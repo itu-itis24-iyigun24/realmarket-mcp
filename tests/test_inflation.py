@@ -87,6 +87,7 @@ def test_evds_parser_reads_its_column_and_sends_the_key_as_a_header() -> None:
     url, headers = fetch.calls[0]
     assert headers == {"key": "k"} and "k" not in url.split("series=")[1].split("&type")[0]
     assert "series=TP.FG.J0" in url
+    assert url.startswith("https://evds3.tcmb.gov.tr/igmevdsms-dis/series=")
 
 
 def test_api_keys_never_appear_in_error_text() -> None:

@@ -26,7 +26,9 @@ FRED_SERIES = "CPIAUCNS"  # CPI-U, all items, US city average, not seasonally ad
 
 EVDS_KEY_ENV = "REALMARKET_EVDS_API_KEY"
 EVDS_URL_ENV = "REALMARKET_EVDS_BASE_URL"
-EVDS_URL = "https://evds2.tcmb.gov.tr/service/evds/"
+# evds2.tcmb.gov.tr now redirects to evds3; the API gateway is this path (verified: it
+# answers 401 "Invalid API Key" to a bad key, while other paths serve the web app).
+EVDS_URL = "https://evds3.tcmb.gov.tr/igmevdsms-dis/"
 EVDS_SERIES = "TP.FG.J0"  # TÜFE, general index (2003=100)
 
 
@@ -115,7 +117,7 @@ def evds_tr_cpi(
     fetch: Fetch = http_fetch,
     retrieved_at: str,
 ) -> CpiSeries:
-    key = _require_key(env, EVDS_KEY_ENV, "TR", "https://evds2.tcmb.gov.tr")
+    key = _require_key(env, EVDS_KEY_ENV, "TR", "https://evds3.tcmb.gov.tr")
     base = env.get(EVDS_URL_ENV, EVDS_URL)
     if not base.endswith("/"):
         base += "/"

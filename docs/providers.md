@@ -24,7 +24,8 @@ These points were reviewed without network access and must be checked against th
 
 - [ ] Yahoo: the exact clause on automated or non-personal use; keep the provider opt-in.
 - [ ] FRED: current API terms and the exact required notice wording.
-- [ ] EVDS: whether automated access is permitted, the required attribution, the current API
-      base URL (`evds2` vs `evds3`), and the response format parsed in `providers/cpi.py`.
+- [ ] EVDS: whether automated access is permitted, the required attribution, and the JSON
+      response format parsed in `providers/cpi.py`. The API base URL was verified on 2026-09-25:
+      `https://evds3.tcmb.gov.tr/igmevdsms-dis/` (evds2 now redirects to evds3).
 - [ ] Run `pip-licenses` on a clean `.[yahoo]` install (`frozendict`, pulled in by `yfinance`,
       is LGPL-3.0; acceptable as an optional, separately installed dependency).
