@@ -19,9 +19,13 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Office/Business :: Financial :: Investment",
 ]
-# Runtime dependencies are added together with the code that needs them.
-# The MCP SDK is pinned when the server module lands (see docs/design.md, milestone M1).
-dependencies = []
+dependencies = [
+    "mcp>=2.2,<3",
+    "pydantic>=2.7",
+]
+
+[project.scripts]
+realmarket-mcp = "realmarket_mcp.server:main"
 
 [project.optional-dependencies]
 dev = [

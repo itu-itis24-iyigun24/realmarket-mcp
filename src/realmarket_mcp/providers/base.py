@@ -1,0 +1,21 @@
+"""The provider interface. Providers are the only modules allowed to use the network.
+
+A provider raises :class:`~realmarket_mcp.contract.ToolError` for every failure it can name
+(unknown symbol, no data, missing key, rate limit, outage) so the message reaches the model
+with an actionable hint.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+from typing import Protocol
+
+from realmarket_mcp.models import AssetRef, PriceSeries
+
+
+class PriceProvider(Protocol):
+    name: str
+
+    def search(self, query: str, limit: int) -> list[AssetRef]: ...
+
+    def daily_bars(self, symbol: str, start: dt.date, end: dt.date) -> PriceSeries: ...

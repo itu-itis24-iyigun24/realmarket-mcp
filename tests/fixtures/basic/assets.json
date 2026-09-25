@@ -1,0 +1,5 @@
+[
+  {"symbol": "AAA", "name": "Alpha Airlines", "asset_class": "equity", "currency": "TRY", "exchange": "TEST"},
+  {"symbol": "BBB", "name": "Beta Bank", "asset_class": "equity", "currency": "USD", "exchange": "TEST"},
+  {"symbol": "IDX", "name": "Test Index", "asset_class": "index", "currency": "TRY", "exchange": "TEST"}
+]

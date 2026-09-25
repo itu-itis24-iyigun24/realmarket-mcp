@@ -1,0 +1,67 @@
+"""End-to-end through the MCP server object, in process (no transport, no network)."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import anyio
+import pytest
+
+from realmarket_mcp.config import FIXTURE_DIR_ENV, PROVIDER_ENV
+from realmarket_mcp.server import build_server
+
+FIXTURES = Path(__file__).parent / "fixtures" / "basic"
+
+
+def _call(name: str, arguments: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+    async def run() -> Any:
+        return await build_server().call_tool(name, arguments)
+
+    result = anyio.run(run)
+    payload = json.loads(result.content[0].text)
+    assert payload == result.structured_content
+    return payload, bool(result.is_error)
+
+
+@pytest.fixture
+def fixture_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(PROVIDER_ENV, "fixture")
+    monkeypatch.setenv(FIXTURE_DIR_ENV, str(FIXTURES))
+
+
+def test_tools_are_listed_with_descriptions_and_read_only_hints() -> None:
+    listed = anyio.run(build_server().list_tools)
+    by_name = {tool.name: tool for tool in listed}
+    assert set(by_name) == {"search_assets", "get_price_summary"}
+    for tool in listed:
+        assert tool.description and len(tool.description) > 80
+        assert tool.annotations is not None and tool.annotations.read_only_hint is True
+
+
+def test_search_then_summary_round_trip(fixture_env: None) -> None:
+    found, is_error = _call("search_assets", {"query": "Alpha"})
+    assert not is_error
+    symbol = found["data"]["results"][0]["symbol"]
+
+    summary, is_error = _call("get_price_summary", {"symbol": symbol, "start": "2024-01-01"})
+    assert not is_error
+    assert summary["ok"] is True
+    assert summary["data"]["total_return"] == pytest.approx(0.2)
+    assert summary["provenance"][0]["provider"] == "fixture"
+
+
+def test_errors_come_back_as_error_envelopes(fixture_env: None) -> None:
+    payload, is_error = _call("get_price_summary", {"symbol": "NOPE"})
+    assert is_error
+    assert payload["error"]["code"] == "unknown_symbol"
+    assert payload["error"]["retryable"] is False
+
+
+def test_missing_configuration_is_explained_to_the_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(PROVIDER_ENV, raising=False)
+    monkeypatch.delenv(FIXTURE_DIR_ENV, raising=False)
+    payload, is_error = _call("search_assets", {"query": "x"})
+    assert is_error
+    assert PROVIDER_ENV in payload["error"]["hint"]
