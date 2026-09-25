@@ -57,14 +57,20 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
             f"(or set {PROVIDER_ENV}=yahoo), then restart the app."
         )
     if not contact:
+        fallback = (
+            "US financial statements come from Yahoo (unofficial) instead"
+            if yahoo
+            else "US financial statements are unavailable"
+        )
         missing.append(
-            "US financial statements from the SEC are off: fill in 'E-mail for SEC EDGAR' "
-            f"({sec.CONTACT_ENV}), then restart the app."
+            f"{fallback}: fill in 'E-mail for SEC EDGAR' ({sec.CONTACT_ENV}) to use the "
+            "companies' official SEC filings, then restart the app."
         )
     if not evds and "TR" not in csv_regions:
         missing.append(
-            "Turkish inflation comes from the OECD and ends months behind; add a TCMB EVDS key "
-            f"({cpi.EVDS_KEY_ENV}) for current data."
+            "Turkish inflation (only) comes from the OECD, which lags TÜİK by months; add a TCMB "
+            f"EVDS key ({cpi.EVDS_KEY_ENV}) for current data. US and other OECD members' "
+            "inflation from the OECD is current."
         )
     return {
         "price_data": {

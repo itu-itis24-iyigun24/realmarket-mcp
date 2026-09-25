@@ -171,3 +171,11 @@ def test_check_setup_tool_over_the_protocol(monkeypatch: pytest.MonkeyPatch) -> 
     assert not is_error
     assert payload["data"]["price_data"]["provider"] == "yahoo"
     assert payload["provenance"][0]["dataset"] == "server_configuration"
+
+
+def test_check_setup_says_what_replaces_a_missing_source() -> None:
+    with_yahoo = config.describe_setup({config.USE_YAHOO_ENV: "true"})["missing"]
+    assert any("come from Yahoo (unofficial) instead" in m for m in with_yahoo)
+    assert any("Turkish inflation (only)" in m for m in with_yahoo)
+    bare = config.describe_setup({})["missing"]
+    assert any("US financial statements are unavailable" in m for m in bare)
