@@ -5,8 +5,8 @@ Claude and other LLMs research markets from **verified, sourced numbers**.
 
 > **Status: alpha (MVP).** Price, real-return and data-quality tools are verified against the
 > live Yahoo, FRED and TCMB EVDS APIs. News search (GDELT) is new and not yet live-verified;
-> KAP company disclosures are not included: KAP's terms require
-> MKK's written permission for automated use (see `docs/providers.md`).
+> KAP company disclosures are not included (KAP's terms require
+> MKK's written permission); use it alongside [kapmcp](#using-it-with-kapmcp-kap-disclosures-and-financial-statements) for those.
 
 ## Why
 
@@ -97,6 +97,57 @@ FRED and TCMB EVDS are used with **your own free API key, under their terms**. T
 uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.
 Turkish CPI is published by TÜİK and distributed by TCMB EVDS. See
 [`docs/providers.md`](docs/providers.md).
+
+## Using it with kapmcp (KAP disclosures and financial statements)
+
+realmarket-mcp does not read KAP, Turkey's Public Disclosure Platform: KAP's terms require MKK's
+written permission for automated use (see [`docs/providers.md`](docs/providers.md)). The
+independent open-source project [kapmcp](https://github.com/hasancagrigungor/kapmcp)
+(`pip install kap-mcp-server`) covers KAP through MKK's official API. MCP clients can run
+several servers at once, so the two can be used side by side and the model picks tools from
+both.
+
+| Question | Served by |
+|---|---|
+| Company disclosures, attachments, official financial statements, corporate actions | kapmcp |
+| Nominal vs inflation-adjusted return; the same holding in US dollars and in gold | realmarket-mcp |
+| "Can I trust this price history?" (seams, gaps, placeholder bars) | realmarket-mcp |
+| Recent news coverage with publisher, date and link | either (kapmcp via Yahoo, realmarket-mcp via GDELT) |
+
+Example configuration with both servers:
+
+```json
+{
+  "mcpServers": {
+    "realmarket": {
+      "command": "realmarket-mcp",
+      "env": {
+        "REALMARKET_PRICE_PROVIDER": "yahoo",
+        "REALMARKET_EVDS_API_KEY": "your-tcmb-evds-key",
+        "REALMARKET_FRED_API_KEY": "your-fred-key"
+      }
+    },
+    "kap": {
+      "command": "kapmcp",
+      "env": { "KAP_API_KEY": "your-mkk-api-key" }
+    }
+  }
+}
+```
+
+Example request that uses both: *"Summarize THYAO's latest financial report from KAP, then tell
+me whether the stock beat Turkish inflation over the last three years, also in dollars and gold.
+Flag any data-quality issues first."*
+
+Notes:
+
+- kapmcp is a separate project with its own maintainer and license (MIT); realmarket-mcp is not
+  affiliated with it and has not audited it. Check its documentation for current setup.
+- Its KAP tools need an API key from the [MKK API Portal](https://apiportal.mkk.com.tr) and an
+  IP authorization on MKK's side; read MKK's conditions when you apply. Without a key, its
+  Yahoo-based tools still work.
+- When two servers offer similar tools (both can report prices), say which one you want if the
+  answer matters, e.g. "use realmarket for the real return".
 
 ## Example questions
 
