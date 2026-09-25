@@ -102,3 +102,18 @@ def test_bad_dates_are_invalid_arguments() -> None:
     with pytest.raises(ToolError) as raised:
         periods.resolve("1y", "31/01/2024", None, today=TODAY)
     assert raised.value.code is ErrorCode.INVALID_ARGUMENT
+
+
+def test_nan_closes_are_reported_as_missing(tmp_path: Path) -> None:
+    (tmp_path / "bars").mkdir()
+    (tmp_path / "assets.json").write_text(
+        '[{"symbol": "N", "name": "N", "asset_class": "equity", "currency": "TRY",'
+        ' "exchange": "X"}]'
+    )
+    (tmp_path / "bars" / "N.csv").write_text(
+        "date,open,high,low,close,volume\n2024-01-02,1,1,1,1,1\n2024-01-03,1,1,1,nan,1\n"
+        "2024-01-04,2,2,2,2,1\n"
+    )
+    result = tools.get_price_summary(FixtureProvider(tmp_path), "N", "1m", today=TODAY)
+    assert "missing_close" in {f.code for f in result.quality_flags}
+    assert result.data["sessions"] == 2

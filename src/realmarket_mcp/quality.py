@@ -14,13 +14,17 @@ SEAM_ABS_LOG_MOVE = 0.5  # |ln(close_t / close_t-1)| above this: ~ -39% / +65% i
 STALE_CALENDAR_DAYS = 7
 
 
+def _usable_close(close: float | None) -> bool:
+    return close is not None and math.isfinite(close) and close > 0
+
+
 def check_series(series: PriceSeries, *, requested_end: dt.date | None = None) -> list[QualityFlag]:
     flags: list[QualityFlag] = []
     bars = series.bars
     if not bars:
         return [QualityFlag("no_bars", Severity.CRITICAL, f"{series.symbol}: no bars in period")]
 
-    missing_close = [b.date.isoformat() for b in bars if b.close is None or b.close <= 0]
+    missing_close = [b.date.isoformat() for b in bars if not _usable_close(b.close)]
     if missing_close:
         flags.append(
             QualityFlag(
@@ -47,7 +51,7 @@ def check_series(series: PriceSeries, *, requested_end: dt.date | None = None) -
             )
         )
 
-    usable = [b for b in bars if b.close is not None and b.close > 0]
+    usable = [b for b in bars if _usable_close(b.close)]
     for prev, cur in itertools.pairwise(usable):
         gap = (cur.date - prev.date).days
         if gap > GAP_CALENDAR_DAYS:

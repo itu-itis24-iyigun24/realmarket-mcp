@@ -1,5 +1,44 @@
 [
-  {"symbol": "AAA", "name": "Alpha Airlines", "asset_class": "equity", "currency": "TRY", "exchange": "TEST"},
-  {"symbol": "BBB", "name": "Beta Bank", "asset_class": "equity", "currency": "USD", "exchange": "TEST"},
-  {"symbol": "IDX", "name": "Test Index", "asset_class": "index", "currency": "TRY", "exchange": "TEST"}
+  {
+    "symbol": "AAA",
+    "name": "Alpha Airlines",
+    "asset_class": "equity",
+    "currency": "TRY",
+    "exchange": "TEST"
+  },
+  {
+    "symbol": "BBB",
+    "name": "Beta Bank",
+    "asset_class": "equity",
+    "currency": "USD",
+    "exchange": "TEST"
+  },
+  {
+    "symbol": "IDX",
+    "name": "Test Index",
+    "asset_class": "index",
+    "currency": "TRY",
+    "exchange": "TEST"
+  },
+  {
+    "symbol": "TTT",
+    "name": "Tau Textiles",
+    "asset_class": "equity",
+    "currency": "TRY",
+    "exchange": "TEST"
+  },
+  {
+    "symbol": "USDTRY",
+    "name": "US Dollar / Turkish Lira",
+    "asset_class": "fx",
+    "currency": "TRY",
+    "exchange": "TEST"
+  },
+  {
+    "symbol": "GOLD",
+    "name": "Gold (USD per ounce)",
+    "asset_class": "commodity",
+    "currency": "USD",
+    "exchange": "TEST"
+  }
 ]

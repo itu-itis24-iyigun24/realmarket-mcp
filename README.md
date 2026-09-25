@@ -3,8 +3,8 @@
 An open-source [Model Context Protocol](https://modelcontextprotocol.io) server that lets
 Claude and other LLMs research markets from **verified, sourced numbers**.
 
-> **Status: pre-alpha.** The response contract and development tooling are in place; no tool
-> is usable yet. See [`docs/design.md`](docs/design.md) for the plan.
+> **Status: alpha (MVP).** Five tools work end to end. The live data providers were written
+> against their documentation and still need verification against the live APIs.
 
 ## Why
 
@@ -22,8 +22,83 @@ compute these figures in code and return them with their sources:
 - **Deterministic results**: the same data and arguments give the same answer, whichever
   model asks.
 
-Planned tools for v0.1: `search_assets`, `get_price_summary`, `check_data_quality`,
-`compare_assets`, `compare_real_return`, plus report prompt templates.
+## Tools
+
+| Tool | What it answers |
+|---|---|
+| `search_assets` | "What is the symbol for Turkish Airlines?" |
+| `get_price_summary` | "How did it do over the last year?" — return, annualized return, volatility, max drawdown |
+| `compare_real_return` | "Did it beat inflation?" — nominal vs real return, plus the same holding in US dollars and in gold |
+| `compare_assets` | "How do these compare?" — 2 to 10 assets over one common window |
+| `check_data_quality` | "Can I trust this data?" — gaps, placeholder bars, suspicious jumps, stale data |
+
+It also ships three report prompts (`single_asset_report`, `real_return_report`,
+`comparison_report`) and a `realmarket://methodology` resource with every formula.
+
+## Install
+
+Requires Python 3.11+.
+
+```bash
+pip install "realmarket-mcp[yahoo] @ git+https://github.com/itu-itis24-iyigun24/realmarket-mcp"
+```
+
+## Configure a client
+
+All configuration is environment variables in the client's MCP server entry. Example for
+Claude Desktop (`claude_desktop_config.json`) or any client using the same format:
+
+```json
+{
+  "mcpServers": {
+    "realmarket": {
+      "command": "realmarket-mcp",
+      "env": {
+        "REALMARKET_PRICE_PROVIDER": "yahoo",
+        "REALMARKET_EVDS_API_KEY": "your-tcmb-evds-key",
+        "REALMARKET_FRED_API_KEY": "your-fred-key"
+      }
+    }
+  }
+}
+```
+
+For Claude Code: `claude mcp add realmarket -e REALMARKET_PRICE_PROVIDER=yahoo -- realmarket-mcp`.
+
+| Variable | Purpose |
+|---|---|
+| `REALMARKET_PRICE_PROVIDER` | `yahoo`, or `fixture` for offline test data |
+| `REALMARKET_EVDS_API_KEY` | Turkish CPI from TCMB EVDS (free key at evds2.tcmb.gov.tr) |
+| `REALMARKET_FRED_API_KEY` | US CPI from FRED (free key at fred.stlouisfed.org) |
+| `REALMARKET_CPI_CSV_<REGION>` | Your own monthly CPI file for any region (`month,cpi_index`), e.g. `REALMARKET_CPI_CSV_TR` |
+| `REALMARKET_FIXTURE_DIR` | Directory for the `fixture` provider |
+
+Without a CPI source, every tool except `compare_real_return` works; that one explains what to set.
+
+### About the Yahoo Finance provider
+
+`yahoo` uses the community [`yfinance`](https://github.com/ranaroussi/yfinance) library, which
+reads Yahoo Finance's public web endpoints. It is **not an official API**: Yahoo's terms
+restrict automated and commercial use, the endpoints change without notice, and some
+histories contain errors (which is why `check_data_quality` exists). realmarket-mcp is not
+affiliated with or endorsed by Yahoo; Yahoo is a trademark of its owner. The provider is off
+unless you select it, is meant for personal research use, and you are responsible for
+complying with Yahoo's terms and for not redistributing the data. Data may be delayed or
+wrong, and the interface may break without notice. Symbols follow Yahoo's conventions:
+`THYAO.IS` (Borsa Istanbul), `XU100.IS`, `USDTRY=X`, `GC=F` (gold).
+
+### CPI sources
+
+FRED and TCMB EVDS are used with **your own free API key, under their terms**. This product
+uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.
+Turkish CPI is published by TÜİK and distributed by TCMB EVDS. See
+[`docs/providers.md`](docs/providers.md).
+
+## Example questions
+
+- "Did THYAO beat Turkish inflation over the last 5 years? Also in dollars and gold."
+- "Compare BIST 100, gold and the S&P 500 over the last 3 years."
+- "Is the price history of ASELS reliable since 2015?"
 
 ## What it is not
 

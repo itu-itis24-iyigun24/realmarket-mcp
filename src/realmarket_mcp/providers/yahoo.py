@@ -123,6 +123,11 @@ def _translate(exc: Exception) -> Exception:
 class YahooProvider:
     name = "yahoo"
     adjustment = "split_and_dividend"
+    gold_usd_symbol = "GC=F"  # COMEX gold futures, continuous front month
+
+    @staticmethod
+    def fx_symbol(base: str, quote: str) -> str:
+        return f"{base}{quote}=X"
 
     def __init__(self, backend: YahooBackend | None = None, *, retrieved_at: str) -> None:
         self._backend = backend if backend is not None else YfinanceBackend()
@@ -148,9 +153,11 @@ class YahooProvider:
 
     def daily_bars(self, symbol: str, start: dt.date, end: dt.date) -> PriceSeries:
         raw = self._call(lambda: self._backend.history(symbol, start, end), symbol=symbol)
+        # A bar dated on or after the retrieval day may be an in-progress session: exclude it.
+        cutoff = min(end, dt.date.fromisoformat(self._retrieved_at[:10]) - dt.timedelta(days=1))
         by_date = {}
         for date, open_, high, low, close, volume in raw.rows:
-            if start <= date <= end:
+            if start <= date <= cutoff:
                 by_date[date] = Bar(date, open_, high, low, close, volume)  # last row per date wins
         return PriceSeries(
             symbol=symbol,

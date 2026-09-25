@@ -15,6 +15,11 @@ from realmarket_mcp.models import AssetRef, PriceSeries
 
 class PriceProvider(Protocol):
     name: str
+    gold_usd_symbol: str  # gold priced in US dollars per troy ounce
+
+    def fx_symbol(self, base: str, quote: str) -> str:
+        """Symbol whose price is units of ``quote`` per one ``base`` (e.g. TRY per USD)."""
+        ...
 
     def search(self, query: str, limit: int) -> list[AssetRef]: ...
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import csv
 import datetime as dt
 import json
+import math
 from pathlib import Path
 
 from realmarket_mcp.contract import ErrorCode, ToolError
@@ -18,11 +19,19 @@ from realmarket_mcp.models import AssetClass, AssetRef, Bar, PriceSeries
 
 
 def _number(cell: str) -> float | None:
-    return float(cell) if cell.strip() else None
+    if not cell.strip():
+        return None
+    value = float(cell)
+    return value if math.isfinite(value) else None
 
 
 class FixtureProvider:
     name = "fixture"
+    gold_usd_symbol = "GOLD"
+
+    @staticmethod
+    def fx_symbol(base: str, quote: str) -> str:
+        return f"{base}{quote}"
 
     def __init__(self, root: Path, *, retrieved_at: str = "1970-01-01T00:00:00Z") -> None:
         self._root = root

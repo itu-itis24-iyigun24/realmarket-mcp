@@ -122,3 +122,14 @@ def test_yfinance_adapter_reads_session_dates_and_currency(monkeypatch: pytest.M
     assert raw.currency == "TRY"
     assert [r[0] for r in raw.rows] == [D(2024, 1, 2), D(2024, 1, 3)]
     assert raw.rows[1][4] is None  # NaN close becomes None, never NaN
+
+
+def test_bars_from_the_retrieval_day_are_excluded_as_possibly_incomplete() -> None:
+    rows = [
+        (D(2024, 1, 31), 1.0, 1.0, 1.0, 1.0, 10.0),
+        (D(2024, 2, 1), 2.0, 2.0, 2.0, 2.0, 10.0),  # retrieval day: session may be open
+    ]
+    series = _provider(history=RawHistory("TRY", rows)).daily_bars(
+        "THYAO.IS", D(2024, 1, 1), D(2024, 2, 1)
+    )
+    assert [b.date for b in series.bars] == [D(2024, 1, 31)]

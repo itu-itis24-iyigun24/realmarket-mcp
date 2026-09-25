@@ -34,7 +34,13 @@ def fixture_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_tools_are_listed_with_descriptions_and_read_only_hints() -> None:
     listed = anyio.run(build_server().list_tools)
     by_name = {tool.name: tool for tool in listed}
-    assert set(by_name) == {"search_assets", "get_price_summary"}
+    assert set(by_name) == {
+        "search_assets",
+        "get_price_summary",
+        "compare_real_return",
+        "compare_assets",
+        "check_data_quality",
+    }
     for tool in listed:
         assert tool.description and len(tool.description) > 80
         assert tool.annotations is not None and tool.annotations.read_only_hint is True
@@ -65,3 +71,32 @@ def test_missing_configuration_is_explained_to_the_model(monkeypatch: pytest.Mon
     payload, is_error = _call("search_assets", {"query": "x"})
     assert is_error
     assert PROVIDER_ENV in payload["error"]["hint"]
+
+
+def test_prompts_and_methodology_are_published() -> None:
+    server = build_server()
+    prompts = {p.name for p in anyio.run(server.list_prompts)}
+    assert prompts == {"single_asset_report", "real_return_report", "comparison_report"}
+    resources = {str(r.uri) for r in anyio.run(server.list_resources)}
+    assert resources == {"realmarket://methodology"}
+
+
+def test_compare_assets_validates_list_length_before_running(fixture_env: None) -> None:
+    async def run() -> object:
+        return await build_server().call_tool("compare_assets", {"symbols": ["AAA"]})
+
+    with pytest.raises(Exception, match="symbols"):
+        anyio.run(run)
+
+
+def test_real_return_through_the_server_with_a_csv_cpi(
+    fixture_env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    cpi = tmp_path / "tr.csv"
+    cpi.write_text("month,cpi_index\n2023-01,100\n2024-01,160\n")
+    monkeypatch.setenv("REALMARKET_CPI_CSV_TR", str(cpi))
+    payload, is_error = _call(
+        "compare_real_return", {"symbol": "TTT", "start": "2023-01-01", "end": "2024-01-02"}
+    )
+    assert not is_error
+    assert payload["data"]["real_return"] == pytest.approx(0.25)
