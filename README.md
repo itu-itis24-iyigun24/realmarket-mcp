@@ -5,7 +5,8 @@ Claude and other LLMs research markets from **verified, sourced numbers**.
 
 > **Status: alpha (MVP).** Price, real-return and data-quality tools are verified against the
 > live Yahoo, FRED and TCMB EVDS APIs. News search (GDELT) is new and not yet live-verified;
-> KAP company disclosures are planned.
+> KAP company disclosures are not included: KAP's terms require
+> MKK's written permission for automated use (see `docs/providers.md`).
 
 ## Why
 

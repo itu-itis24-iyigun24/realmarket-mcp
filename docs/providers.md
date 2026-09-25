@@ -13,7 +13,7 @@ Every provider module must have an entry here before it is merged (see the
 | FRED (Federal Reserve Bank of St. Louis) | `providers/cpi.py` | US CPI `CPIAUCNS` (source: BLS) | `REALMARKET_FRED_API_KEY` | yes, free | FRED API terms of use | see notice below |
 | TCMB EVDS (Central Bank of the Republic of Türkiye) | `providers/cpi.py` | Turkish CPI `TP.GENENDEKS.T1` (2003=100) (source: TÜİK) | `REALMARKET_EVDS_API_KEY` | yes, free | EVDS terms of use | cite TCMB EVDS / TÜİK |
 | GDELT Project | `providers/gdelt.py` | news article listings (title, link, publisher, date) | default; `REALMARKET_NEWS_PROVIDER=none` disables | no | GDELT terms (open data; citation requested) | cite "The GDELT Project" |
-| KAP (Public Disclosure Platform) | *planned* | company disclosures and financial statements | will be opt-in | — | kap.org.tr terms: **not yet reviewed** | — |
+| KAP (Public Disclosure Platform) | **not implemented — terms forbid it** | company disclosures and financial statements | — | — | see finding below | — |
 | User CSV | `inflation.py` | any monthly CPI series | `REALMARKET_CPI_CSV_<REGION>` | — | the user's own source | — |
 | Fixture | `providers/fixture.py` | synthetic test data | `REALMARKET_PRICE_PROVIDER=fixture` | — | — | — |
 
@@ -44,10 +44,19 @@ the providers' current terms pages.
       year and +1.84% month on month, matches TÜİK's release (31.51% and 1.84%; the 0.01-point
       gap is rounding of the chained 2003=100 levels). Regression test:
       `tests/test_inflation.py::test_evds_uses_the_live_series_not_the_archived_one`.
-- [ ] GDELT: verify the DOC 2.0 API JSON shape and plain-text error messages against the live
-      API (`providers/gdelt.py` was written from the documentation), and the citation wording.
-- [ ] KAP: read kap.org.tr's terms of use and robots.txt **before any KAP code is written**; KAP
-      data is otherwise distributed through a licensed data-publishing service. Stop if the terms
-      forbid automated access.
+- [ ] GDELT: partly verified live on 2026-09-25. Confirmed: the rate-limit response is HTTP 429
+      with the plain-text "Please limit requests to one every 5 seconds..." (mapped to
+      `rate_limited`), and an empty result is `{}`. Not yet confirmed: the shape of a non-empty
+      `articles` list, because the cloud test environment's shared IP stayed rate-limited.
+      Re-test from a normal connection; also confirm the citation wording.
+- [x] KAP: reviewed on 2026-09-25 — **stop; no KAP provider.** kap.org.tr has no robots.txt, but
+      its "Telif Hakkı ve Çekince İhbarı" page (`/tr/icerik/Diger/telif-hakki-ve-cekince-ihbari`,
+      section "Kullanım izni ve şartları") states that users may use the information only to
+      inform themselves, and that without MKK's prior written permission it may not be copied in
+      whole or in part, put into application, distributed, reproduced, modified, or stored for
+      later use. A tool that fetches and processes KAP data falls under that. The site's JSON
+      endpoints (`/tr/api/...`) are internal to its web app, not a published API; KAP data is
+      licensed separately through its data-publishing service. Options: request written
+      permission from MKK, or use a licensed source.
 - [ ] Run `pip-licenses` on a clean `.[yahoo]` install (`frozendict`, pulled in by `yfinance`,
       is LGPL-3.0; acceptable as an optional, separately installed dependency).
