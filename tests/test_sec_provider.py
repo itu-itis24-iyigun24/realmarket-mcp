@@ -277,8 +277,11 @@ def test_routing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(config.PROVIDER_ENV, raising=False)
     monkeypatch.delenv(config.FIXTURE_DIR_ENV, raising=False)
     with_contact = {sec.CONTACT_ENV: "me@example.org"}
+    chosen = config.load_financials_provider("AAPL", retrieved_at=STAMP, env=with_contact)
+    assert chosen.name == "sec_edgar"
+    forced = {**with_contact, config.FINANCIALS_PROVIDER_ENV: "sec"}
     assert isinstance(
-        config.load_financials_provider("AAPL", retrieved_at=STAMP, env=with_contact),
+        config.load_financials_provider("AAPL", retrieved_at=STAMP, env=forced),
         sec.SecEdgarProvider,
     )
     with pytest.raises(ToolError) as raised:  # no contact, no price provider
@@ -307,3 +310,38 @@ def test_tool_reports_the_official_source() -> None:
     annual = result.data["growth"]["annual"]
     assert annual["revenue"]["real"] == pytest.approx(461 / (360 * 1.03) - 1, abs=1e-6)
     assert result.provenance[0].provider == "sec_edgar"
+
+
+class _Stub:
+    def __init__(self, name: str, result: Any) -> None:
+        self.name, self.result, self.calls = name, result, 0
+
+    def financials(self, symbol: str) -> Any:
+        self.calls += 1
+        if isinstance(self.result, ToolError):
+            raise self.result
+        return self.result
+
+
+def test_fallback_covers_what_the_sec_cannot() -> None:
+    ifrs = ToolError(ErrorCode.NO_DATA_IN_RANGE, "TSM files no US GAAP statements.", "IFRS")
+    backup = _Stub("yahoo", "statements from the price provider")
+    chained = config._WithFallback(_Stub("sec_edgar", ifrs), lambda: backup)
+    assert chained.financials("TSM") == "statements from the price provider"
+
+    outage = http.unavailable("SEC EDGAR", "HTTP 503")  # an outage is reported, not hidden
+    chained = config._WithFallback(_Stub("sec_edgar", outage), lambda: backup)
+    with pytest.raises(ToolError) as raised:
+        chained.financials("AAPL")
+    assert raised.value is outage and backup.calls == 1
+
+
+def test_without_a_price_provider_the_sec_error_is_kept() -> None:
+    ifrs = ToolError(ErrorCode.NO_DATA_IN_RANGE, "TSM files no US GAAP statements.", "IFRS")
+
+    def missing() -> Any:
+        raise ToolError(ErrorCode.MISSING_API_KEY, "no price provider", "set it")
+
+    with pytest.raises(ToolError) as raised:
+        config._WithFallback(_Stub("sec_edgar", ifrs), missing).financials("TSM")
+    assert raised.value is ifrs

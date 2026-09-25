@@ -185,3 +185,18 @@ def test_unknown_company(tmp_path: Path) -> None:
     with pytest.raises(ToolError) as raised:
         tools.get_financials(_provider(tmp_path, "X", {}), _loader, "NOPE", today=TODAY)
     assert raised.value.code is ErrorCode.NO_DATA_IN_RANGE
+
+
+def test_non_operating_items_dominating_net_income_are_flagged(tmp_path: Path) -> None:
+    spec = _retailer()
+    spec["quarterly"][-1]["values"]["net_income"] = 400  # operating income is 165
+    flags = tools.get_financials(
+        _provider(tmp_path, "GAIN", spec), _loader, "GAIN", today=TODAY
+    ).quality_flags
+    flag = next(f for f in flags if f.code == "non_operating_items_dominate")
+    assert "2.4x" in flag.message
+
+    ordinary = tools.get_financials(
+        _provider(tmp_path, "RET", _retailer()), _loader, "RET", today=TODAY
+    ).quality_flags
+    assert "non_operating_items_dominate" not in {f.code for f in ordinary}

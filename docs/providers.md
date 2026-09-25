@@ -71,10 +71,11 @@ the providers' current terms pages.
 - [x] SEC EDGAR: verified live on 2026-09-25. `data.sec.gov/api/xbrl/companyfacts/CIK##########.json`
       and `data.sec.gov/submissions/...` answer 200 to `realmarket-mcp/<version> <e-mail>`; a
       User-Agent **with a URL in it returns 403** ("Undeclared Automated Tool"), so the SEC agent
-      string omits the repository URL. The ticker list (`www.sec.gov/files/company_tickers.json`)
-      could not be fetched from the test environment (host not allow-listed); its parser is
-      tested offline and a CIK can be passed instead. Still to do: read the current fair-access
-      page on www.sec.gov and confirm the ticker list's shape live.
+      string omits the repository URL. The ticker list `www.sec.gov/files/company_tickers.json`
+      is `{"0": {"cik_str", "ticker", "title"}, ...}` (10,413 entries) with class shares as
+      `BRK-B`. The SEC's developer page ("Fair Access") limits each user to 10 requests per
+      second, asks for efficient scripts that download only what they need, and blocks
+      unclassified bots; a declared agent making 2-3 targeted API calls per request fits that.
 - [ ] OECD: read the current terms and citation requirements; note the API's anonymous rate
       limits.
 - [ ] Run `pip-licenses` on a clean `.[yahoo]` install (`frozendict`, pulled in by `yfinance`,
@@ -136,6 +137,14 @@ Findings that shaped the provider:
   — it now uses the first-reported pair and the notes name restated years; one element per
   field, so quarters and years never mix `Revenues` with another total; bare numbers such as
   `7203` are no longer treated as CIKs (only `CIK…`).
+- Live end to end with tickers: AAPL, GOOGL, BRK-B, JPM and KO from the SEC; ASML files US
+  GAAP in EUR (annual only, Form 20-F; 2025 revenue 32.667bn, as published); TSM files IFRS, so
+  `auto` falls back to the price provider (Yahoo, TWD). A fallback happens only when the SEC has
+  no data for the company or does not list the ticker, never on an outage.
+- Alphabet 2026 Q2: net income 112.2bn against operating income 40.8bn, because the 10-Q
+  reports a 99.0bn gain on equity securities. The figure is correct as filed; the tool adds the
+  informational flag `non_operating_items_dominate` when net income exceeds 1.5x operating
+  income, so the model does not read it as operating performance.
 - Some companies tag no `GrossProfit` or `OperatingIncomeLoss` (Eli Lilly); those fields stay
   null rather than being computed from other lines.
 - Old years can mix a restated annual figure with first-reported quarters (Microsoft FY2016,

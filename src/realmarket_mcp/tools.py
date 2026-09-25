@@ -993,6 +993,9 @@ SHOWN_YEARS = 4
 MAX_QUARTERS_SHOWN = 8
 QUARTER_SUM_TOLERANCE = 0.03
 UNUSUAL_REAL_CHANGE = (-0.40, 0.60)
+# Net income this far above operating income means non-operating items (investment gains,
+# one-offs) dominate the quarter; Alphabet 2026 Q2: 112.2bn net vs 40.8bn operating.
+NON_OPERATING_DOMINANCE = 1.5
 
 
 def _amount(value: float | None) -> float | None:
@@ -1144,6 +1147,24 @@ def get_financials(
                     f"Quarterly revenue for the year ending {year.end} sums to {deviation:+.1%} "
                     "versus the annual figure; verify against the official filing.",
                     (year.end.isoformat(),),
+                )
+            )
+    if latest is not None:
+        net, operating = latest.values.get("net_income"), latest.values.get("operating_income")
+        if (
+            net is not None
+            and operating is not None
+            and 0 < operating * NON_OPERATING_DOMINANCE < net
+        ):
+            flags.append(
+                QualityFlag(
+                    "non_operating_items_dominate",
+                    Severity.INFO,
+                    f"Net income in the quarter ending {latest.end} is {net / operating:.1f}x "
+                    "operating income: non-operating items such as investment gains or one-off "
+                    "items drive it, so net margin and net income growth do not describe the "
+                    "operating business. Check the filing for the source.",
+                    (latest.end.isoformat(),),
                 )
             )
     if qoq is not None:

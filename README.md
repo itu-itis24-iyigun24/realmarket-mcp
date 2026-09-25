@@ -104,10 +104,13 @@ wrong, and the interface may break without notice. Symbols follow Yahoo's conven
 
 | Market | Source | Official |
 |---|---|---|
-| US-listed companies (10-Q / 10-K filers) | SEC EDGAR XBRL API, with `REALMARKET_SEC_CONTACT` | yes |
+| US-listed companies filing US GAAP (10-Q / 10-K, and 20-F filers such as ASML) | SEC EDGAR XBRL API, with `REALMARKET_SEC_CONTACT` | yes |
 | Everything else, incl. Borsa Istanbul | Yahoo Finance (`REALMARKET_PRICE_PROVIDER=yahoo`) | no; verify in the company's filings (KAP for Borsa Istanbul) |
 
 US tickers use Yahoo's spelling (`AAPL`, `BRK-B`); a CIK such as `CIK0000320193` also works.
+When the SEC has no statements for a company (IFRS filers such as TSM) or does not list the
+ticker, the price provider's statements are used instead, and the result's provenance names
+the source.
 Fourth-quarter income figures are derived as annual minus nine months, because companies do not
 file them separately, and the result lists which quarters were derived. SEC data is public; the
 SEC asks automated clients to stay under 10 requests per second and to identify themselves.

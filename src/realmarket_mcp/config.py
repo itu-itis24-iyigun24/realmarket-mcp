@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import datetime as dt
 import os
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import cast
 
 from realmarket_mcp import inflation
 from realmarket_mcp.contract import ErrorCode, ToolError
-from realmarket_mcp.providers import cpi
+from realmarket_mcp.models import FinancialStatements
+from realmarket_mcp.providers import cpi, sec
 from realmarket_mcp.providers.base import FinancialsProvider, NewsProvider, PriceProvider
 
 PROVIDER_ENV = "REALMARKET_PRICE_PROVIDER"
@@ -119,8 +120,6 @@ def load_financials_provider(
     """``auto`` (default): SEC EDGAR for US tickers and CIKs when a contact e-mail is set (it
     is official and needs no key), otherwise the price provider's statements. ``sec`` or
     ``price`` force one source."""
-    from realmarket_mcp.providers import sec
-
     env = os.environ if env is None else env
     choice = env.get(FINANCIALS_PROVIDER_ENV, "auto").strip().lower()
     if choice not in {"auto", "sec", "price"}:
@@ -139,11 +138,39 @@ def load_financials_provider(
                 f"Set {sec.CONTACT_ENV} to your e-mail address in the MCP server's environment "
                 "(no key or sign-up needed).",
             )
-        return sec.SecEdgarProvider(contact, retrieved_at=retrieved_at)
+        edgar = sec.SecEdgarProvider(contact, retrieved_at=retrieved_at)
+        if choice == "sec":
+            return edgar
+        return _WithFallback(edgar, lambda: _price_financials(retrieved_at))
+    return _price_financials(retrieved_at, us_symbol=us_symbol and choice == "auto")
+
+
+class _WithFallback:
+    """SEC first; for what the SEC cannot cover (IFRS filers such as TSM, tickers it does not
+    list) the configured price provider's statements, if there is one."""
+
+    def __init__(self, primary: FinancialsProvider, fallback: Callable[[], FinancialsProvider]):
+        self.name = primary.name
+        self._primary, self._fallback = primary, fallback
+
+    def financials(self, symbol: str) -> FinancialStatements:
+        try:
+            return self._primary.financials(symbol)
+        except ToolError as error:
+            if error.code not in {ErrorCode.NO_DATA_IN_RANGE, ErrorCode.UNKNOWN_SYMBOL}:
+                raise
+            try:
+                secondary = self._fallback()
+            except ToolError:
+                raise error from None
+            return secondary.financials(symbol)
+
+
+def _price_financials(retrieved_at: str, *, us_symbol: bool = False) -> FinancialsProvider:
     try:
         provider = load_price_provider(retrieved_at=retrieved_at)
     except ToolError as error:
-        if us_symbol and choice == "auto":
+        if us_symbol:
             raise ToolError(
                 error.code,
                 "No source for financial statements is configured.",
