@@ -10,7 +10,7 @@ from __future__ import annotations
 import datetime as dt
 from typing import Protocol
 
-from realmarket_mcp.models import AssetRef, PriceSeries
+from realmarket_mcp.models import AssetRef, NewsItem, PriceSeries
 
 
 class PriceProvider(Protocol):
@@ -24,3 +24,17 @@ class PriceProvider(Protocol):
     def search(self, query: str, limit: int) -> list[AssetRef]: ...
 
     def daily_bars(self, symbol: str, start: dt.date, end: dt.date) -> PriceSeries: ...
+
+
+class NewsProvider(Protocol):
+    name: str
+
+    def search(
+        self,
+        query: str,
+        start: dt.datetime,
+        end: dt.datetime,
+        *,
+        language: str | None,
+        limit: int,
+    ) -> list[NewsItem]: ...

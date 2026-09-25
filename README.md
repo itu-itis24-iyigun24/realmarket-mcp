@@ -3,8 +3,9 @@
 An open-source [Model Context Protocol](https://modelcontextprotocol.io) server that lets
 Claude and other LLMs research markets from **verified, sourced numbers**.
 
-> **Status: alpha (MVP).** Five tools work end to end. The live data providers were written
-> against their documentation and still need verification against the live APIs.
+> **Status: alpha (MVP).** Price, real-return and data-quality tools are verified against the
+> live Yahoo, FRED and TCMB EVDS APIs. News search (GDELT) is new and not yet live-verified;
+> KAP company disclosures are planned.
 
 ## Why
 
@@ -31,6 +32,7 @@ compute these figures in code and return them with their sources:
 | `compare_real_return` | "Did it beat inflation?" — nominal vs real return, plus the same holding in US dollars and in gold |
 | `compare_assets` | "How do these compare?" — 2 to 10 assets over one common window |
 | `check_data_quality` | "Can I trust this data?" — gaps, placeholder bars, suspicious jumps, stale data |
+| `get_news` | "What was in the news about it?" — recent article listings with publisher, date and link |
 
 It also ships three report prompts (`single_asset_report`, `real_return_report`,
 `comparison_report`) and a `realmarket://methodology` resource with every formula.
@@ -71,6 +73,7 @@ For Claude Code: `claude mcp add realmarket -e REALMARKET_PRICE_PROVIDER=yahoo -
 | `REALMARKET_EVDS_API_KEY` | Turkish CPI from TCMB EVDS (free key at evds3.tcmb.gov.tr) |
 | `REALMARKET_FRED_API_KEY` | US CPI from FRED (free key at fred.stlouisfed.org) |
 | `REALMARKET_CPI_CSV_<REGION>` | Your own monthly CPI file for any region (`month,cpi_index`), e.g. `REALMARKET_CPI_CSV_TR` |
+| `REALMARKET_NEWS_PROVIDER` | `gdelt` (default, free, no key) or `none` |
 | `REALMARKET_FIXTURE_DIR` | Directory for the `fixture` provider |
 
 Without a CPI source, every tool except `compare_real_return` works; that one explains what to set.

@@ -12,6 +12,8 @@ Every provider module must have an entry here before it is merged (see the
 | Yahoo Finance (via the community `yfinance` library) | `providers/yahoo.py` | daily prices, FX, gold futures | `REALMARKET_PRICE_PROVIDER=yahoo` + `[yahoo]` extra | no | Yahoo terms of service; restrict automated use | not affiliated with or endorsed by Yahoo |
 | FRED (Federal Reserve Bank of St. Louis) | `providers/cpi.py` | US CPI `CPIAUCNS` (source: BLS) | `REALMARKET_FRED_API_KEY` | yes, free | FRED API terms of use | see notice below |
 | TCMB EVDS (Central Bank of the Republic of Türkiye) | `providers/cpi.py` | Turkish CPI `TP.GENENDEKS.T1` (2003=100) (source: TÜİK) | `REALMARKET_EVDS_API_KEY` | yes, free | EVDS terms of use | cite TCMB EVDS / TÜİK |
+| GDELT Project | `providers/gdelt.py` | news article listings (title, link, publisher, date) | default; `REALMARKET_NEWS_PROVIDER=none` disables | no | GDELT terms (open data; citation requested) | cite "The GDELT Project" |
+| KAP (Public Disclosure Platform) | *planned* | company disclosures and financial statements | will be opt-in | — | kap.org.tr terms: **not yet reviewed** | — |
 | User CSV | `inflation.py` | any monthly CPI series | `REALMARKET_CPI_CSV_<REGION>` | — | the user's own source | — |
 | Fixture | `providers/fixture.py` | synthetic test data | `REALMARKET_PRICE_PROVIDER=fixture` | — | — | — |
 
@@ -42,5 +44,10 @@ the providers' current terms pages.
       year and +1.84% month on month, matches TÜİK's release (31.51% and 1.84%; the 0.01-point
       gap is rounding of the chained 2003=100 levels). Regression test:
       `tests/test_inflation.py::test_evds_uses_the_live_series_not_the_archived_one`.
+- [ ] GDELT: verify the DOC 2.0 API JSON shape and plain-text error messages against the live
+      API (`providers/gdelt.py` was written from the documentation), and the citation wording.
+- [ ] KAP: read kap.org.tr's terms of use and robots.txt **before any KAP code is written**; KAP
+      data is otherwise distributed through a licensed data-publishing service. Stop if the terms
+      forbid automated access.
 - [ ] Run `pip-licenses` on a clean `.[yahoo]` install (`frozendict`, pulled in by `yfinance`,
       is LGPL-3.0; acceptable as an optional, separately installed dependency).

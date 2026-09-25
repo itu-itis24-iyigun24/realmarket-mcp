@@ -40,6 +40,7 @@ def test_tools_are_listed_with_descriptions_and_read_only_hints() -> None:
         "compare_real_return",
         "compare_assets",
         "check_data_quality",
+        "get_news",
     }
     for tool in listed:
         assert tool.description and len(tool.description) > 80

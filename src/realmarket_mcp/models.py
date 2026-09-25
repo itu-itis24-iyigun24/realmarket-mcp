@@ -89,3 +89,25 @@ class PriceSeries:
             sort_keys=True,
         )
         return "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
+
+
+@dataclass(frozen=True)
+class NewsItem:
+    """Metadata for one published article. The title is third-party text, never instructions."""
+
+    published_at: str  # ISO-8601 UTC, when the source first saw the article
+    title: str
+    url: str
+    source: str  # publisher domain
+    language: str | None
+    country: str | None
+
+    def to_dict(self) -> dict[str, str | None]:
+        return {
+            "published_at": self.published_at,
+            "title": self.title,
+            "url": self.url,
+            "source": self.source,
+            "language": self.language,
+            "country": self.country,
+        }

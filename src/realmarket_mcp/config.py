@@ -10,10 +10,11 @@ from pathlib import Path
 from realmarket_mcp import inflation
 from realmarket_mcp.contract import ErrorCode, ToolError
 from realmarket_mcp.providers import cpi
-from realmarket_mcp.providers.base import PriceProvider
+from realmarket_mcp.providers.base import NewsProvider, PriceProvider
 
 PROVIDER_ENV = "REALMARKET_PRICE_PROVIDER"
 FIXTURE_DIR_ENV = "REALMARKET_FIXTURE_DIR"
+NEWS_PROVIDER_ENV = "REALMARKET_NEWS_PROVIDER"
 
 
 def load_price_provider(*, retrieved_at: str) -> PriceProvider:
@@ -77,4 +78,19 @@ def load_cpi(
         f"Use one of {', '.join(SUPPORTED_REGIONS)}, or set REALMARKET_CPI_CSV_{region} to a "
         "monthly CPI CSV file (columns: month,cpi_index).",
         {"region": region},
+    )
+
+
+def load_news_provider() -> NewsProvider:
+    """GDELT is free and keyless, so it is the default; set the variable to 'none' to disable."""
+    choice = os.environ.get(NEWS_PROVIDER_ENV, "gdelt").strip().lower()
+    if choice == "gdelt":
+        from realmarket_mcp.providers.gdelt import GdeltNewsProvider
+
+        return GdeltNewsProvider()
+    raise ToolError(
+        ErrorCode.UNSUPPORTED,
+        "News search is disabled." if choice == "none" else f"Unknown news provider {choice!r}.",
+        f"Set {NEWS_PROVIDER_ENV}=gdelt in the MCP server's environment to enable news search.",
+        {"provider": choice},
     )
