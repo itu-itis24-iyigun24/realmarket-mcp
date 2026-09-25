@@ -4,10 +4,9 @@ An open-source [Model Context Protocol](https://modelcontextprotocol.io) server 
 Claude and other LLMs research markets from **verified, sourced numbers**.
 
 > **Status: alpha (MVP).** Price, real-return, data-quality and US financial-statement tools are
-> verified against the live Yahoo, SEC EDGAR, FRED and TCMB EVDS APIs. News search (GDELT) is
-> new and not yet live-verified;
-> KAP company disclosures are not included (KAP's terms require
-> MKK's written permission); use it alongside [kapmcp](#using-it-with-kapmcp-kap-disclosures-and-financial-statements) for those.
+> verified against the live Yahoo, SEC EDGAR, OECD, FRED, TCMB EVDS and GDELT services. KAP
+> company disclosures are not included (KAP's terms require MKK's written permission); use it
+> alongside [kapmcp](#using-it-with-kapmcp-kap-disclosures-and-financial-statements) for those.
 
 ## Why
 

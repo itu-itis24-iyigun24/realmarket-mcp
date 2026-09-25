@@ -25,19 +25,22 @@ Reserve Bank of St. Louis.*
 
 ## Checked before the first public release
 
-`[x]` checked; `[~]` checked, with a decision still open. Each item says how it was checked:
+`[x]` checked. Each item says how it was checked:
 read directly, or — where the build environment's network blocks the site — through web
 search of the provider's own pages, which is weaker evidence and should be re-read from a
 normal connection.
 
-- [~] Yahoo — **decision needed.** legal.yahoo.com is not reachable from the build environment;
-      the clause was read through web-search results of Yahoo's own Terms of Service pages
-      (2026-09-25): users may not "access or collect data, or attempt to access or collect data,
-      from our Services using any automated means, devices, programs, algorithms or
-      methodologies, including but not limited to robots, spiders, scrapers, data mining tools,
-      or data gathering or extraction tools, for any purpose without our express, prior
-      permission". There is no personal-use exception. The provider stays opt-in, the README now
-      states this plainly, and whether to keep shipping it is recorded as an open decision.
+- [x] Yahoo — **decision recorded 2026-09-25: keep, opt-in.** legal.yahoo.com is not reachable
+      from the build environment; the clause was read through web-search results of Yahoo's own
+      Terms of Service pages: users may not "access or collect data, or attempt to access or
+      collect data, from our Services using any automated means, devices, programs, algorithms
+      or methodologies, including but not limited to robots, spiders, scrapers, data mining
+      tools, or data gathering or extraction tools, for any purpose without our express, prior
+      permission". There is no personal-use exception. The maintainer chose to keep the provider
+      because Borsa Istanbul prices and Turkish company statements have no free official
+      alternative: it stays off unless the user selects it, the README states the prohibition
+      plainly, and the user takes responsibility for their use. Revisit if a licensed source
+      becomes available or Yahoo objects.
 - [x] FRED API terms read on 2026-09-25 (`fred.stlouisfed.org/docs/api/terms_of_use.html`).
       Required: the notice "This product uses the FRED® API but is not endorsed or certified by
       the Federal Reserve Bank of St. Louis." placed prominently (README, extension description,
