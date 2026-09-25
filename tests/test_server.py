@@ -45,6 +45,7 @@ def test_tools_are_listed_with_descriptions_and_read_only_hints() -> None:
         "get_event_reaction",
         "portfolio_real_return",
         "get_financials",
+        "check_setup",
     }
     for tool in listed:
         assert tool.description and len(tool.description) > 80
@@ -133,3 +134,40 @@ def test_settings_a_host_left_empty_or_unsubstituted_are_dropped() -> None:
         "REALMARKET_SEC_CONTACT",
     ]
     assert env == {"REALMARKET_FRED_API_KEY": "abc", "PATH": ""}
+
+
+def test_yahoo_checkbox_enables_prices_and_explicit_provider_wins() -> None:
+    assert config.price_provider_choice({}) == "fixture"
+    assert config.price_provider_choice({config.USE_YAHOO_ENV: "false"}) == "fixture"
+    for ticked in ("true", "True", "1", "yes", " on "):
+        assert config.price_provider_choice({config.USE_YAHOO_ENV: ticked}) == "yahoo"
+    both = {config.USE_YAHOO_ENV: "true", PROVIDER_ENV: "fixture"}
+    assert config.price_provider_choice(both) == "fixture"  # the explicit variable wins
+
+
+def test_check_setup_reports_presence_never_values() -> None:
+    secret, email = "evds-secret-123", "me@example.org"
+    env = {config.USE_YAHOO_ENV: "true", "REALMARKET_SEC_CONTACT": email,
+           "REALMARKET_EVDS_API_KEY": secret}  # fmt: skip
+    setup = config.describe_setup(env)
+    text = json.dumps(setup)
+    assert secret not in text and email not in text
+    assert setup["price_data"] == {"provider": "yahoo", "enabled": True}
+    assert setup["financial_statements"]["us_companies"] == "sec_edgar"
+    assert setup["inflation"]["TR"] == "evds" and setup["missing"] == []
+
+    bare = config.describe_setup({})
+    assert bare["price_data"]["enabled"] is False
+    assert bare["financial_statements"] == {
+        "us_companies": "unavailable", "other_markets": "unavailable", "sec_contact_set": False
+    }  # fmt: skip
+    assert len(bare["missing"]) == 3 and "Use Yahoo Finance" in bare["missing"][0]
+
+
+def test_check_setup_tool_over_the_protocol(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(config.USE_YAHOO_ENV, "true")
+    monkeypatch.delenv(PROVIDER_ENV, raising=False)
+    payload, is_error = _call("check_setup", {})
+    assert not is_error
+    assert payload["data"]["price_data"]["provider"] == "yahoo"
+    assert payload["provenance"][0]["dataset"] == "server_configuration"

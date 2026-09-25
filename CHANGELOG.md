@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.1 — 2026-09-25
+
+Fixes from the first hands-on test in Claude Desktop.
+
+- **Yahoo is now a checkbox.** The "Price data provider" text field is replaced by **Use Yahoo
+  Finance (unofficial)**, off by default. After upgrading, tick it again in the settings.
+  Plain MCP configurations can keep `REALMARKET_PRICE_PROVIDER=yahoo`; the new
+  `REALMARKET_USE_YAHOO=true` is what the checkbox sets.
+- **New `check_setup` tool.** Reports which sources the server will use (prices, SEC
+  statements, inflation per region, news) and which settings are missing, as present or absent
+  — never their values. Claude is told to use it when a source is not configured.
+- **Padded holiday bars are informational.** `placeholder_bars` (zero-volume flat bars) no
+  longer counts as a warning; they do not change any figure.
+- **Clearer setup instructions:** installing the Desktop extension from Settings → Extensions →
+  Advanced settings, and a troubleshooting section — above all, quit the app completely and
+  reopen it after changing a setting.
+
 ## 0.1.0 — 2026-09-25
 
 First public release (alpha). Market research tools for Claude and other MCP clients that

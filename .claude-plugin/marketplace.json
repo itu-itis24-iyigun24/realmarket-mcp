@@ -10,7 +10,7 @@
       "name": "realmarket",
       "source": "./",
       "description": "Real returns vs inflation, USD and gold; data-quality checks; company financials; news. Not investment advice.",
-      "version": "0.1.0"
+      "version": "0.1.1"
     }
   ]
 }

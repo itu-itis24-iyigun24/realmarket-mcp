@@ -23,7 +23,7 @@ from typing import Any
 import anyio
 
 from realmarket_mcp import __version__
-from realmarket_mcp.config import PROVIDER_ENV
+from realmarket_mcp.config import USE_YAHOO_ENV
 from realmarket_mcp.providers import cpi, sec
 from realmarket_mcp.server import build_server
 
@@ -33,12 +33,14 @@ REPO_URL = "https://github.com/itu-itis24-iyigun24/realmarket-mcp"
 INCLUDE = ("pyproject.toml", "README.md", "LICENSE", "src/realmarket_mcp")
 
 USER_CONFIG: dict[str, dict[str, Any]] = {
-    "price_provider": {
-        "type": "string",
-        "title": "Price data provider",
-        "description": "Type yahoo to use Yahoo Finance for prices (unofficial; for personal "
-        "research; you are responsible for Yahoo's terms). Leave empty to keep price tools off.",
+    "use_yahoo": {
+        "type": "boolean",
+        "title": "Use Yahoo Finance (unofficial)",
+        "description": "Prices, FX, gold and non-US company statements from Yahoo Finance. "
+        "Yahoo's terms prohibit automated access without its permission; you take "
+        "responsibility for your use. Off by default. Restart the app after changing it.",
         "required": False,
+        "default": False,
     },
     "sec_contact": {
         "type": "string",
@@ -75,7 +77,7 @@ PRIVACY_POLICIES = [
     "https://www.oecd.org/en/about/privacy.html",
 ]
 ENV = {
-    PROVIDER_ENV: "${user_config.price_provider}",
+    USE_YAHOO_ENV: "${user_config.use_yahoo}",
     sec.CONTACT_ENV: "${user_config.sec_contact}",
     cpi.EVDS_KEY_ENV: "${user_config.evds_api_key}",
     cpi.FRED_KEY_ENV: "${user_config.fred_api_key}",

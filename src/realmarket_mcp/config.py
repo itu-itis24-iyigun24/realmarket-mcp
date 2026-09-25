@@ -18,6 +18,76 @@ from realmarket_mcp.providers.base import FinancialsProvider, NewsProvider, Pric
 PROVIDER_ENV = "REALMARKET_PRICE_PROVIDER"
 FIXTURE_DIR_ENV = "REALMARKET_FIXTURE_DIR"
 NEWS_PROVIDER_ENV = "REALMARKET_NEWS_PROVIDER"
+# The plugin and extension checkbox; REALMARKET_PRICE_PROVIDER, when set, takes precedence.
+USE_YAHOO_ENV = "REALMARKET_USE_YAHOO"
+TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+
+
+def price_provider_choice(env: Mapping[str, str] | None = None) -> str:
+    env = os.environ if env is None else env
+    explicit = env.get(PROVIDER_ENV, "").strip().lower()
+    if explicit:
+        return explicit
+    return "yahoo" if env.get(USE_YAHOO_ENV, "").strip().lower() in TRUE_VALUES else "fixture"
+
+
+# Names of settings the host passed empty or unsubstituted, removed at startup (for check_setup).
+dropped_at_startup: list[str] = []
+
+
+def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
+    """What the server will use, from its environment. Reports whether each setting is present,
+    never its value, so the result is safe to show and paste."""
+    env = os.environ if env is None else env
+    price = price_provider_choice(env)
+    yahoo = price == "yahoo"
+    contact = sec.contact_from(env) is not None
+    evds = bool(env.get(cpi.EVDS_KEY_ENV, "").strip())
+    fred = bool(env.get(cpi.FRED_KEY_ENV, "").strip())
+    csv_regions = sorted(
+        name.removeprefix("REALMARKET_CPI_CSV_")
+        for name, value in env.items()
+        if name.startswith("REALMARKET_CPI_CSV_") and value.strip()
+    )
+    news = env.get(NEWS_PROVIDER_ENV, "gdelt").strip().lower() or "gdelt"
+    missing: list[str] = []
+    if not yahoo:
+        missing.append(
+            "Prices are off: tick 'Use Yahoo Finance' in the plugin or extension settings "
+            f"(or set {PROVIDER_ENV}=yahoo), then restart the app."
+        )
+    if not contact:
+        missing.append(
+            "US financial statements from the SEC are off: fill in 'E-mail for SEC EDGAR' "
+            f"({sec.CONTACT_ENV}), then restart the app."
+        )
+    if not evds and "TR" not in csv_regions:
+        missing.append(
+            "Turkish inflation comes from the OECD and ends months behind; add a TCMB EVDS key "
+            f"({cpi.EVDS_KEY_ENV}) for current data."
+        )
+    return {
+        "price_data": {
+            "provider": price,
+            "enabled": yahoo or (price == "fixture" and bool(env.get(FIXTURE_DIR_ENV, "").strip())),
+        },
+        "financial_statements": {
+            "us_companies": "sec_edgar" if contact else ("yahoo" if yahoo else "unavailable"),
+            "other_markets": "yahoo" if yahoo else "unavailable",
+            "sec_contact_set": contact,
+        },
+        "inflation": {
+            "TR": "csv" if "TR" in csv_regions else ("evds" if evds else "oecd"),
+            "US": "csv" if "US" in csv_regions else ("fred" if fred else "oecd"),
+            "other_oecd_members": "oecd",
+            "evds_key_set": evds,
+            "fred_key_set": fred,
+            "csv_regions": csv_regions,
+        },
+        "news": news,
+        "settings_ignored_at_startup": list(dropped_at_startup),
+        "missing": missing,
+    }
 
 
 def drop_unset_values(env: MutableMapping[str, str]) -> list[str]:
@@ -39,7 +109,7 @@ def drop_unset_values(env: MutableMapping[str, str]) -> list[str]:
 
 def load_price_provider(*, retrieved_at: str) -> PriceProvider:
     """Build the configured price provider. Called per request so config errors reach the model."""
-    choice = os.environ.get(PROVIDER_ENV, "fixture").strip().lower()
+    choice = price_provider_choice()
     if choice == "fixture":
         root = os.environ.get(FIXTURE_DIR_ENV)
         if not root or not Path(root, "assets.json").exists():
@@ -47,8 +117,9 @@ def load_price_provider(*, retrieved_at: str) -> PriceProvider:
                 ErrorCode.MISSING_API_KEY,
                 "No price data source is configured.",
                 "Ask the user to enable a price provider: in the realmarket plugin or extension "
-                "settings, set 'Price data provider' to yahoo; in a plain MCP configuration, set "
-                f"{PROVIDER_ENV}=yahoo (or {FIXTURE_DIR_ENV} for offline test data).",
+                "settings, tick 'Use Yahoo Finance' and restart the app; in a plain MCP "
+                f"configuration, set {PROVIDER_ENV}=yahoo (or {FIXTURE_DIR_ENV} for offline "
+                "test data).",
                 {"provider": choice},
             )
         from realmarket_mcp.providers.fixture import FixtureProvider
@@ -223,8 +294,8 @@ def _price_financials(retrieved_at: str, *, us_symbol: bool = False) -> Financia
                 error.code,
                 "No source for financial statements is configured.",
                 "Ask the user to fill in a setting: for US companies 'E-mail for SEC EDGAR' "
-                f"({sec.CONTACT_ENV}; official and free), for other markets 'Price data "
-                f"provider' = yahoo ({PROVIDER_ENV}).",
+                f"({sec.CONTACT_ENV}; official and free), for other markets tick 'Use Yahoo "
+                f"Finance' ({USE_YAHOO_ENV}); then restart the app.",
             ) from None
         raise
     if not hasattr(provider, "financials"):

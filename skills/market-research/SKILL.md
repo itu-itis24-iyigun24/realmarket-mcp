@@ -24,7 +24,8 @@ Every figure in the answer must come from a realmarket tool result, never from m
    - "How did the stock react to X?" → `get_event_reaction` with the announcement date
    - "What was in the news?" → `get_news`
 4. **When a tool returns an error,** read its `hint` and act on it (fix the argument, or tell
-   the user which setting is missing). Do not substitute numbers from memory.
+   the user which setting is missing). If a source is not configured, run `check_setup` and
+   relay its `missing` list. Do not substitute numbers from memory.
 
 ## Reporting rules
 

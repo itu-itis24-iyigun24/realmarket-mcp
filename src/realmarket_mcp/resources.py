@@ -43,7 +43,9 @@ All ratios are fractions: 0.12 means 12%.
 - Neither is adjusted for US inflation.
 
 ## Data-quality flags
-- `missing_close`, `placeholder_bars` (zero-volume flat bars, usually padded holidays),
+- `placeholder_bars` is informational (zero-volume flat bars, usually padded holidays; they do
+  not change returns).
+- `missing_close`,
   `gap` (no usable bar for over 10 calendar days), `suspicious_move` (one-session move beyond
   about -39% or +65%, often an unadjusted split or redenomination; severity critical),
   `stale` (latest bar over 7 days before the requested end).

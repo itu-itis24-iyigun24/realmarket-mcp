@@ -58,7 +58,7 @@ command) to fill in the settings. All are optional:
 
 | Setting | What it does |
 |---|---|
-| `price_provider` | Type `yahoo` to enable prices from Yahoo Finance (unofficial; see below). Empty keeps price tools off. |
+| `use_yahoo` | Tick to enable prices, FX, gold and non-US statements from Yahoo Finance (unofficial; see below). Off by default. |
 | `sec_contact` | Your e-mail, for official SEC financial statements of US companies |
 | `evds_api_key` | Most current Turkish CPI (TCMB EVDS); stored masked |
 | `fred_api_key` | US CPI through the FRED API; stored masked, not needed |
@@ -68,16 +68,34 @@ report their sources.
 
 ### As a Claude Desktop extension (.mcpb)
 
-Open the `realmarket-<version>.mcpb` file with Claude Desktop (double-click, or Settings →
-Extensions → Install extension) and fill in the same settings as above. Claude Desktop installs
-the Python dependencies itself with uv, pinned by the bundle's `uv.lock`; no Python setup is
-needed. To build the file from source:
+1. Download `realmarket-<version>.mcpb` from the
+   [latest release](https://github.com/itu-itis24-iyigun24/realmarket-mcp/releases/latest).
+2. In Claude Desktop open **Settings → Extensions → Advanced settings → Install Extension…** and
+   choose the downloaded file.
+3. Fill in the same settings as above (tick **Use Yahoo Finance** for prices), then quit Claude
+   Desktop completely — from the system tray / menu bar, not just the window — and reopen it.
+
+Claude Desktop installs the Python dependencies itself with uv, pinned by the bundle's
+`uv.lock`; no Python setup is needed. To build the file from source:
 
 ```bash
 python scripts/build_mcpb.py
 npx -y @anthropic-ai/mcpb validate build/mcpb/manifest.json
-npx -y @anthropic-ai/mcpb pack build/mcpb dist/realmarket-0.1.0.mcpb
+npx -y @anthropic-ai/mcpb pack build/mcpb dist/realmarket-<version>.mcpb
 ```
+
+### Troubleshooting
+
+- **Ask Claude to run `check_setup`.** It lists which sources the server will use and which
+  settings are missing, without showing any values.
+- **"No price data source is configured" after changing a setting:** settings reach the server
+  only when it starts. Quit the app completely (system tray on Windows, menu bar on macOS) and
+  reopen it, then start a new chat.
+- **Turkish real returns stop at an earlier month:** without a TCMB EVDS key, Turkish inflation
+  comes from the OECD, which lags TÜİK's releases. Add the key in the settings.
+- **Still failing:** the server log is in `%APPDATA%\Claude\logs` (Windows) or
+  `~/Library/Logs/Claude` (macOS), in a file whose name contains `realmarket`. Remove any API
+  key or e-mail from it before sharing it in an issue.
 
 ### As a plain MCP server (any MCP client)
 
@@ -113,6 +131,7 @@ For Claude Code: `claude mcp add realmarket -e REALMARKET_PRICE_PROVIDER=yahoo -
 | Variable | Purpose |
 |---|---|
 | `REALMARKET_PRICE_PROVIDER` | `yahoo`, or `fixture` for offline test data |
+| `REALMARKET_USE_YAHOO` | `true` enables Yahoo when `REALMARKET_PRICE_PROVIDER` is not set (the plugin and extension checkbox) |
 | `REALMARKET_SEC_CONTACT` | *Optional.* Your e-mail address, which the SEC requires in every automated request. With it, US companies' financial statements come from their official SEC filings (no key or sign-up) |
 | `REALMARKET_FINANCIALS_PROVIDER` | `auto` (default: SEC for US tickers when the contact is set, else the price provider), `sec` or `price` |
 | `REALMARKET_EVDS_API_KEY` | *Optional.* Turkish CPI from TCMB EVDS, the most current source (free key at evds3.tcmb.gov.tr) |

@@ -59,6 +59,8 @@ def test_price_summary_surfaces_quality_problems(provider: FixtureProvider) -> N
     )
     codes = {flag.code for flag in result.quality_flags}
     assert codes == {"placeholder_bars", "missing_close", "gap", "suspicious_move"}
+    severity = {flag.code: flag.severity.value for flag in result.quality_flags}
+    assert severity["placeholder_bars"] == "info"  # padded holidays do not change returns
 
 
 def test_unknown_symbol_points_to_search(provider: FixtureProvider) -> None:

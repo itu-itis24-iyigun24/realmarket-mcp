@@ -25,7 +25,7 @@ def test_versions_match_the_package() -> None:
 def test_server_env_uses_known_variables_and_declared_settings() -> None:
     plugin = _load("plugin.json")
     server = plugin["mcpServers"]["realmarket"]
-    known = {config.PROVIDER_ENV, sec.CONTACT_ENV, cpi.EVDS_KEY_ENV, cpi.FRED_KEY_ENV}
+    known = {config.USE_YAHOO_ENV, sec.CONTACT_ENV, cpi.EVDS_KEY_ENV, cpi.FRED_KEY_ENV}
     assert set(server["env"]) <= known
     referenced = {m for v in server["env"].values() for m in re.findall(r"user_config\.(\w+)", v)}
     assert referenced == set(plugin["userConfig"])
@@ -34,7 +34,8 @@ def test_server_env_uses_known_variables_and_declared_settings() -> None:
 def test_api_keys_are_masked_and_yahoo_is_opt_in() -> None:
     settings = _load("plugin.json")["userConfig"]
     assert settings["evds_api_key"]["sensitive"] and settings["fred_api_key"]["sensitive"]
-    assert "default" not in settings["price_provider"]  # Yahoo only when the user types it
+    assert settings["use_yahoo"]["type"] == "boolean"
+    assert settings["use_yahoo"].get("default", False) is False  # Yahoo only when ticked
 
 
 def test_server_runs_from_the_installed_plugin() -> None:
@@ -76,5 +77,6 @@ def test_desktop_and_plugin_settings_agree() -> None:
     assert set(desktop) == set(plugin)
     for key, spec in plugin.items():
         assert desktop[key]["title"] == spec["title"]
-        assert desktop[key].get("sensitive", False) == spec["sensitive"]
-        assert "default" not in desktop[key]  # Yahoo stays opt-in here too
+        assert desktop[key].get("sensitive", False) == spec.get("sensitive", False)
+        assert desktop[key].get("default") == spec.get("default")
+    assert desktop["use_yahoo"]["default"] is False  # Yahoo stays opt-in here too

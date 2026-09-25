@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "realmarket-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "An MCP server that lets LLMs research markets with verified data, data-quality checks and inflation-adjusted (real) returns."
 readme = "README.md"
 license = "Apache-2.0"

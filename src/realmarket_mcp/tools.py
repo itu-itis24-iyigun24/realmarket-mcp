@@ -13,7 +13,7 @@ import math
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
-from realmarket_mcp import analytics, quality
+from realmarket_mcp import __version__, analytics, quality
 from realmarket_mcp.config import default_region
 from realmarket_mcp.contract import (
     ErrorCode,
@@ -1231,5 +1231,30 @@ def get_financials(
             "comparisons are used as reported; a previous quarter is restated with CPI "
             "(period-end months). Elsewhere real = now / (before x CPI ratio) - 1.",
             "Growth is null when the earlier figure is zero or a loss.",
+        ),
+    )
+
+
+def check_setup(setup: dict[str, Any], *, retrieved_at: str, today: dt.date) -> ToolResult:
+    """Report which data sources the server will use. Reads only its own configuration."""
+    text = json.dumps(setup, sort_keys=True, separators=(",", ":"))
+    return ToolResult(
+        tool="check_setup",
+        data={"version": __version__, **setup},
+        provenance=(
+            Provenance(
+                provider="realmarket-mcp",
+                dataset="server_configuration",
+                symbols=(),
+                period_start=today.isoformat(),
+                period_end=today.isoformat(),
+                retrieved_at=retrieved_at,
+                data_version="sha256:" + hashlib.sha256(text.encode()).hexdigest(),
+                adjustment="none",
+            ),
+        ),
+        notes=(
+            "Settings are reported as present or absent; values are never shown. After changing "
+            "a setting, quit the app completely (including from the system tray) and reopen it.",
         ),
     )

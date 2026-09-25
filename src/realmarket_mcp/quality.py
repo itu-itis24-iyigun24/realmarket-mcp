@@ -44,9 +44,9 @@ def check_series(series: PriceSeries, *, requested_end: dt.date | None = None) -
         flags.append(
             QualityFlag(
                 "placeholder_bars",
-                Severity.WARNING,
+                Severity.INFO,  # padded holidays repeat a price; they do not change returns
                 f"{series.symbol}: {len(placeholder)} zero-volume flat bar(s), "
-                "typically holidays padded by the provider",
+                "typically holidays padded by the provider; they do not affect the figures",
                 tuple(placeholder[:20]),
             )
         )
