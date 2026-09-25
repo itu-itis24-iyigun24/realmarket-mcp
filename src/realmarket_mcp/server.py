@@ -11,7 +11,7 @@ from typing import Annotated, Literal
 
 from mcp.server.mcpserver import MCPServer
 from mcp_types import CallToolResult, TextContent, ToolAnnotations
-from pydantic import Field
+from pydantic import BaseModel, Field
 
 from realmarket_mcp import __version__, tools
 from realmarket_mcp.config import load_cpi, load_news_provider, load_price_provider
@@ -38,6 +38,12 @@ PeriodArg = Annotated[
 ]
 StartArg = Annotated[str | None, Field(description="Optional ISO start date, e.g. '2023-01-01'.")]
 EndArg = Annotated[str | None, Field(description="Optional ISO end date; defaults to today.")]
+
+
+class Purchase(BaseModel):
+    symbol: str = Field(description="A symbol returned by search_assets.")
+    date: str = Field(description="ISO purchase date, e.g. '2023-03-01'.")
+    amount: float = Field(gt=0, description="Amount paid, in the report currency.")
 
 
 def _utc_now() -> dt.datetime:
@@ -238,6 +244,47 @@ def build_server() -> MCPServer:
                 benchmark,
                 windows,
                 today=today,
+            )
+        )
+
+    @server.tool(annotations=READ_ONLY)
+    def portfolio_real_return(
+        purchases: Annotated[
+            list[Purchase], Field(min_length=1, max_length=50, description="Dated purchases.")
+        ],
+        currency: Annotated[
+            str | None,
+            Field(description="Report currency (ISO code); defaults to the first asset's."),
+        ] = None,
+        inflation_region: Annotated[
+            str | None, Field(description="CPI region; defaults from the report currency.")
+        ] = None,
+        compare_with: Annotated[
+            list[str],
+            Field(
+                max_length=5,
+                description="Alternatives to replay the same payments into: 'USD', 'GOLD' or "
+                "any symbol such as 'XU100.IS'.",
+            ),
+        ] = ["USD", "GOLD"],  # noqa: B006 - pydantic copies defaults
+    ) -> CallToolResult:
+        """Evaluate a set of dated purchases as of today: total paid, current value, return,
+        annualized money-weighted return, and the real return after restating every payment
+        in today's purchasing power. Also shows where the same payments would stand had they
+        gone into US dollars, gold or an index. Use it for "did my savings keep up with
+        inflation" questions. Purchases only; sales and cash dividends are not modelled.
+        Ratios are fractions (0.12 means 12%)."""
+        now = _utc_now()
+        stamp = _stamp(now)
+        return respond(
+            lambda: tools.portfolio_real_return(
+                load_price_provider(retrieved_at=stamp),
+                lambda region, first, last: load_cpi(region, first, last, retrieved_at=stamp),
+                [p.model_dump() for p in purchases],
+                currency,
+                inflation_region,
+                compare_with,
+                today=now.date(),
             )
         )
 

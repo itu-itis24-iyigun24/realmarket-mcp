@@ -9,7 +9,7 @@ import datetime as dt
 import hashlib
 import json
 import math
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from realmarket_mcp import analytics, quality
@@ -720,5 +720,265 @@ def get_event_reaction(
             "(1 + return) / (1 + benchmark_return) - 1.",
             "A price move after an event is not proof the event caused it; other news, the "
             "whole market and chance all move prices.",
+        ),
+    )
+
+
+MAX_LOTS = 50
+
+
+def xirr(flows: Sequence[tuple[dt.date, float]]) -> float | None:
+    """Annual money-weighted return solving sum(cf / (1 + r) ** years) = 0, by bisection."""
+    if not flows or not any(cf < 0 for _, cf in flows) or not any(cf > 0 for _, cf in flows):
+        return None
+    origin = min(d for d, _ in flows)
+
+    def npv(rate: float) -> float:
+        return math.fsum(
+            cf / (1.0 + rate) ** ((d - origin).days / analytics.DAYS_PER_YEAR) for d, cf in flows
+        )
+
+    low, high = -0.9999, 100.0
+    if npv(low) * npv(high) > 0:
+        return None
+    for _ in range(200):
+        mid = (low + high) / 2
+        if npv(low) * npv(mid) <= 0:
+            high = mid
+        else:
+            low = mid
+    return (low + high) / 2
+
+
+class _Prices:
+    """Loads each symbol once and answers as-of close lookups, recording provenance."""
+
+    def __init__(self, provider: PriceProvider, start: dt.date, end: dt.date) -> None:
+        self._provider, self._start, self._end = provider, start, end
+        self._cache: dict[str, tuple[PriceSeries, list[Bar]]] = {}
+        self.provenance: list[Provenance] = []
+        self.flags: list[QualityFlag] = []
+
+    def series(self, symbol: str) -> tuple[PriceSeries, list[Bar]]:
+        if symbol not in self._cache:
+            series = self._provider.daily_bars(symbol, self._start, self._end)
+            usable = _usable(series)
+            if not usable:
+                raise ToolError(
+                    ErrorCode.NO_DATA_IN_RANGE,
+                    f"No prices for {symbol} between {self._start} and {self._end}.",
+                    "Check the symbol with search_assets and the purchase dates.",
+                    {"symbol": symbol},
+                )
+            self._cache[symbol] = (series, usable)
+            self.provenance.append(_provenance(series, usable[0].date, usable[-1].date))
+            self.flags.extend(
+                f for f in quality.check_series(series) if f.severity is Severity.CRITICAL
+            )
+        return self._cache[symbol]
+
+    def close(self, symbol: str, day: dt.date) -> float:
+        _, usable = self.series(symbol)
+        bar = _as_of(usable, day)
+        if bar is None:
+            raise ToolError(
+                ErrorCode.NO_DATA_IN_RANGE,
+                f"No {symbol} price on or before {day}.",
+                "Use a purchase date after the asset started trading.",
+                {"symbol": symbol, "date": day.isoformat()},
+            )
+        if (day - bar.date).days > AS_OF_TOLERANCE_DAYS:
+            self.flags.append(
+                QualityFlag(
+                    "stale_price",
+                    Severity.WARNING,
+                    f"{symbol} price for {day} taken from {bar.date}.",
+                    (symbol, day.isoformat()),
+                )
+            )
+        return _close(bar)
+
+    def currency(self, symbol: str) -> str:
+        return self.series(symbol)[0].currency.upper()
+
+
+def _convert(
+    prices: _Prices, provider: PriceProvider, value: float, src: str, dst: str, day: dt.date
+) -> float:
+    """Convert between currencies through US dollar rates as of ``day``."""
+    if src == dst:
+        return value
+    usd = value if src == "USD" else value / prices.close(provider.fx_symbol("USD", src), day)
+    return usd if dst == "USD" else usd * prices.close(provider.fx_symbol("USD", dst), day)
+
+
+def portfolio_real_return(
+    provider: PriceProvider,
+    load_cpi: CpiLoader,
+    lots: Sequence[Mapping[str, Any]],
+    currency: str | None = None,
+    inflation_region: str | None = None,
+    compare_with: Sequence[str] = ("USD", "GOLD"),
+    *,
+    today: dt.date,
+) -> ToolResult:
+    if not 1 <= len(lots) <= MAX_LOTS:
+        raise ToolError(
+            ErrorCode.INVALID_ARGUMENT,
+            f"Pass between 1 and {MAX_LOTS} purchases.",
+            "Each purchase is {symbol, date, amount}; amount is what you paid, in `currency`.",
+        )
+    parsed = []
+    for i, lot in enumerate(lots):
+        day = parse_date(str(lot.get("date", "")), f"lots[{i}].date")
+        amount = float(lot.get("amount", 0))
+        if day > today or not math.isfinite(amount) or amount <= 0:
+            raise ToolError(
+                ErrorCode.INVALID_ARGUMENT,
+                f"lots[{i}] needs a past date and a positive amount.",
+                "Example: {'symbol': 'THYAO.IS', 'date': '2023-03-01', 'amount': 10000}.",
+            )
+        parsed.append((str(lot.get("symbol", "")).strip(), day, amount))
+
+    first_day = min(d for _, d, _ in parsed)
+    prices = _Prices(provider, first_day - dt.timedelta(days=AS_OF_TOLERANCE_DAYS * 2), today)
+    report = (currency or prices.currency(parsed[0][0])).upper()
+
+    rows, flows, value_total = [], [], 0.0
+    for symbol, day, amount in parsed:
+        ccy = prices.currency(symbol)
+        units = _convert(prices, provider, amount, report, ccy, day) / prices.close(symbol, day)
+        now_value = _convert(
+            prices, provider, units * prices.close(symbol, today), ccy, report, today
+        )
+        value_total += now_value
+        flows.append((day, -amount))
+        rows.append(
+            {
+                "symbol": symbol,
+                "date": day.isoformat(),
+                "amount": round(amount, 2),
+                "value_now": round(now_value, 2),
+                "return": _round(now_value / amount - 1.0),
+            }
+        )
+    invested = math.fsum(amount for _, _, amount in parsed)
+    flows.append((today, value_total))
+    flags: list[QualityFlag] = []
+
+    # Inflation: restate every payment in today's purchasing power.
+    region = (inflation_region or default_region(report) or "").upper()
+    real = invested_real = cumulative = None
+    if not region:
+        flags.append(
+            QualityFlag(
+                "inflation_unavailable",
+                Severity.INFO,
+                f"No default inflation region for {report}; pass "
+                "inflation_region to get the real return.",
+            )
+        )
+    else:
+        try:
+            cpi = load_cpi(region, first_day, today)
+            end_month = min(month_of(today), cpi.last_month)
+            factors = [cpi.factor(month_of(day), end_month) for _, day, _ in parsed]
+            if any(f is None for f in factors):
+                raise ToolError(
+                    ErrorCode.NO_DATA_IN_RANGE,
+                    "CPI does not cover every purchase.",
+                    "Use purchases inside the CPI series' coverage.",
+                )
+            invested_real = math.fsum(
+                a * f for (_, _, a), f in zip(parsed, factors, strict=True) if f is not None
+            )
+            real = value_total / invested_real - 1.0
+            cumulative_first = cpi.factor(month_of(first_day), end_month)
+            cumulative = None if cumulative_first is None else cumulative_first - 1.0
+            prices.provenance.append(_cpi_provenance(cpi, month_of(first_day), end_month))
+            if end_month < month_of(today):
+                flags.append(
+                    QualityFlag(
+                        "inflation_window_truncated",
+                        Severity.WARNING,
+                        f"{region} CPI is published through {month_str(end_month)}; "
+                        "purchasing power is restated to that month.",
+                    )
+                )
+        except ToolError as error:
+            flags.append(
+                QualityFlag(
+                    "inflation_unavailable",
+                    Severity.WARNING,
+                    f"No real return: {error.message} {error.hint}",
+                )
+            )
+
+    # The same payments, had they gone into each alternative instead.
+    alternatives = []
+    for name in dict.fromkeys(c.strip().upper() for c in compare_with if c.strip()):
+        try:
+            alt_value = 0.0
+            for _, day, amount in parsed:
+                if name == "USD":
+                    usd = _convert(prices, provider, amount, report, "USD", day)
+                    alt_value += _convert(prices, provider, usd, "USD", report, today)
+                    continue
+                symbol = provider.gold_usd_symbol if name == "GOLD" else name
+                ccy = prices.currency(symbol)
+                units = _convert(prices, provider, amount, report, ccy, day) / prices.close(
+                    symbol, day
+                )
+                alt_value += _convert(
+                    prices, provider, units * prices.close(symbol, today), ccy, report, today
+                )
+            alt_flows = [(d, cf) for d, cf in flows[:-1]] + [(today, alt_value)]
+            alternatives.append(
+                {
+                    "alternative": name,
+                    "value_now": round(alt_value, 2),
+                    "return": _round(alt_value / invested - 1.0),
+                    "annualized_money_weighted": _round(xirr(alt_flows)),
+                }
+            )
+        except ToolError as error:
+            flags.append(
+                QualityFlag(
+                    "alternative_unavailable",
+                    Severity.INFO,
+                    f"{name} comparison skipped: {error.message}",
+                    (name,),
+                )
+            )
+
+    return ToolResult(
+        tool="portfolio_real_return",
+        data={
+            "currency": report,
+            "as_of": today.isoformat(),
+            "invested": round(invested, 2),
+            "value_now": round(value_total, 2),
+            "return": _round(value_total / invested - 1.0),
+            "annualized_money_weighted": _round(xirr(flows)),
+            "inflation_region": region or None,
+            "cumulative_inflation_since_first_purchase": _round(cumulative),
+            "invested_in_todays_money": None if invested_real is None else round(invested_real, 2),
+            "real_return": _round(real),
+            "real_return_positive": None if real is None else real > 0,
+            "lots": rows,
+            "alternatives": alternatives,
+        },
+        provenance=tuple(prices.provenance),
+        quality_flags=tuple(prices.flags + flags),
+        notes=(
+            f"{RATIO_NOTE} Amounts are in {report}; foreign assets are converted at each date's "
+            "US-dollar exchange rates.",
+            "real_return compares today's value with every payment restated in today's "
+            "purchasing power: invested_in_todays_money.",
+            "annualized_money_weighted is the internal rate of return of the dated payments "
+            "(it accounts for when money went in).",
+            "alternatives show where the same payments would stand in each alternative; they "
+            "describe the past, not what to buy.",
+            "Purchases only: sales and dividends paid out in cash are not modelled.",
         ),
     )

@@ -42,6 +42,7 @@ def test_tools_are_listed_with_descriptions_and_read_only_hints() -> None:
         "check_data_quality",
         "get_news",
         "get_event_reaction",
+        "portfolio_real_return",
     }
     for tool in listed:
         assert tool.description and len(tool.description) > 80
@@ -102,3 +103,17 @@ def test_real_return_through_the_server_with_a_csv_cpi(
     )
     assert not is_error
     assert payload["data"]["real_return"] == pytest.approx(0.25)
+
+
+def test_portfolio_through_the_server(
+    fixture_env: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    cpi = tmp_path / "tr.csv"
+    cpi.write_text("month,cpi_index\n2023-01,100\n2024-01,160\n")
+    monkeypatch.setenv("REALMARKET_CPI_CSV_TR", str(cpi))
+    payload, is_error = _call(
+        "portfolio_real_return",
+        {"purchases": [{"symbol": "TTT", "date": "2023-01-02", "amount": 1000}]},
+    )
+    assert not is_error, payload
+    assert payload["data"]["invested"] == 1000.0

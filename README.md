@@ -33,6 +33,7 @@ compute these figures in code and return them with their sources:
 | `compare_real_return` | "Did it beat inflation?" — nominal vs real return, plus the same holding in US dollars and in gold |
 | `compare_assets` | "How do these compare?" — 2 to 10 assets over one common window |
 | `check_data_quality` | "Can I trust this data?" — gaps, placeholder bars, suspicious jumps, stale data |
+| `portfolio_real_return` | "Did my savings keep up with inflation?" — dated purchases valued today, money-weighted return, real return, and the same payments replayed into USD, gold or an index |
 | `get_event_reaction` | "How did the stock react to that announcement?" — 1/5/20-session return vs the index, plus pre-event drift |
 | `get_news` | "What was in the news about it?" — recent article listings with publisher, date and link |
 
