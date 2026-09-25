@@ -301,13 +301,14 @@ def build_server() -> MCPServer:
         year-on-year and annual growth, each both as reported and in constant purchasing power
         (real); up to eight quarters and four years of figures. Handles Turkish inflation
         accounting (TMS 29) and flags missing quarters, quarters that do not reconcile with the
-        annual figure, and implausible jumps. Unofficial source: verify material figures in the
-        company's official filings (KAP for Borsa Istanbul). Ratios are fractions."""
+        annual figure, and implausible jumps. US companies come from their official SEC filings
+        (when configured); other markets from an unofficial source, so verify material figures
+        in the company's own filings (KAP for Borsa Istanbul). Ratios are fractions."""
         now = _utc_now()
         stamp = _stamp(now)
         return respond(
             lambda: tools.get_financials(
-                load_financials_provider(retrieved_at=stamp),
+                load_financials_provider(symbol, retrieved_at=stamp),
                 lambda region, first, last: load_cpi(region, first, last, retrieved_at=stamp),
                 symbol,
                 today=now.date(),

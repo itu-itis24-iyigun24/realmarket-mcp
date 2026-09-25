@@ -3,8 +3,9 @@
 An open-source [Model Context Protocol](https://modelcontextprotocol.io) server that lets
 Claude and other LLMs research markets from **verified, sourced numbers**.
 
-> **Status: alpha (MVP).** Price, real-return and data-quality tools are verified against the
-> live Yahoo, FRED and TCMB EVDS APIs. News search (GDELT) is new and not yet live-verified;
+> **Status: alpha (MVP).** Price, real-return, data-quality and US financial-statement tools are
+> verified against the live Yahoo, SEC EDGAR, FRED and TCMB EVDS APIs. News search (GDELT) is
+> new and not yet live-verified;
 > KAP company disclosures are not included (KAP's terms require
 > MKK's written permission); use it alongside [kapmcp](#using-it-with-kapmcp-kap-disclosures-and-financial-statements) for those.
 
@@ -35,7 +36,7 @@ compute these figures in code and return them with their sources:
 | `check_data_quality` | "Can I trust this data?" — gaps, placeholder bars, suspicious jumps, stale data |
 | `portfolio_real_return` | "Did my savings keep up with inflation?" — dated purchases valued today, money-weighted return, real return, and the same payments replayed into USD, gold or an index |
 | `get_event_reaction` | "How did the stock react to that announcement?" — 1/5/20-session return vs the index, plus pre-event drift |
-| `get_financials` | "How did the last quarter go?" — revenue, profit, margins, leverage and growth in real terms, with Turkish inflation accounting (TMS 29) handled and data errors flagged |
+| `get_financials` | "How did the last quarter go?" — revenue, profit, margins, leverage and growth in real terms; US companies from their official SEC filings, Turkish inflation accounting (TMS 29) handled, data errors flagged |
 | `get_news` | "What was in the news about it?" — recent article listings with publisher, date and link |
 
 It also ships three report prompts (`single_asset_report`, `real_return_report`,
@@ -61,6 +62,7 @@ Claude Desktop (`claude_desktop_config.json`) or any client using the same forma
       "command": "realmarket-mcp",
       "env": {
         "REALMARKET_PRICE_PROVIDER": "yahoo",
+        "REALMARKET_SEC_CONTACT": "you@example.com",
         "REALMARKET_EVDS_API_KEY": "your-tcmb-evds-key",
         "REALMARKET_FRED_API_KEY": "your-fred-key"
       }
@@ -74,6 +76,8 @@ For Claude Code: `claude mcp add realmarket -e REALMARKET_PRICE_PROVIDER=yahoo -
 | Variable | Purpose |
 |---|---|
 | `REALMARKET_PRICE_PROVIDER` | `yahoo`, or `fixture` for offline test data |
+| `REALMARKET_SEC_CONTACT` | *Optional.* Your e-mail address, which the SEC requires in every automated request. With it, US companies' financial statements come from their official SEC filings (no key or sign-up) |
+| `REALMARKET_FINANCIALS_PROVIDER` | `auto` (default: SEC for US tickers when the contact is set, else the price provider), `sec` or `price` |
 | `REALMARKET_EVDS_API_KEY` | *Optional.* Turkish CPI from TCMB EVDS, the most current source (free key at evds3.tcmb.gov.tr) |
 | `REALMARKET_FRED_API_KEY` | *Optional.* US CPI through the FRED API (free key at fred.stlouisfed.org) |
 | `REALMARKET_CPI_CSV_<REGION>` | Your own monthly CPI file for any region (`month,cpi_index`), e.g. `REALMARKET_CPI_CSV_TR` |
@@ -95,6 +99,18 @@ unless you select it, is meant for personal research use, and you are responsibl
 complying with Yahoo's terms and for not redistributing the data. Data may be delayed or
 wrong, and the interface may break without notice. Symbols follow Yahoo's conventions:
 `THYAO.IS` (Borsa Istanbul), `XU100.IS`, `USDTRY=X`, `GC=F` (gold).
+
+### Financial statement sources
+
+| Market | Source | Official |
+|---|---|---|
+| US-listed companies (10-Q / 10-K filers) | SEC EDGAR XBRL API, with `REALMARKET_SEC_CONTACT` | yes |
+| Everything else, incl. Borsa Istanbul | Yahoo Finance (`REALMARKET_PRICE_PROVIDER=yahoo`) | no; verify in the company's filings (KAP for Borsa Istanbul) |
+
+US tickers use Yahoo's spelling (`AAPL`, `BRK-B`); a CIK such as `CIK0000320193` also works.
+Fourth-quarter income figures are derived as annual minus nine months, because companies do not
+file them separately, and the result lists which quarters were derived. SEC data is public; the
+SEC asks automated clients to stay under 10 requests per second and to identify themselves.
 
 ### CPI sources
 

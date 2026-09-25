@@ -25,6 +25,7 @@ def get(
     source: str,
     timeout: float = 30,
     not_found: ToolError | None = None,
+    forbidden: ToolError | None = None,
 ) -> bytes:
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, **headers})
     try:
@@ -40,6 +41,8 @@ def get(
             ) from None
         if exc.code == 404 and not_found is not None:
             raise not_found from None
+        if exc.code == 403 and forbidden is not None:
+            raise forbidden from None
         raise unavailable(source, f"HTTP {exc.code}") from None
     except (urllib.error.URLError, TimeoutError) as exc:
         raise unavailable(source, type(exc).__name__) from None

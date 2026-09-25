@@ -10,6 +10,7 @@ Every provider module must have an entry here before it is merged (see the
 | Provider | Module | Data | Enabled by | API key | Terms | Attribution |
 |---|---|---|---|---|---|---|
 | Yahoo Finance (via the community `yfinance` library) | `providers/yahoo.py` | daily prices, FX, gold futures, financial statements | `REALMARKET_PRICE_PROVIDER=yahoo` + `[yahoo]` extra | no | Yahoo terms of service; restrict automated use | not affiliated with or endorsed by Yahoo |
+| SEC EDGAR XBRL API | `providers/sec.py` | US company financial statements (companyfacts), ticker→CIK list, SIC industry | `REALMARKET_SEC_CONTACT` (an e-mail, not a key) | no | SEC "Accessing EDGAR Data": declared User-Agent with contact, max 10 requests/s; data is public | cite "SEC EDGAR" |
 | FRED (Federal Reserve Bank of St. Louis) | `providers/cpi.py` | US CPI `CPIAUCNS` (source: BLS) | `REALMARKET_FRED_API_KEY` | yes, free | FRED API terms of use | see notice below |
 | TCMB EVDS (Central Bank of the Republic of Türkiye) | `providers/cpi.py` | Turkish CPI `TP.GENENDEKS.T1` (2003=100) (source: TÜİK) | `REALMARKET_EVDS_API_KEY` | yes, free | EVDS terms of use | cite TCMB EVDS / TÜİK |
 | FRED public CSV | `providers/cpi.py` | US CPI `CPIAUCNS` without a key | default when no FRED key | no | FRED terms of use | FRED notice below |
@@ -67,6 +68,13 @@ the providers' current terms pages.
       month-on-month changes equal EVDS exactly (2021-09..2025-12 cumulative +515.76% in both),
       but the series ends at 2025-12 (TÜİK's 2026 rebasing is not yet carried); DE and GB run to
       2026-08; JP, CH and the euro area return 404 "NoRecordsFound" in this dataflow.
+- [x] SEC EDGAR: verified live on 2026-09-25. `data.sec.gov/api/xbrl/companyfacts/CIK##########.json`
+      and `data.sec.gov/submissions/...` answer 200 to `realmarket-mcp/<version> <e-mail>`; a
+      User-Agent **with a URL in it returns 403** ("Undeclared Automated Tool"), so the SEC agent
+      string omits the repository URL. The ticker list (`www.sec.gov/files/company_tickers.json`)
+      could not be fetched from the test environment (host not allow-listed); its parser is
+      tested offline and a CIK can be passed instead. Still to do: read the current fair-access
+      page on www.sec.gov and confirm the ticker list's shape live.
 - [ ] OECD: read the current terms and citation requirements; note the API's anonymous rate
       limits.
 - [ ] Run `pip-licenses` on a clean `.[yahoo]` install (`frozendict`, pulled in by `yfinance`,
@@ -100,3 +108,36 @@ Findings that shaped the tool:
 - Latest-quarter headline figures matched in 7 of 8 companies; one error was caught by the
   flags and one (TUPRS revenue growth) was not. The tool therefore always tells the model to
   verify material figures in the official filing.
+
+## Financial statements (SEC EDGAR): check, 2026-09-25
+
+`get_financials` via SEC EDGAR against figures the companies published (periods before this
+project's reference cutoff, so they can be checked against the press releases):
+
+| Company | Check | Tool | Published | Result |
+|---|---|---|---|---|
+| Apple | FY2025 Q4 revenue (derived: FY − 9 months) | 102.466bn | 102.466bn | match |
+| Microsoft | FY2025 revenue; FY2025 Q4 revenue (derived) | 281.724bn; 76.441bn | 281.7bn; 76.4bn | match |
+| NVIDIA | FY2025 revenue / net income; Q4 FY2025 revenue (derived) | 130.497bn / 72.880bn; 39.331bn | 130.5bn / 72.9bn; 39.3bn | match |
+| JPMorgan (bank) | 2024 net revenue; Q4 2024 net revenue | 177.556bn; 42.768bn | 177.6bn; 42.8bn | match |
+| Eli Lilly | 2024 revenue; Q4 2024 revenue (derived) | 45.043bn; 13.533bn | 45.04bn; 13.53bn | match |
+| Coca-Cola | 2024 revenue; Q4 2024 revenue (derived); 2024 total debt | 47.061bn; 11.544bn; 44.2bn | 47.1bn; 11.5bn; ~44bn | match (after the fixes below) |
+
+Findings that shaped the provider:
+
+- Banks tag their quarterly top line as `RevenuesNetOfInterestExpense` and the annual one as
+  `Revenues` (JPMorgan); both are read, per period, in a fixed order of preference.
+- An integrity review of the first version found, and these are now fixed with regression
+  tests: debt collapsing to short-term borrowings when the long-term element changed
+  (Coca-Cola moved to `LongTermDebtAndCapitalLeaseObligations` in 2024: 42.2bn fell to 1.1bn;
+  JPMorgan tags no `LongTermDebt` since 2014) — debt is now null without a long-term figure;
+  commercial paper added on top of `ShortTermBorrowings`, which already includes it; a fourth
+  quarter computed from a recast annual figure and a nine-month figure filed before the recast
+  — it now uses the first-reported pair and the notes name restated years; one element per
+  field, so quarters and years never mix `Revenues` with another total; bare numbers such as
+  `7203` are no longer treated as CIKs (only `CIK…`).
+- Some companies tag no `GrossProfit` or `OperatingIncomeLoss` (Eli Lilly); those fields stay
+  null rather than being computed from other lines.
+- Old years can mix a restated annual figure with first-reported quarters (Microsoft FY2016,
+  after its ASC 606 restatement), so the quarter-to-year reconciliation covers only the four
+  years shown.

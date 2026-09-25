@@ -110,12 +110,51 @@ def load_news_provider() -> NewsProvider:
     )
 
 
-def load_financials_provider(*, retrieved_at: str) -> FinancialsProvider:
-    provider = load_price_provider(retrieved_at=retrieved_at)
+FINANCIALS_PROVIDER_ENV = "REALMARKET_FINANCIALS_PROVIDER"
+
+
+def load_financials_provider(
+    symbol: str, *, retrieved_at: str, env: Mapping[str, str] | None = None
+) -> FinancialsProvider:
+    """``auto`` (default): SEC EDGAR for US tickers and CIKs when a contact e-mail is set (it
+    is official and needs no key), otherwise the price provider's statements. ``sec`` or
+    ``price`` force one source."""
+    from realmarket_mcp.providers import sec
+
+    env = os.environ if env is None else env
+    choice = env.get(FINANCIALS_PROVIDER_ENV, "auto").strip().lower()
+    if choice not in {"auto", "sec", "price"}:
+        raise ToolError(
+            ErrorCode.UNSUPPORTED,
+            f"Unknown financials provider {choice!r}.",
+            f"Set {FINANCIALS_PROVIDER_ENV} to one of: auto, sec, price.",
+        )
+    contact = sec.contact_from(env)
+    us_symbol = sec.looks_like_us_symbol(symbol)
+    if choice == "sec" or (choice == "auto" and us_symbol and contact):
+        if not contact:
+            raise ToolError(
+                ErrorCode.MISSING_API_KEY,
+                "SEC EDGAR needs a contact e-mail address.",
+                f"Set {sec.CONTACT_ENV} to your e-mail address in the MCP server's environment "
+                "(no key or sign-up needed).",
+            )
+        return sec.SecEdgarProvider(contact, retrieved_at=retrieved_at)
+    try:
+        provider = load_price_provider(retrieved_at=retrieved_at)
+    except ToolError as error:
+        if us_symbol and choice == "auto":
+            raise ToolError(
+                error.code,
+                "No source for financial statements is configured.",
+                f"For US companies set {sec.CONTACT_ENV} to your e-mail address (SEC EDGAR, "
+                f"official and free); for other markets set {PROVIDER_ENV}=yahoo.",
+            ) from None
+        raise
     if not hasattr(provider, "financials"):
         raise ToolError(
             ErrorCode.UNSUPPORTED,
             f"The {provider.name} provider has no financial statements.",
-            f"Set {PROVIDER_ENV}=yahoo to use financial statements.",
+            f"Set {PROVIDER_ENV}=yahoo, or {sec.CONTACT_ENV} for US companies.",
         )
     return cast(FinancialsProvider, provider)

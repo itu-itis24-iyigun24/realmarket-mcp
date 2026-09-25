@@ -989,6 +989,7 @@ FLOW_FIELDS = ("revenue", "gross_profit", "operating_income", "net_income")
 STOCK_FIELDS = ("total_assets", "total_equity", "total_debt")
 # Turkish listed companies other than banks restate under TMS 29 from 2023 year-end reports.
 TMS29_FIRST_PERIOD_END = dt.date(2023, 12, 31)
+SHOWN_YEARS = 4
 MAX_QUARTERS_SHOWN = 8
 QUARTER_SUM_TOLERANCE = 0.03
 UNUSUAL_REAL_CHANGE = (-0.40, 0.60)
@@ -1124,7 +1125,7 @@ def get_financials(
                     (prev.end.isoformat(), cur.end.isoformat()),
                 )
             )
-    for year in years:
+    for year in years[-SHOWN_YEARS:]:  # older years: later restatements make noise
         if restating and year.end >= TMS29_FIRST_PERIOD_END:
             continue  # the source mixes restated and first-reported quarters: no reliable check
         inside = [
@@ -1190,15 +1191,20 @@ def get_financials(
             "latest_quarter": latest_view,
             "growth": {"quarter_on_quarter": qoq, "year_on_year": yoy, "annual": annual},
             "quarters": [row(q) for q in quarters[-MAX_QUARTERS_SHOWN:]],
-            "years": [row(y) for y in years[-4:]],
+            "years": [row(y) for y in years[-SHOWN_YEARS:]],
         },
         provenance=tuple(provenance),
         quality_flags=tuple(flags),
         notes=(
             f"{RATIO_NOTE} Amounts are in {st.currency}, in full units, exactly as the source "
             "lists them; the reporting currency can differ from the share's trading currency.",
-            "Unofficial source. The official statements are the company's filings on KAP "
-            "(kap.org.tr); verify material figures there.",
+            *(
+                st.source_notes
+                or (
+                    "Unofficial source. The official statements are the company's own filings "
+                    "(KAP, kap.org.tr, for Borsa Istanbul); verify material figures there.",
+                )
+            ),
             "Each growth block states its real_method. For Turkish companies under TMS 29 the "
             "source carries the prior-year quarter and year as restated by the company, so those "
             "comparisons are used as reported; a previous quarter is restated with CPI "

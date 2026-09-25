@@ -142,6 +142,8 @@ class FinancialStatements:
     retrieved_at: str
     quarterly: tuple[FinancialPeriod, ...]  # ascending by end date
     annual: tuple[FinancialPeriod, ...]  # ascending by end date
+    # What the tool should tell the model about this source (official or not, derivations).
+    source_notes: tuple[str, ...] = ()
 
     @property
     def is_bank(self) -> bool:
