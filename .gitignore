@@ -1,0 +1,21 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local data caches and API keys never belong in the repository.
+.cache/
+data_cache/
+.env
+.env.*
+
+# Personal Claude Code overrides.
+.claude/settings.local.json

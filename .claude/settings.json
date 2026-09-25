@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest *)",
+      "Bash(python3 -m pytest *)",
+      "Bash(python -m ruff *)",
+      "Bash(python3 -m ruff *)",
+      "Bash(python -m mypy *)",
+      "Bash(python3 -m mypy *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/format_python.sh\" 2>/dev/null || true",
+            "timeout": 30,
+            "statusMessage": "Formatting Python with ruff"
+          }
+        ]
+      }
+    ]
+  }
+}
