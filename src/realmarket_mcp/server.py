@@ -6,6 +6,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 import logging
+import os
 from collections.abc import Callable
 from typing import Annotated, Literal
 
@@ -15,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from realmarket_mcp import __version__, tools
 from realmarket_mcp.config import (
+    drop_unset_values,
     load_cpi,
     load_financials_provider,
     load_news_provider,
@@ -414,6 +416,7 @@ Report rules:
 
 def main() -> None:
     logging.basicConfig(level=logging.WARNING)
+    drop_unset_values(os.environ)
     build_server().run()
 
 

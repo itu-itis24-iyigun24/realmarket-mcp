@@ -1,0 +1,16 @@
+{
+  "name": "realmarket",
+  "owner": {
+    "name": "realmarket-mcp contributors",
+    "url": "https://github.com/itu-itis24-iyigun24/realmarket-mcp"
+  },
+  "description": "realmarket: market research from verified, sourced numbers.",
+  "plugins": [
+    {
+      "name": "realmarket",
+      "source": "./",
+      "description": "Real returns vs inflation, USD and gold; data-quality checks; company financials; news. Not investment advice.",
+      "version": "0.1.0"
+    }
+  ]
+}

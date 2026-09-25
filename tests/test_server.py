@@ -9,6 +9,7 @@ from typing import Any
 import anyio
 import pytest
 
+from realmarket_mcp import config
 from realmarket_mcp.config import FIXTURE_DIR_ENV, PROVIDER_ENV
 from realmarket_mcp.server import build_server
 
@@ -118,3 +119,17 @@ def test_portfolio_through_the_server(
     )
     assert not is_error, payload
     assert payload["data"]["invested"] == 1000.0
+
+
+def test_settings_a_host_left_empty_or_unsubstituted_are_dropped() -> None:
+    env = {
+        "REALMARKET_SEC_CONTACT": "${user_config.sec_contact}",
+        "REALMARKET_PRICE_PROVIDER": "  ",
+        "REALMARKET_FRED_API_KEY": "abc",
+        "PATH": "",
+    }
+    assert sorted(config.drop_unset_values(env)) == [
+        "REALMARKET_PRICE_PROVIDER",
+        "REALMARKET_SEC_CONTACT",
+    ]
+    assert env == {"REALMARKET_FRED_API_KEY": "abc", "PATH": ""}

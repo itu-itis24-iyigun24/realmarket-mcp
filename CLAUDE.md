@@ -69,3 +69,15 @@ src/realmarket_mcp/
 docs/              design, tool contract, providers
 tests/             offline pytest suite
 ```
+
+## Claude plugin packaging
+
+The repository is also a Claude Code plugin marketplace: `.claude-plugin/plugin.json` (the
+plugin; it launches the server with `uvx --from ${CLAUDE_PLUGIN_ROOT}`), `.claude-plugin/
+marketplace.json`, and the user-facing skill in `skills/` (the skills under `.claude/` are for
+developing this repo and are not part of the plugin). When releasing, bump the version in
+`pyproject.toml`, `src/realmarket_mcp/__init__.py`, `plugin.json` and `marketplace.json`
+together (`tests/test_plugin.py` enforces it), then run `claude plugin validate .` and
+`claude plugin validate .claude-plugin/plugin.json`; the one expected warning is that the root
+`CLAUDE.md` is not loaded as plugin context. Plugin hosts may pass unset settings as `""` or as
+a literal `${user_config.x}`; `config.drop_unset_values` removes those at startup.

@@ -44,6 +44,31 @@ It also ships three report prompts (`single_asset_report`, `real_return_report`,
 
 ## Install
 
+### As a Claude plugin (Claude Code and Cowork)
+
+Requires [uv](https://docs.astral.sh/uv/getting-started/installation/), which runs the server
+without a separate Python setup.
+
+```bash
+claude plugin marketplace add itu-itis24-iyigun24/realmarket-mcp
+claude plugin install realmarket@realmarket
+```
+
+Then run `/plugin configure realmarket@realmarket` (or pass `--config KEY=VALUE` to the install
+command) to fill in the settings. All are optional:
+
+| Setting | What it does |
+|---|---|
+| `price_provider` | Type `yahoo` to enable prices from Yahoo Finance (unofficial; see below). Empty keeps price tools off. |
+| `sec_contact` | Your e-mail, for official SEC financial statements of US companies |
+| `evds_api_key` | Most current Turkish CPI (TCMB EVDS); stored masked |
+| `fred_api_key` | US CPI through the FRED API; stored masked, not needed |
+
+The plugin also adds a `market-research` skill that tells Claude how to use the tools and
+report their sources.
+
+### As a plain MCP server (any MCP client)
+
 Requires Python 3.11+.
 
 ```bash

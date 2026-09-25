@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import os
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, MutableMapping
 from pathlib import Path
 from typing import cast
 
@@ -17,6 +17,23 @@ from realmarket_mcp.providers.base import FinancialsProvider, NewsProvider, Pric
 PROVIDER_ENV = "REALMARKET_PRICE_PROVIDER"
 FIXTURE_DIR_ENV = "REALMARKET_FIXTURE_DIR"
 NEWS_PROVIDER_ENV = "REALMARKET_NEWS_PROVIDER"
+
+
+def drop_unset_values(env: MutableMapping[str, str]) -> list[str]:
+    """Remove ``REALMARKET_*`` variables a host left empty or unsubstituted.
+
+    Plugin and extension hosts fill the server's environment from user settings; a setting the
+    user skipped can arrive as ``""`` or as a literal ``${user_config.name}``. Both mean "not
+    set", and treating them as values would, for example, send a placeholder as an e-mail.
+    """
+    dropped = [
+        name
+        for name, value in env.items()
+        if name.startswith("REALMARKET_") and (not value.strip() or value.strip().startswith("${"))
+    ]
+    for name in dropped:
+        del env[name]
+    return dropped
 
 
 def load_price_provider(*, retrieved_at: str) -> PriceProvider:

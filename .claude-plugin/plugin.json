@@ -1,0 +1,52 @@
+{
+  "name": "realmarket",
+  "displayName": "realmarket",
+  "version": "0.1.0",
+  "description": "Market research from verified, sourced numbers: real (inflation-adjusted) returns, returns in US dollars and gold, data-quality checks, company financials (official SEC filings for US companies) and news. Not investment advice.",
+  "author": {
+    "name": "realmarket-mcp contributors",
+    "url": "https://github.com/itu-itis24-iyigun24/realmarket-mcp"
+  },
+  "homepage": "https://github.com/itu-itis24-iyigun24/realmarket-mcp",
+  "repository": "https://github.com/itu-itis24-iyigun24/realmarket-mcp",
+  "license": "Apache-2.0",
+  "keywords": ["markets", "inflation", "real-return", "financial-statements", "mcp"],
+  "mcpServers": {
+    "realmarket": {
+      "command": "uvx",
+      "args": ["--from", "${CLAUDE_PLUGIN_ROOT}", "--with", "yfinance>=1.5", "realmarket-mcp"],
+      "env": {
+        "REALMARKET_PRICE_PROVIDER": "${user_config.price_provider}",
+        "REALMARKET_SEC_CONTACT": "${user_config.sec_contact}",
+        "REALMARKET_EVDS_API_KEY": "${user_config.evds_api_key}",
+        "REALMARKET_FRED_API_KEY": "${user_config.fred_api_key}"
+      }
+    }
+  },
+  "userConfig": {
+    "price_provider": {
+      "type": "string",
+      "title": "Price data provider",
+      "description": "Type yahoo to use Yahoo Finance for prices (unofficial; for personal research; you are responsible for Yahoo's terms). Leave empty to keep price tools off.",
+      "sensitive": false
+    },
+    "sec_contact": {
+      "type": "string",
+      "title": "E-mail for SEC EDGAR (optional)",
+      "description": "The SEC requires a contact e-mail in automated requests. With it, US companies' financial statements come from their official filings. No sign-up needed.",
+      "sensitive": false
+    },
+    "evds_api_key": {
+      "type": "string",
+      "title": "TCMB EVDS API key (optional)",
+      "description": "Most current Turkish CPI. Without it Turkish inflation comes from the OECD, which can lag.",
+      "sensitive": true
+    },
+    "fred_api_key": {
+      "type": "string",
+      "title": "FRED API key (optional)",
+      "description": "US CPI through the FRED API. Not needed: the public FRED file gives the same data.",
+      "sensitive": true
+    }
+  }
+}
