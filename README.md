@@ -67,6 +67,19 @@ command) to fill in the settings. All are optional:
 The plugin also adds a `market-research` skill that tells Claude how to use the tools and
 report their sources.
 
+### As a Claude Desktop extension (.mcpb)
+
+Open the `realmarket-<version>.mcpb` file with Claude Desktop (double-click, or Settings →
+Extensions → Install extension) and fill in the same settings as above. Claude Desktop installs
+the Python dependencies itself with uv, pinned by the bundle's `uv.lock`; no Python setup is
+needed. To build the file from source:
+
+```bash
+python scripts/build_mcpb.py
+npx -y @anthropic-ai/mcpb validate build/mcpb/manifest.json
+npx -y @anthropic-ai/mcpb pack build/mcpb dist/realmarket-0.1.0.mcpb
+```
+
 ### As a plain MCP server (any MCP client)
 
 Requires Python 3.11+.

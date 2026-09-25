@@ -81,3 +81,13 @@ together (`tests/test_plugin.py` enforces it), then run `claude plugin validate 
 `claude plugin validate .claude-plugin/plugin.json`; the one expected warning is that the root
 `CLAUDE.md` is not loaded as plugin context. Plugin hosts may pass unset settings as `""` or as
 a literal `${user_config.x}`; `config.drop_unset_values` removes those at startup.
+
+## Claude Desktop extension (.mcpb)
+
+`scripts/build_mcpb.py` stages `build/mcpb/` with a manifest generated from the code (version,
+tools, and the server's own prompt text rendered with `${arguments.x}` slots), the package
+sources and a `uv.lock`; the manifest uses the MCPB `uv` server type (manifest 0.4), so the host
+installs dependencies and the bundle ships no packages. Validate and pack with the official CLI
+(`npx -y @anthropic-ai/mcpb validate|pack`). `tests/test_plugin.py` keeps the extension's
+settings and environment identical to the Claude Code plugin's. `privacy_policies` is left out
+until the providers' privacy pages are verified (see `docs/providers.md`).

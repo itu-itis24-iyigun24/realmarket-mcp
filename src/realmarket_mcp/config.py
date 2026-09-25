@@ -45,8 +45,9 @@ def load_price_provider(*, retrieved_at: str) -> PriceProvider:
             raise ToolError(
                 ErrorCode.MISSING_API_KEY,
                 "No price data source is configured.",
-                f"Set {PROVIDER_ENV} to a supported provider in the MCP server's environment, "
-                f"or set {FIXTURE_DIR_ENV} to a fixture directory for offline use.",
+                "Ask the user to enable a price provider: in the realmarket plugin or extension "
+                "settings, set 'Price data provider' to yahoo; in a plain MCP configuration, set "
+                f"{PROVIDER_ENV}=yahoo (or {FIXTURE_DIR_ENV} for offline test data).",
                 {"provider": choice},
             )
         from realmarket_mcp.providers.fixture import FixtureProvider
@@ -152,8 +153,8 @@ def load_financials_provider(
             raise ToolError(
                 ErrorCode.MISSING_API_KEY,
                 "SEC EDGAR needs a contact e-mail address.",
-                f"Set {sec.CONTACT_ENV} to your e-mail address in the MCP server's environment "
-                "(no key or sign-up needed).",
+                "Ask the user to fill in 'E-mail for SEC EDGAR' in the plugin or extension "
+                f"settings ({sec.CONTACT_ENV}); no key or sign-up is needed.",
             )
         edgar = sec.SecEdgarProvider(contact, retrieved_at=retrieved_at)
         if choice == "sec":
@@ -191,8 +192,9 @@ def _price_financials(retrieved_at: str, *, us_symbol: bool = False) -> Financia
             raise ToolError(
                 error.code,
                 "No source for financial statements is configured.",
-                f"For US companies set {sec.CONTACT_ENV} to your e-mail address (SEC EDGAR, "
-                f"official and free); for other markets set {PROVIDER_ENV}=yahoo.",
+                "Ask the user to fill in a setting: for US companies 'E-mail for SEC EDGAR' "
+                f"({sec.CONTACT_ENV}; official and free), for other markets 'Price data "
+                f"provider' = yahoo ({PROVIDER_ENV}).",
             ) from None
         raise
     if not hasattr(provider, "financials"):

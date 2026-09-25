@@ -40,3 +40,41 @@ def test_api_keys_are_masked_and_yahoo_is_opt_in() -> None:
 def test_server_runs_from_the_installed_plugin() -> None:
     args = _load("plugin.json")["mcpServers"]["realmarket"]["args"]
     assert args[:2] == ["--from", "${CLAUDE_PLUGIN_ROOT}"] and args[-1] == "realmarket-mcp"
+
+
+def _build_script():  # type: ignore[no-untyped-def]
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("build_mcpb", ROOT / "scripts" / "build_mcpb.py")
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_desktop_extension_manifest_matches_the_server() -> None:
+    import anyio
+
+    from realmarket_mcp.server import build_server
+
+    manifest = _build_script().manifest()
+    server = build_server()
+    assert manifest["version"] == __version__
+    assert [t["name"] for t in manifest["tools"]] == [t.name for t in anyio.run(server.list_tools)]
+    for prompt in manifest["prompts"]:
+        for argument in prompt["arguments"]:
+            assert f"${{arguments.{argument}}}" in prompt["text"]
+    assert (
+        manifest["server"]["mcp_config"]["env"]
+        == _load("plugin.json")["mcpServers"]["realmarket"]["env"]
+    )
+
+
+def test_desktop_and_plugin_settings_agree() -> None:
+    desktop = _build_script().manifest()["user_config"]
+    plugin = _load("plugin.json")["userConfig"]
+    assert set(desktop) == set(plugin)
+    for key, spec in plugin.items():
+        assert desktop[key]["title"] == spec["title"]
+        assert desktop[key].get("sensitive", False) == spec["sensitive"]
+        assert "default" not in desktop[key]  # Yahoo stays opt-in here too

@@ -78,6 +78,11 @@ the providers' current terms pages.
       unclassified bots; a declared agent making 2-3 targeted API calls per request fits that.
 - [ ] OECD: read the current terms and citation requirements; note the API's anonymous rate
       limits.
+- [ ] Desktop extension `privacy_policies`: the MCPB spec asks for the privacy policy URL of
+      each external service that processes user data (the SEC receives the user's e-mail;
+      Yahoo, GDELT, FRED, OECD and TCMB receive queries). The pages could not be reached from
+      the build environment on 2026-09-25, so none are listed yet; add verified URLs before a
+      directory submission.
 - [ ] Run `pip-licenses` on a clean `.[yahoo]` install (`frozendict`, pulled in by `yfinance`,
       is LGPL-3.0; acceptable as an optional, separately installed dependency).
 
