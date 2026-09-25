@@ -28,8 +28,8 @@ All ratios are fractions: 0.12 means 12%.
   last bar inside the published months, and an `inflation_window_truncated` flag says so.
 - CPI sources, in order: a user CSV (`REALMARKET_CPI_CSV_<REGION>`, columns `month,cpi_index`);
   the official keyed API if its key is set (Türkiye `TP.GENENDEKS.T1` from TCMB EVDS, US
-  `CPIAUCNS` from FRED); otherwise keyless sources: FRED's public CSV for the US and the OECD's
-  national CPI (2015=100) for Türkiye and other OECD members. Keyless OECD data can end months
+  `CPIAUCNS` from FRED); otherwise the OECD's national CPI (2015=100) for the US, Türkiye and
+  other OECD members, with FRED's public CSV as the US fallback. Keyless OECD data can end months
   before the national release; the result then says how far it reaches.
 
 ## Live prices

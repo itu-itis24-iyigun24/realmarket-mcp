@@ -58,6 +58,23 @@ class ContractViolation(ValueError):
     """A tool tried to return something the contract forbids. This is a bug in the tool."""
 
 
+# The credit each source asks for, shown with every block of its numbers (see
+# docs/providers.md for the terms each line comes from).
+ATTRIBUTIONS = {
+    "yahoo": "Yahoo Finance via the community yfinance library (unofficial; not affiliated "
+    "with or endorsed by Yahoo).",
+    "sec_edgar": "Source: company filings, SEC EDGAR (data.sec.gov).",
+    "fred": "Source: U.S. Bureau of Labor Statistics via FRED®, Federal Reserve Bank of St. "
+    "Louis. This product uses the FRED® API but is not endorsed or certified by the Federal "
+    "Reserve Bank of St. Louis.",
+    "fred_csv": "Source: U.S. Bureau of Labor Statistics via FRED®, Federal Reserve Bank of St. "
+    "Louis.",
+    "evds": "Source: TÜİK consumer price index via CBRT (TCMB) EVDS.",
+    "oecd": "Source: OECD, Prices (DF_PRICES_ALL), OECD Data Explorer, licensed CC BY 4.0.",
+    "gdelt": "Source: The GDELT Project (https://www.gdeltproject.org/).",
+}
+
+
 @dataclass(frozen=True)
 class Provenance:
     """Where one block of numbers came from."""
@@ -78,9 +95,14 @@ class Provenance:
         if not self.data_version:
             raise ContractViolation("Provenance.data_version must identify the exact data used")
 
+    @property
+    def attribution(self) -> str | None:
+        return ATTRIBUTIONS.get(self.provider)
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "provider": self.provider,
+            "attribution": self.attribution,
             "dataset": self.dataset,
             "symbols": list(self.symbols),
             "period_start": self.period_start,

@@ -122,19 +122,20 @@ For Claude Code: `claude mcp add realmarket -e REALMARKET_PRICE_PROVIDER=yahoo -
 | `REALMARKET_NEWS_PROVIDER` | `gdelt` (default, free, no key) or `none` |
 | `REALMARKET_FIXTURE_DIR` | Directory for the `fixture` provider |
 
-**No key is required.** Without keys, inflation comes from FRED's public CSV (US) and the OECD
-(Türkiye and other OECD members). The OECD's Türkiye series currently ends at 2025-12, so
+**No key is required.** Without keys, inflation comes from the OECD's public API (US, Türkiye
+and other OECD members), with FRED's public CSV as a US fallback. The OECD's Türkiye series currently ends at 2025-12, so
 without an EVDS key Turkish real returns stop there and say so; set the EVDS key for current data.
 
 ### About the Yahoo Finance provider
 
 `yahoo` uses the community [`yfinance`](https://github.com/ranaroussi/yfinance) library, which
-reads Yahoo Finance's public web endpoints. It is **not an official API**: Yahoo's terms
-restrict automated and commercial use, the endpoints change without notice, and some
-histories contain errors (which is why `check_data_quality` exists). realmarket-mcp is not
-affiliated with or endorsed by Yahoo; Yahoo is a trademark of its owner. The provider is off
-unless you select it, is meant for personal research use, and you are responsible for
-complying with Yahoo's terms and for not redistributing the data. Data may be delayed or
+reads Yahoo Finance's public web endpoints. It is **not an official API**, and **Yahoo's Terms
+of Service prohibit accessing or collecting data from its services by automated means, for any
+purpose, without Yahoo's express prior permission** — they contain no exception for personal
+use. The endpoints also change without notice, and some histories contain errors (which is why
+`check_data_quality` exists). realmarket-mcp is not affiliated with or endorsed by Yahoo; Yahoo
+is a trademark of its owner. The provider is off unless you select it; by selecting it you take
+responsibility for your use under Yahoo's terms, and you must not redistribute the data. Data may be delayed or
 wrong, and the interface may break without notice. Symbols follow Yahoo's conventions:
 `THYAO.IS` (Borsa Istanbul), `XU100.IS`, `USDTRY=X`, `GC=F` (gold).
 
@@ -158,13 +159,33 @@ SEC asks automated clients to stay under 10 requests per second and to identify 
 | Region | Without a key | With a key |
 |---|---|---|
 | Türkiye | OECD (matches TÜİK; currently ends 2025-12) | TCMB EVDS (current) |
-| United States | FRED public CSV (current) | FRED API (same data) |
+| United States | OECD (current; FRED's public CSV as fallback) | FRED API (same BLS data) |
 | Other OECD members (e.g. DE, GB) | OECD (current where published) | — |
 | Anything else | `REALMARKET_CPI_CSV_<REGION>` | — |
 
-Use of FRED, the OECD and EVDS is subject to their terms. This product uses the FRED® API but is
-not endorsed or certified by the Federal Reserve Bank of St. Louis. Turkish CPI is published by
-TÜİK. See [`docs/providers.md`](docs/providers.md).
+The OECD's public API allows about 60 downloads per hour, so each series is fetched once and
+reused for six hours; results keep the original retrieval time.
+
+## Data sources, terms and privacy
+
+realmarket-mcp ships no data. It fetches from the services below on your behalf, and **by using
+it you agree to the terms of each service you enable**. Every result's provenance carries the
+credit its source asks for.
+
+| Service | Used for | Terms (summary) | Privacy |
+|---|---|---|---|
+| SEC EDGAR | US financial statements | Public data; identify yourself (contact e-mail), max 10 requests/s | [policy](https://www.sec.gov/about/privacy-information); receives your e-mail |
+| TCMB EVDS | Turkish CPI (with key) | May be used and published with reference; not investment advice; users may not be charged for it | [policy](https://evds3.tcmb.gov.tr/igmevdsms-dis/documents/showDocument?docId=22) |
+| FRED | US CPI (API with key; CSV fallback) | [FRED® API Terms of Use](https://fred.stlouisfed.org/docs/api/terms_of_use.html) (API); FRED website terms for the CSV (personal, non-commercial use) | [policy](https://www.stlouisfed.org/about-us/privacy-policy) |
+| OECD | CPI without a key | CC BY 4.0; cite the OECD | [policy](https://www.oecd.org/en/about/privacy.html) |
+| GDELT | News listings | Free for any use; cite the GDELT Project with a link | receives only the search text |
+| Yahoo Finance (opt-in) | Prices, FX, gold, non-US statements | Terms prohibit automated access without permission (see above) | [policy](https://legal.yahoo.com/us/en/yahoo/privacy/index.html) |
+
+**FRED:** if you set a FRED API key, you agree to be bound by the
+[FRED® API Terms of Use](https://fred.stlouisfed.org/docs/api/terms_of_use.html). This product
+uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.
+Turkish CPI is published by TÜİK. Details and the evidence for each line:
+[`docs/providers.md`](docs/providers.md).
 
 ## Using it with kapmcp (KAP disclosures and financial statements)
 

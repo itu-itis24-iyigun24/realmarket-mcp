@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import os
+import time
 from collections.abc import Callable, Mapping, MutableMapping
 from pathlib import Path
 from typing import cast
@@ -85,8 +86,9 @@ def load_cpi(
     """Pick a monthly CPI source for ``region``.
 
     Order: the user's CSV; the official keyed API when its key is set (TCMB EVDS for TR, FRED
-    for US), which is the most current; otherwise a keyless source (FRED's public CSV for US,
-    the OECD for TR and other OECD members). Keyless OECD data can lag national releases.
+    for US), which is the most current; otherwise the OECD's public API (CC BY 4.0), with FRED's
+    public CSV as the US fallback when the OECD is unreachable or rate-limited. Keyless OECD
+    data can lag national releases (Türkiye's series ends 2025-12 as of 2026-09).
     """
     env = os.environ if env is None else env
     region = region.upper()
@@ -98,13 +100,19 @@ def load_cpi(
             return cpi.fred_us_cpi(
                 start, env=env, fetch=fetch or cpi.http_fetch, retrieved_at=retrieved_at
             )
-        return cpi.fred_us_cpi_keyless(start, fetch=fetch, retrieved_at=retrieved_at)
+        try:
+            return _oecd(region, start, fetch=fetch, retrieved_at=retrieved_at)
+        except ToolError as error:
+            if not error.retryable:
+                raise
+            # The same BLS series; FRED's download licence covers personal use.
+            return cpi.fred_us_cpi_keyless(start, fetch=fetch, retrieved_at=retrieved_at)
     if region == "TR" and env.get(cpi.EVDS_KEY_ENV, "").strip():
         return cpi.evds_tr_cpi(
             start, end, env=env, fetch=fetch or cpi.http_fetch, retrieved_at=retrieved_at
         )
     if region in cpi.OECD_REGIONS:
-        return cpi.oecd_cpi(region, start, fetch=fetch, retrieved_at=retrieved_at)
+        return _oecd(region, start, fetch=fetch, retrieved_at=retrieved_at)
     raise ToolError(
         ErrorCode.UNSUPPORTED,
         f"No built-in CPI source for region {region!r}.",
@@ -112,6 +120,28 @@ def load_cpi(
         "to a monthly CPI CSV file (columns: month,cpi_index).",
         {"region": region},
     )
+
+
+# The OECD's anonymous API allows 60 downloads per hour per IP, so each region's series is
+# fetched once (from OECD_CACHE_FROM) and reused for OECD_CACHE_SECONDS. The cached series keeps
+# its original retrieval time, so provenance stays truthful.
+OECD_CACHE_SECONDS = 6 * 3600
+OECD_CACHE_FROM = dt.date(1990, 1, 1)
+_oecd_cache: dict[str, tuple[float, inflation.CpiSeries]] = {}
+
+
+def _oecd(
+    region: str, start: dt.date, *, fetch: cpi.Fetch | None, retrieved_at: str
+) -> inflation.CpiSeries:
+    if fetch is not None:  # an injected fetch (tests) is never cached
+        return cpi.oecd_cpi(region, start, fetch=fetch, retrieved_at=retrieved_at)
+    cached = _oecd_cache.get(region)
+    fresh = cached and time.monotonic() - cached[0] < OECD_CACHE_SECONDS
+    if cached and fresh and cached[1].first_month <= inflation.month_of(start):
+        return cached[1]
+    series = cpi.oecd_cpi(region, min(start, OECD_CACHE_FROM), retrieved_at=retrieved_at)
+    _oecd_cache[region] = (time.monotonic(), series)
+    return series
 
 
 def load_news_provider() -> NewsProvider:

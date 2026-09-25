@@ -58,12 +58,22 @@ USER_CONFIG: dict[str, dict[str, Any]] = {
     "fred_api_key": {
         "type": "string",
         "title": "FRED API key (optional)",
-        "description": "US CPI through the FRED API. Not needed: the public FRED file gives "
-        "the same data.",
+        "description": "US CPI through the FRED API (agreeing to the FRED API Terms of Use). "
+        "Not needed: the OECD gives the same BLS data without a key.",
         "required": False,
         "sensitive": True,
     },
 }
+# Services that receive user data: the SEC gets the user's e-mail (User-Agent), the rest get
+# query text (symbols, dates, search terms) and keys where set. GDELT publishes no privacy
+# policy; it receives only the news search text. Sources for each URL: docs/providers.md.
+PRIVACY_POLICIES = [
+    "https://www.sec.gov/about/privacy-information",
+    "https://legal.yahoo.com/us/en/yahoo/privacy/index.html",
+    "https://www.stlouisfed.org/about-us/privacy-policy",
+    "https://evds3.tcmb.gov.tr/igmevdsms-dis/documents/showDocument?docId=22",
+    "https://www.oecd.org/en/about/privacy.html",
+]
 ENV = {
     PROVIDER_ENV: "${user_config.price_provider}",
     sec.CONTACT_ENV: "${user_config.sec_contact}",
@@ -109,8 +119,12 @@ def manifest() -> dict[str, Any]:
             "measured in US dollars and in gold, data-quality flags, company financial "
             "statements (official SEC filings for US companies), event reactions and news "
             "listings. It ships no market data: it fetches from providers under your own "
-            "access. Not investment advice."
+            "access, and you agree to each provider's terms (listed in the README), including "
+            "the FRED® API Terms of Use (https://fred.stlouisfed.org/docs/api/terms_of_use.html)"
+            " when a FRED key is set. This product uses the FRED® API but is not endorsed or "
+            "certified by the Federal Reserve Bank of St. Louis. Not investment advice."
         ),
+        "privacy_policies": PRIVACY_POLICIES,
         "author": {"name": "realmarket-mcp contributors", "url": REPO_URL},
         "repository": {"type": "git", "url": REPO_URL},
         "homepage": REPO_URL,

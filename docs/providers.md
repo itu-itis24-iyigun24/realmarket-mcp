@@ -9,12 +9,12 @@ Every provider module must have an entry here before it is merged (see the
 
 | Provider | Module | Data | Enabled by | API key | Terms | Attribution |
 |---|---|---|---|---|---|---|
-| Yahoo Finance (via the community `yfinance` library) | `providers/yahoo.py` | daily prices, FX, gold futures, financial statements | `REALMARKET_PRICE_PROVIDER=yahoo` + `[yahoo]` extra | no | Yahoo terms of service; restrict automated use | not affiliated with or endorsed by Yahoo |
+| Yahoo Finance (via the community `yfinance` library) | `providers/yahoo.py` | daily prices, FX, gold futures, financial statements | `REALMARKET_PRICE_PROVIDER=yahoo` + `[yahoo]` extra | no | Yahoo terms of service; prohibit automated access without permission | not affiliated with or endorsed by Yahoo |
 | SEC EDGAR XBRL API | `providers/sec.py` | US company financial statements (companyfacts), ticker→CIK list, SIC industry | `REALMARKET_SEC_CONTACT` (an e-mail, not a key) | no | SEC "Accessing EDGAR Data": declared User-Agent with contact, max 10 requests/s; data is public | cite "SEC EDGAR" |
 | FRED (Federal Reserve Bank of St. Louis) | `providers/cpi.py` | US CPI `CPIAUCNS` (source: BLS) | `REALMARKET_FRED_API_KEY` | yes, free | FRED API terms of use | see notice below |
 | TCMB EVDS (Central Bank of the Republic of Türkiye) | `providers/cpi.py` | Turkish CPI `TP.GENENDEKS.T1` (2003=100) (source: TÜİK) | `REALMARKET_EVDS_API_KEY` | yes, free | EVDS terms of use | cite TCMB EVDS / TÜİK |
-| FRED public CSV | `providers/cpi.py` | US CPI `CPIAUCNS` without a key | default when no FRED key | no | FRED terms of use | FRED notice below |
-| OECD Data Explorer API | `providers/cpi.py` | national monthly CPI (2015=100) for OECD members | default when no official key | no | OECD terms and conditions | cite "OECD" and the dataset |
+| FRED public CSV | `providers/cpi.py` | US CPI `CPIAUCNS` without a key | fallback when the OECD is unavailable | no | FRED website terms (personal, non-commercial downloads) | "U.S. Bureau of Labor Statistics via FRED" |
+| OECD Data Explorer API | `providers/cpi.py` | national monthly CPI (2015=100) for OECD members, incl. US | default when no official key | no | OECD terms and conditions; CC BY 4.0; 60 downloads/hour | cite "OECD" and the dataset |
 | GDELT Project | `providers/gdelt.py` | news article listings (title, link, publisher, date) | default; `REALMARKET_NEWS_PROVIDER=none` disables | no | GDELT terms (open data; citation requested) | cite "The GDELT Project" |
 | KAP (Public Disclosure Platform) | **not implemented — terms forbid it** | company disclosures and financial statements | — | — | see finding below | — |
 | User CSV | `inflation.py` | any monthly CPI series | `REALMARKET_CPI_CSV_<REGION>` | — | the user's own source | — |
@@ -23,18 +23,44 @@ Every provider module must have an entry here before it is merged (see the
 FRED notice: *This product uses the FRED® API but is not endorsed or certified by the Federal
 Reserve Bank of St. Louis.*
 
-## To verify before the first public release
+## Checked before the first public release
 
-Items marked done were checked against the live services; the rest still need a reading of
-the providers' current terms pages.
+`[x]` checked; `[~]` checked, with a decision still open. Each item says how it was checked:
+read directly, or — where the build environment's network blocks the site — through web
+search of the provider's own pages, which is weaker evidence and should be re-read from a
+normal connection.
 
-- [ ] Yahoo: the exact clause on automated or non-personal use; keep the provider opt-in.
-- [ ] FRED: current API terms and the exact required notice wording.
+- [~] Yahoo — **decision needed.** legal.yahoo.com is not reachable from the build environment;
+      the clause was read through web-search results of Yahoo's own Terms of Service pages
+      (2026-09-25): users may not "access or collect data, or attempt to access or collect data,
+      from our Services using any automated means, devices, programs, algorithms or
+      methodologies, including but not limited to robots, spiders, scrapers, data mining tools,
+      or data gathering or extraction tools, for any purpose without our express, prior
+      permission". There is no personal-use exception. The provider stays opt-in, the README now
+      states this plainly, and whether to keep shipping it is recorded as an open decision.
+- [x] FRED API terms read on 2026-09-25 (`fred.stlouisfed.org/docs/api/terms_of_use.html`).
+      Required: the notice "This product uses the FRED® API but is not endorsed or certified by
+      the Federal Reserve Bank of St. Louis." placed prominently (README, extension description,
+      and the `attribution` of every FRED provenance block); for an application used by others,
+      show a link to the API terms and state that users agree to be bound by them (README "Data
+      sources, terms and privacy"; extension description). `CPIAUCNS` is "Public Domain:
+      Citation Requested" (series page); citation: "U.S. Bureau of Labor Statistics via FRED".
+      The FRED website terms (`fred.stlouisfed.org/legal/`) govern the keyless CSV: downloads
+      are licensed for personal, non-commercial use and disruptive data-gathering is prohibited;
+      programmatic use is sanctioned only through the API. The CSV is therefore now only the US
+      fallback when the OECD is unavailable, and the OECD (CC BY 4.0) is the keyless default —
+      its US series equals FRED's month for month (both skip October 2025).
 - [x] FRED: JSON response format parsed in `providers/cpi.py` (verified live on 2026-09-25).
       `observations[].date` is `YYYY-MM-01`, `value` is a string; a month BLS did not publish is
       `"."` (October 2025 is missing in `CPIAUCNS`) and is skipped, never filled. The August 2026
       level, 334.980, matches the BLS CPI release (+3.4% over 12 months, not seasonally adjusted).
-- [ ] EVDS: whether automated access is permitted and the required attribution.
+- [x] EVDS terms read on 2026-09-25 (English PDF, docId 21; Turkish, docId 18, served by
+      `evds3.tcmb.gov.tr/igmevdsms-dis/documents/showDocument`). "Data provided in the EVDS
+      application can be accessed via web services" and "may be used and published by third
+      parties provided that such data are used with reference"; translations must be marked as
+      unofficial; even commercial reuse must not charge its users for the data; not investment
+      advice. Attribution used: "Source: TÜİK consumer price index via CBRT (TCMB) EVDS".
+      Privacy policy: docId 22.
 - [x] EVDS: API base URL, series and JSON response format (verified live on 2026-09-25).
       Base URL `https://evds3.tcmb.gov.tr/igmevdsms-dis/` (evds2 now redirects to evds3); key
       sent as the `key` header. Response is `{"totalCount", "items": [...]}`, each item holding
@@ -47,11 +73,16 @@ the providers' current terms pages.
       year and +1.84% month on month, matches TÜİK's release (31.51% and 1.84%; the 0.01-point
       gap is rounding of the chained 2003=100 levels). Regression test:
       `tests/test_inflation.py::test_evds_uses_the_live_series_not_the_archived_one`.
-- [ ] GDELT: partly verified live on 2026-09-25. Confirmed: the rate-limit response is HTTP 429
-      with the plain-text "Please limit requests to one every 5 seconds..." (mapped to
-      `rate_limited`), and an empty result is `{}`. Not yet confirmed: the shape of a non-empty
-      `articles` list, because the cloud test environment's shared IP stayed rate-limited.
-      Re-test from a normal connection; also confirm the citation wording.
+- [x] GDELT verified live on 2026-09-25: a non-empty `articles` response has exactly the field
+      set the tests use (`url`, `url_mobile`, `title`, `seendate`, `socialimage`, `domain`,
+      `language`, `sourcecountry`), and the saved live response parses correctly through
+      `get_news` (dates, languages, countries, newest first). The rate-limit response (HTTP 429,
+      plain text) is mapped to `rate_limited`. Terms (gdeltproject.org is not reachable from the
+      build environment; read through web search of its About page): datasets are free for
+      "unlimited and unrestricted use for any academic, commercial, or governmental use", and
+      use or redistribution must cite the GDELT Project with a link to gdeltproject.org — every
+      news result's provenance does. GDELT publishes no privacy policy found; it receives only
+      the search text.
 - [x] KAP: reviewed on 2026-09-25 — **stop; no KAP provider.** kap.org.tr has no robots.txt, but
       its "Telif Hakkı ve Çekince İhbarı" page (`/tr/icerik/Diger/telif-hakki-ve-cekince-ihbari`,
       section "Kullanım izni ve şartları") states that users may use the information only to
@@ -76,16 +107,22 @@ the providers' current terms pages.
       `BRK-B`. The SEC's developer page ("Fair Access") limits each user to 10 requests per
       second, asks for efficient scripts that download only what they need, and blocks
       unclassified bots; a declared agent making 2-3 targeted API calls per request fits that.
-- [ ] OECD: read the current terms and citation requirements; note the API's anonymous rate
-      limits.
-- [ ] Desktop extension `privacy_policies`: the MCPB spec asks for the privacy policy URL of
-      each external service that processes user data (the SEC receives the user's e-mail;
-      Yahoo, GDELT, FRED, OECD and TCMB receive queries). The pages could not be reached from
-      the build environment on 2026-09-25, so none are listed yet; add verified URLs before a
-      directory submission.
-- [ ] Run `pip-licenses` on a clean `.[yahoo]` install (`frozendict`, pulled in by `yfinance`,
-      is LGPL-3.0; acceptable as an optional, separately installed dependency).
-
+- [x] OECD (read through web search of oecd.org, not reachable directly, 2026-09-25): the API is
+      free subject to the OECD Terms and Conditions; data are under CC BY 4.0 (Open Access
+      Policy, July 2024); cite as "OECD (year), (dataset name), (data source) DOI or URL (accessed
+      on (date))" — provenance names the dataflow and retrieval time. Anonymous limit: 60 data
+      downloads per hour per IP; each region's series is now fetched once and reused for six
+      hours (`config.OECD_CACHE_SECONDS`), keeping its original retrieval time.
+- [x] Desktop extension `privacy_policies` (2026-09-25): SEC
+      `https://www.sec.gov/about/privacy-information` (opened); TCMB EVDS docId 22 (opened);
+      FRED `https://www.stlouisfed.org/about-us/privacy-policy` (linked from FRED's own terms
+      pages); OECD `https://www.oecd.org/en/about/privacy.html` and Yahoo
+      `https://legal.yahoo.com/us/en/yahoo/privacy/index.html` (official-domain search results;
+      not reachable here). GDELT: none found.
+- [x] Licences (2026-09-25): a clean `.[yahoo]` install has 48 third-party packages, all
+      permissive (MIT, BSD, Apache-2.0, PSF, ISC-style); `certifi` is MPL-2.0 (file-level,
+      used unmodified); `peewee` reports "UNKNOWN" but its licence file is MIT. `frozendict`
+      (LGPL) is no longer pulled in by `yfinance` 1.7.
 ## Financial statements (Yahoo): reliability test, 2026-09-25
 
 `get_financials` output for the 2026 Q2 reports of eight Borsa Istanbul companies, compared

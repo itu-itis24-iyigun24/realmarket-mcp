@@ -45,7 +45,7 @@
     "fred_api_key": {
       "type": "string",
       "title": "FRED API key (optional)",
-      "description": "US CPI through the FRED API. Not needed: the public FRED file gives the same data.",
+      "description": "US CPI through the FRED API (agreeing to the FRED API Terms of Use). Not needed: the OECD gives the same BLS data without a key.",
       "sensitive": true
     }
   }

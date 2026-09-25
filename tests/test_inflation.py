@@ -4,6 +4,7 @@ import datetime as dt
 import json
 from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -229,7 +230,7 @@ def test_oecd_not_found_becomes_unsupported(monkeypatch: pytest.MonkeyPatch) -> 
     [
         ("TR", {}, OECD_CSV, "oecd"),  # keyless fallback
         ("TR", {cpi.EVDS_KEY_ENV: "k"}, None, "evds"),  # key set: official API wins
-        ("US", {}, FRED_CSV, "fred_csv"),
+        ("US", {}, OECD_CSV.replace("TUR", "USA"), "oecd"),  # CC BY 4.0, explicitly licensed
         ("US", {cpi.FRED_KEY_ENV: "k"}, None, "fred"),
         ("DE", {}, OECD_CSV.replace("TUR", "DEU"), "oecd"),
     ],
@@ -289,3 +290,88 @@ def test_user_agent_names_the_project_with_a_contact_url() -> None:
 
     assert http.USER_AGENT.startswith("realmarket-mcp/")
     assert "(+https://" in http.USER_AGENT
+
+
+class RoutedFetch:
+    """OECD requests get ``oecd`` (a body, or an error to raise); everything else FRED's CSV."""
+
+    def __init__(self, oecd: str | ToolError) -> None:
+        self.oecd = oecd
+        self.urls: list[str] = []
+
+    def __call__(self, url: str, headers: Mapping[str, str]) -> bytes:
+        self.urls.append(url)
+        if "oecd.org" in url:
+            if isinstance(self.oecd, ToolError):
+                raise self.oecd
+            return self.oecd.encode()
+        return FRED_CSV.encode()
+
+
+def test_us_falls_back_to_fred_csv_only_when_the_oecd_is_unavailable() -> None:
+    limited = ToolError(ErrorCode.RATE_LIMITED, "OECD rate limit reached.", "Wait.")
+    fetch = RoutedFetch(limited)
+    series = config.load_cpi(
+        "US", dt.date(2025, 9, 1), dt.date(2025, 11, 1), retrieved_at=STAMP, env={}, fetch=fetch
+    )
+    assert series.source == "fred_csv"
+    assert ["oecd.org" in u for u in fetch.urls] == [True, False]
+
+    refused = ToolError(ErrorCode.UNSUPPORTED, "No such series.", "Use a CSV.")
+    with pytest.raises(ToolError) as raised:  # not an outage: report it, do not switch
+        config.load_cpi(
+            "US",
+            dt.date(2025, 9, 1),
+            dt.date(2025, 11, 1),
+            retrieved_at=STAMP,
+            env={},
+            fetch=RoutedFetch(refused),
+        )
+    assert raised.value is refused
+
+
+def test_oecd_series_is_fetched_once_and_reused(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[dt.date] = []
+
+    def fake(region: str, start: dt.date, **_: object) -> Any:
+        calls.append(start)
+        return inflation.series_from_rows(
+            [("2000-01", "1"), ("2025-11", "2")],
+            region=region,
+            source="oecd",
+            series_id="x",
+            retrieved_at="first retrieval",
+        )
+
+    monkeypatch.setattr(config, "_oecd_cache", {})
+    monkeypatch.setattr(cpi, "oecd_cpi", fake)
+    first = config.load_cpi(
+        "DE", dt.date(2024, 1, 1), dt.date(2025, 1, 1), retrieved_at="a", env={}
+    )
+    again = config.load_cpi(
+        "DE", dt.date(2010, 1, 1), dt.date(2025, 1, 1), retrieved_at="b", env={}
+    )
+    assert again is first and again.retrieved_at == "first retrieval"  # provenance stays true
+    assert calls == [config.OECD_CACHE_FROM]
+
+    monkeypatch.setattr(config, "OECD_CACHE_SECONDS", 0)  # expired: fetched again
+    config.load_cpi("DE", dt.date(2024, 1, 1), dt.date(2025, 1, 1), retrieved_at="c", env={})
+    assert len(calls) == 2
+
+
+def test_provenance_carries_each_sources_requested_credit() -> None:
+    from realmarket_mcp.contract import ATTRIBUTIONS, Provenance
+
+    def prov(provider: str) -> dict[str, Any]:
+        return Provenance(
+            provider, "d", (), "2025-01", "2025-02", STAMP, "sha256:x", "none"
+        ).to_dict()
+
+    assert (
+        "not endorsed or certified by the Federal Reserve Bank of St. Louis"
+        in prov("fred")["attribution"]
+    )
+    assert "CC BY 4.0" in prov("oecd")["attribution"]
+    assert "gdeltproject.org" in prov("gdelt")["attribution"]
+    assert prov("fixture")["attribution"] is None
+    assert set(ATTRIBUTIONS) >= {"yahoo", "sec_edgar", "fred", "fred_csv", "evds", "oecd", "gdelt"}
