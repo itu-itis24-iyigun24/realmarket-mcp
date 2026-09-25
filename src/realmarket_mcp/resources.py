@@ -26,9 +26,11 @@ All ratios are fractions: 0.12 means 12%.
 - Real return: `(1 + nominal) / (1 + inflation) - 1` (not `nominal - inflation`).
 - If the CPI for the final month is not yet published, the real return is measured up to the
   last bar inside the published months, and an `inflation_window_truncated` flag says so.
-- Built-in CPI sources: Turkey `TP.GENENDEKS.T1` (TCMB EVDS, key `REALMARKET_EVDS_API_KEY`), United
-  States `CPIAUCNS` (FRED, key `REALMARKET_FRED_API_KEY`). Any region can instead be supplied as
-  a CSV via `REALMARKET_CPI_CSV_<REGION>` with columns `month,cpi_index` (YYYY-MM, index level).
+- CPI sources, in order: a user CSV (`REALMARKET_CPI_CSV_<REGION>`, columns `month,cpi_index`);
+  the official keyed API if its key is set (Türkiye `TP.GENENDEKS.T1` from TCMB EVDS, US
+  `CPIAUCNS` from FRED); otherwise keyless sources: FRED's public CSV for the US and the OECD's
+  national CPI (2015=100) for Türkiye and other OECD members. Keyless OECD data can end months
+  before the national release; the result then says how far it reaches.
 
 ## Live prices
 - With the Yahoo provider, bars dated on or after the current UTC day are excluded because

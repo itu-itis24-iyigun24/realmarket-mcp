@@ -148,7 +148,8 @@ def build_server() -> MCPServer:
         inflation, real (inflation-adjusted) return and its annualized rate, plus the same
         holding measured in US dollars and in gold. Use it for any question about real,
         inflation-adjusted or purchasing-power returns, especially for high-inflation
-        currencies. Needs a configured CPI source; the error explains how if one is missing.
+        currencies. Works without API keys; if the inflation series ends before the period does,
+        the result says how far it reaches.
         Ratios are fractions (0.12 means 12%)."""
         now = _utc_now()
         stamp = _stamp(now)

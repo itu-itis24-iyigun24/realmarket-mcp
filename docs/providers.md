@@ -12,6 +12,8 @@ Every provider module must have an entry here before it is merged (see the
 | Yahoo Finance (via the community `yfinance` library) | `providers/yahoo.py` | daily prices, FX, gold futures | `REALMARKET_PRICE_PROVIDER=yahoo` + `[yahoo]` extra | no | Yahoo terms of service; restrict automated use | not affiliated with or endorsed by Yahoo |
 | FRED (Federal Reserve Bank of St. Louis) | `providers/cpi.py` | US CPI `CPIAUCNS` (source: BLS) | `REALMARKET_FRED_API_KEY` | yes, free | FRED API terms of use | see notice below |
 | TCMB EVDS (Central Bank of the Republic of Türkiye) | `providers/cpi.py` | Turkish CPI `TP.GENENDEKS.T1` (2003=100) (source: TÜİK) | `REALMARKET_EVDS_API_KEY` | yes, free | EVDS terms of use | cite TCMB EVDS / TÜİK |
+| FRED public CSV | `providers/cpi.py` | US CPI `CPIAUCNS` without a key | default when no FRED key | no | FRED terms of use | FRED notice below |
+| OECD Data Explorer API | `providers/cpi.py` | national monthly CPI (2015=100) for OECD members | default when no official key | no | OECD terms and conditions | cite "OECD" and the dataset |
 | GDELT Project | `providers/gdelt.py` | news article listings (title, link, publisher, date) | default; `REALMARKET_NEWS_PROVIDER=none` disables | no | GDELT terms (open data; citation requested) | cite "The GDELT Project" |
 | KAP (Public Disclosure Platform) | **not implemented — terms forbid it** | company disclosures and financial statements | — | — | see finding below | — |
 | User CSV | `inflation.py` | any monthly CPI series | `REALMARKET_CPI_CSV_<REGION>` | — | the user's own source | — |
@@ -58,5 +60,14 @@ the providers' current terms pages.
       endpoints (`/tr/api/...`) are internal to its web app, not a published API; KAP data is
       licensed separately through its data-publishing service. Options: request written
       permission from MKK, or use a licensed source.
+- [x] FRED public CSV and OECD API verified live on 2026-09-25. FRED CSV (`fredgraph.csv?id=
+      CPIAUCNS`) equals the keyed API on every overlapping month; it resets connections for
+      bare User-Agent strings, so requests send `realmarket-mcp/<version> (+<repo URL>)`. OECD
+      (`OECD.SDD.TPS,DSD_PRICES@DF_PRICES_ALL,1.0`, key `<ISO3>.M.N.CPI.IX._T.N._Z`): Türkiye's
+      month-on-month changes equal EVDS exactly (2021-09..2025-12 cumulative +515.76% in both),
+      but the series ends at 2025-12 (TÜİK's 2026 rebasing is not yet carried); DE and GB run to
+      2026-08; JP, CH and the euro area return 404 "NoRecordsFound" in this dataflow.
+- [ ] OECD: read the current terms and citation requirements; note the API's anonymous rate
+      limits.
 - [ ] Run `pip-licenses` on a clean `.[yahoo]` install (`frozendict`, pulled in by `yfinance`,
       is LGPL-3.0; acceptable as an optional, separately installed dependency).

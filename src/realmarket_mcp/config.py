@@ -45,8 +45,8 @@ def load_price_provider(*, retrieved_at: str) -> PriceProvider:
     )
 
 
-CURRENCY_REGIONS = {"TRY": "TR", "USD": "US"}
-SUPPORTED_REGIONS = ("TR", "US")
+CURRENCY_REGIONS = {"TRY": "TR", "USD": "US", "GBP": "GB"}
+SUPPORTED_REGIONS = tuple(sorted(cpi.OECD_REGIONS))
 
 
 def default_region(currency: str) -> str | None:
@@ -60,23 +60,36 @@ def load_cpi(
     *,
     retrieved_at: str,
     env: Mapping[str, str] | None = None,
-    fetch: cpi.Fetch = cpi.http_fetch,
+    fetch: cpi.Fetch | None = None,
 ) -> inflation.CpiSeries:
-    """A user CSV wins over an API, so anyone can bring their own series for any region."""
+    """Pick a monthly CPI source for ``region``.
+
+    Order: the user's CSV; the official keyed API when its key is set (TCMB EVDS for TR, FRED
+    for US), which is the most current; otherwise a keyless source (FRED's public CSV for US,
+    the OECD for TR and other OECD members). Keyless OECD data can lag national releases.
+    """
     env = os.environ if env is None else env
     region = region.upper()
     csv_path = env.get(f"REALMARKET_CPI_CSV_{region}")
     if csv_path:
         return inflation.load_csv(Path(csv_path), region=region, retrieved_at=retrieved_at)
     if region == "US":
-        return cpi.fred_us_cpi(start, env=env, fetch=fetch, retrieved_at=retrieved_at)
-    if region == "TR":
-        return cpi.evds_tr_cpi(start, end, env=env, fetch=fetch, retrieved_at=retrieved_at)
+        if env.get(cpi.FRED_KEY_ENV, "").strip():
+            return cpi.fred_us_cpi(
+                start, env=env, fetch=fetch or cpi.http_fetch, retrieved_at=retrieved_at
+            )
+        return cpi.fred_us_cpi_keyless(start, fetch=fetch, retrieved_at=retrieved_at)
+    if region == "TR" and env.get(cpi.EVDS_KEY_ENV, "").strip():
+        return cpi.evds_tr_cpi(
+            start, end, env=env, fetch=fetch or cpi.http_fetch, retrieved_at=retrieved_at
+        )
+    if region in cpi.OECD_REGIONS:
+        return cpi.oecd_cpi(region, start, fetch=fetch, retrieved_at=retrieved_at)
     raise ToolError(
         ErrorCode.UNSUPPORTED,
         f"No built-in CPI source for region {region!r}.",
-        f"Use one of {', '.join(SUPPORTED_REGIONS)}, or set REALMARKET_CPI_CSV_{region} to a "
-        "monthly CPI CSV file (columns: month,cpi_index).",
+        f"Use an OECD member code such as TR, US, DE or GB, or set REALMARKET_CPI_CSV_{region} "
+        "to a monthly CPI CSV file (columns: month,cpi_index).",
         {"region": region},
     )
 

@@ -7,7 +7,9 @@ against the live APIs on 2026-09-25 (see docs/providers.md).
 
 from __future__ import annotations
 
+import csv
 import datetime as dt
+import io
 import json
 import urllib.error
 import urllib.parse
@@ -17,6 +19,7 @@ from typing import Any
 
 from realmarket_mcp.contract import ErrorCode, ToolError
 from realmarket_mcp.inflation import CpiSeries, series_from_rows
+from realmarket_mcp.providers import http
 
 Fetch = Callable[[str, Mapping[str, str]], bytes]
 
@@ -36,7 +39,7 @@ EVDS_SERIES = "TP.GENENDEKS.T1"
 
 
 def http_fetch(url: str, headers: Mapping[str, str]) -> bytes:
-    request = urllib.request.Request(url, headers={"User-Agent": "realmarket-mcp", **headers})
+    request = urllib.request.Request(url, headers={"User-Agent": http.USER_AGENT, **headers})
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             body: bytes = response.read()
@@ -138,3 +141,110 @@ def evds_tr_cpi(
         )
     except (KeyError, TypeError, ValueError) as exc:
         raise _bad_payload("EVDS", exc) from None
+
+
+# ---------------------------------------------------------------------------- keyless sources
+# Both verified live on 2026-09-25 (see docs/providers.md).
+
+FRED_CSV_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv"
+OECD_URL = "https://sdmx.oecd.org/public/rest/data/OECD.SDD.TPS,DSD_PRICES@DF_PRICES_ALL,1.0"
+# ISO 3166 alpha-2 -> OECD alpha-3 for OECD members. Monthly national CPI was verified for TR,
+# US, DE and GB; the OECD does not publish every member's monthly series in this dataflow.
+OECD_REGIONS = {
+    "AT": "AUT",
+    "AU": "AUS",
+    "BE": "BEL",
+    "CA": "CAN",
+    "CH": "CHE",
+    "CL": "CHL",
+    "CO": "COL",
+    "CR": "CRI",
+    "CZ": "CZE",
+    "DE": "DEU",
+    "DK": "DNK",
+    "EE": "EST",
+    "ES": "ESP",
+    "FI": "FIN",
+    "FR": "FRA",
+    "GB": "GBR",
+    "GR": "GRC",
+    "HU": "HUN",
+    "IE": "IRL",
+    "IL": "ISR",
+    "IS": "ISL",
+    "IT": "ITA",
+    "JP": "JPN",
+    "KR": "KOR",
+    "LT": "LTU",
+    "LU": "LUX",
+    "LV": "LVA",
+    "MX": "MEX",
+    "NL": "NLD",
+    "NO": "NOR",
+    "NZ": "NZL",
+    "PL": "POL",
+    "PT": "PRT",
+    "SE": "SWE",
+    "SI": "SVN",
+    "SK": "SVK",
+    "TR": "TUR",
+    "US": "USA",
+}
+
+
+def fred_us_cpi_keyless(
+    start: dt.date, *, fetch: Fetch | None = None, retrieved_at: str
+) -> CpiSeries:
+    """The same CPIAUCNS series as the API, from FRED's public CSV download (no key)."""
+    query = urllib.parse.urlencode(
+        {"id": FRED_SERIES, "cosd": dt.date(start.year, start.month, 1).isoformat()}
+    )
+    get = fetch or (lambda url, headers: http.get(url, headers, source="FRED"))
+    body = get(f"{FRED_CSV_URL}?{query}", {})
+    try:
+        rows = list(csv.reader(io.StringIO(body.decode("utf-8"))))
+        if not rows or rows[0][:1] != ["observation_date"]:
+            raise ValueError("unexpected header")
+        return series_from_rows(
+            ((r[0], r[1]) for r in rows[1:] if len(r) >= 2),
+            region="US",
+            source="fred_csv",
+            series_id=FRED_SERIES,
+            retrieved_at=retrieved_at,
+        )
+    except (IndexError, UnicodeDecodeError, ValueError) as exc:
+        raise _bad_payload("FRED", exc) from None
+
+
+def oecd_cpi(
+    region: str, start: dt.date, *, fetch: Fetch | None = None, retrieved_at: str
+) -> CpiSeries:
+    """National monthly CPI (2015=100, not seasonally adjusted) from the OECD's public API."""
+    iso3 = OECD_REGIONS[region]
+    key = f"{iso3}.M.N.CPI.IX._T.N._Z"
+    query = urllib.parse.urlencode(
+        {
+            "startPeriod": f"{start.year:04d}-{start.month:02d}",
+            "dimensionAtObservation": "AllDimensions",
+            "format": "csv",
+        }
+    )
+    not_found = ToolError(
+        ErrorCode.UNSUPPORTED,
+        f"The OECD publishes no monthly CPI for {region} in this dataset.",
+        f"Set REALMARKET_CPI_CSV_{region} to a monthly CPI CSV file (columns: month,cpi_index).",
+        {"region": region},
+    )
+    get = fetch or (lambda url, headers: http.get(url, headers, source="OECD", not_found=not_found))
+    body = get(f"{OECD_URL}/{key}?{query}", {})
+    try:
+        records = list(csv.DictReader(io.StringIO(body.decode("utf-8"))))
+        return series_from_rows(
+            ((r["TIME_PERIOD"], r["OBS_VALUE"]) for r in records),
+            region=region,
+            source="oecd",
+            series_id=f"OECD PRICES_ALL {iso3} CPI 2015=100",
+            retrieved_at=retrieved_at,
+        )
+    except (KeyError, UnicodeDecodeError, ValueError) as exc:
+        raise _bad_payload("OECD", exc) from None

@@ -73,13 +73,15 @@ For Claude Code: `claude mcp add realmarket -e REALMARKET_PRICE_PROVIDER=yahoo -
 | Variable | Purpose |
 |---|---|
 | `REALMARKET_PRICE_PROVIDER` | `yahoo`, or `fixture` for offline test data |
-| `REALMARKET_EVDS_API_KEY` | Turkish CPI from TCMB EVDS (free key at evds3.tcmb.gov.tr) |
-| `REALMARKET_FRED_API_KEY` | US CPI from FRED (free key at fred.stlouisfed.org) |
+| `REALMARKET_EVDS_API_KEY` | *Optional.* Turkish CPI from TCMB EVDS, the most current source (free key at evds3.tcmb.gov.tr) |
+| `REALMARKET_FRED_API_KEY` | *Optional.* US CPI through the FRED API (free key at fred.stlouisfed.org) |
 | `REALMARKET_CPI_CSV_<REGION>` | Your own monthly CPI file for any region (`month,cpi_index`), e.g. `REALMARKET_CPI_CSV_TR` |
 | `REALMARKET_NEWS_PROVIDER` | `gdelt` (default, free, no key) or `none` |
 | `REALMARKET_FIXTURE_DIR` | Directory for the `fixture` provider |
 
-Without a CPI source, every tool except `compare_real_return` works; that one explains what to set.
+**No key is required.** Without keys, inflation comes from FRED's public CSV (US) and the OECD
+(Türkiye and other OECD members). The OECD's Türkiye series currently ends at 2025-12, so
+without an EVDS key Turkish real returns stop there and say so; set the EVDS key for current data.
 
 ### About the Yahoo Finance provider
 
@@ -95,10 +97,16 @@ wrong, and the interface may break without notice. Symbols follow Yahoo's conven
 
 ### CPI sources
 
-FRED and TCMB EVDS are used with **your own free API key, under their terms**. This product
-uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.
-Turkish CPI is published by TÜİK and distributed by TCMB EVDS. See
-[`docs/providers.md`](docs/providers.md).
+| Region | Without a key | With a key |
+|---|---|---|
+| Türkiye | OECD (matches TÜİK; currently ends 2025-12) | TCMB EVDS (current) |
+| United States | FRED public CSV (current) | FRED API (same data) |
+| Other OECD members (e.g. DE, GB) | OECD (current where published) | — |
+| Anything else | `REALMARKET_CPI_CSV_<REGION>` | — |
+
+Use of FRED, the OECD and EVDS is subject to their terms. This product uses the FRED® API but is
+not endorsed or certified by the Federal Reserve Bank of St. Louis. Turkish CPI is published by
+TÜİK. See [`docs/providers.md`](docs/providers.md).
 
 ## Using it with kapmcp (KAP disclosures and financial statements)
 

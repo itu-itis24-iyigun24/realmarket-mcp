@@ -162,11 +162,97 @@ def test_unexpected_payload_is_a_provider_error() -> None:
     assert raised.value.code is ErrorCode.PROVIDER_UNAVAILABLE
 
 
-def test_missing_key_explains_both_options() -> None:
+def test_evds_without_key_explains_the_key() -> None:
     with pytest.raises(ToolError) as raised:
-        config.load_cpi("TR", dt.date(2024, 1, 1), dt.date(2024, 2, 1), retrieved_at=STAMP, env={})
+        cpi.evds_tr_cpi(
+            dt.date(2024, 1, 1), dt.date(2024, 2, 1), env={}, fetch=Recorder({}), retrieved_at=STAMP
+        )
     assert raised.value.code is ErrorCode.MISSING_API_KEY
     assert cpi.EVDS_KEY_ENV in raised.value.hint and "REALMARKET_CPI_CSV_TR" in raised.value.hint
+
+
+class TextRecorder:
+    def __init__(self, text: str) -> None:
+        self.body = text.encode()
+        self.urls: list[str] = []
+
+    def __call__(self, url: str, headers: Mapping[str, str]) -> bytes:
+        self.urls.append(url)
+        return self.body
+
+
+FRED_CSV = "observation_date,CPIAUCNS\n2025-09-01,200.0\n2025-10-01,\n2025-11-01,202.0\n"
+OECD_CSV = (
+    "STRUCTURE,STRUCTURE_ID,ACTION,REF_AREA,FREQ,METHODOLOGY,MEASURE,UNIT_MEASURE,EXPENDITURE,"
+    "ADJUSTMENT,TRANSFORMATION,TIME_PERIOD,OBS_VALUE,OBS_STATUS,UNIT_MULT,BASE_PER\n"
+    "DATAFLOW,OECD.SDD.TPS:DSD_PRICES@DF_PRICES_ALL(1.0),I,TUR,M,N,CPI,IX,_T,N,_Z,2025-12,"
+    "110.0,A,,2015\n"
+    "DATAFLOW,OECD.SDD.TPS:DSD_PRICES@DF_PRICES_ALL(1.0),I,TUR,M,N,CPI,IX,_T,N,_Z,2025-11,"
+    "100.0,A,,2015\n"
+)
+
+
+def test_fred_keyless_csv_skips_unpublished_months() -> None:
+    fetch = TextRecorder(FRED_CSV)
+    series = cpi.fred_us_cpi_keyless(dt.date(2025, 9, 15), fetch=fetch, retrieved_at=STAMP)
+    assert series.values == {(2025, 9): 200.0, (2025, 11): 202.0}
+    assert series.source == "fred_csv"
+    assert "id=CPIAUCNS" in fetch.urls[0] and "cosd=2025-09-01" in fetch.urls[0]
+    assert "api_key" not in fetch.urls[0]
+
+
+def test_oecd_csv_is_parsed_by_column_name() -> None:
+    fetch = TextRecorder(OECD_CSV)
+    series = cpi.oecd_cpi("TR", dt.date(2025, 11, 1), fetch=fetch, retrieved_at=STAMP)
+    assert series.values == {(2025, 11): 100.0, (2025, 12): 110.0}
+    assert "/TUR.M.N.CPI.IX._T.N._Z?" in fetch.urls[0]
+    assert "startPeriod=2025-11" in fetch.urls[0]
+
+
+def test_oecd_not_found_becomes_unsupported(monkeypatch: pytest.MonkeyPatch) -> None:
+    import io
+    import urllib.error
+    import urllib.request
+
+    def not_found(*_args: object, **_kwargs: object) -> None:
+        raise urllib.error.HTTPError("u", 404, "Not Found", {}, io.BytesIO(b"NoRecordsFound"))
+
+    monkeypatch.setattr(urllib.request, "urlopen", not_found)
+    with pytest.raises(ToolError) as raised:
+        cpi.oecd_cpi("JP", dt.date(2025, 1, 1), retrieved_at=STAMP)
+    assert raised.value.code is ErrorCode.UNSUPPORTED
+    assert "REALMARKET_CPI_CSV_JP" in raised.value.hint
+
+
+@pytest.mark.parametrize(
+    ("region", "env", "body", "source"),
+    [
+        ("TR", {}, OECD_CSV, "oecd"),  # keyless fallback
+        ("TR", {cpi.EVDS_KEY_ENV: "k"}, None, "evds"),  # key set: official API wins
+        ("US", {}, FRED_CSV, "fred_csv"),
+        ("US", {cpi.FRED_KEY_ENV: "k"}, None, "fred"),
+        ("DE", {}, OECD_CSV.replace("TUR", "DEU"), "oecd"),
+    ],
+)
+def test_source_order(region: str, env: dict[str, str], body: str | None, source: str) -> None:
+    if body is None:
+        payload: object = (
+            {"items": [{"Tarih": "2024-1", "TP_GENENDEKS_T1": "1"}]}
+            if region == "TR"
+            else {"observations": [{"date": "2024-01-01", "value": "1"}]}
+        )
+        fetch: object = Recorder(payload)
+    else:
+        fetch = TextRecorder(body)
+    series = config.load_cpi(
+        region,
+        dt.date(2024, 1, 1),
+        dt.date(2024, 2, 1),
+        retrieved_at=STAMP,
+        env=env,
+        fetch=fetch,  # type: ignore[arg-type]
+    )
+    assert series.source == source
 
 
 def test_csv_override_wins_over_api(tmp_path: Path) -> None:
@@ -195,3 +281,11 @@ def test_non_finite_cpi_values_are_rejected(tmp_path: Path) -> None:
     with pytest.raises(ToolError) as raised:
         inflation.load_csv(path, region="TR", retrieved_at=STAMP)
     assert raised.value.code is ErrorCode.INVALID_ARGUMENT
+
+
+def test_user_agent_names_the_project_with_a_contact_url() -> None:
+    # FRED's CSV download resets connections for bare agent strings (seen 2026-09-25).
+    from realmarket_mcp.providers import http
+
+    assert http.USER_AGENT.startswith("realmarket-mcp/")
+    assert "(+https://" in http.USER_AGENT
