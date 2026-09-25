@@ -12,6 +12,7 @@ from realmarket_mcp.contract import ErrorCode, ToolError
 from realmarket_mcp.providers import cpi
 
 STAMP = "2024-02-01T00:00:00Z"
+FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def test_factor_uses_index_levels() -> None:
@@ -71,8 +72,8 @@ def test_evds_parser_reads_its_column_and_sends_the_key_as_a_header() -> None:
     fetch = Recorder(
         {
             "items": [
-                {"Tarih": "2024-1", "TP_FG_J0": "1984.02", "UNIXTIME": {"$numberLong": "1"}},
-                {"Tarih": "2024-2", "TP_FG_J0": None},
+                {"Tarih": "2024-1", "TP_GENENDEKS_T1": "1984.02", "UNIXTIME": {"$numberLong": "1"}},
+                {"Tarih": "2024-2", "TP_GENENDEKS_T1": None},
             ]
         }
     )
@@ -86,8 +87,44 @@ def test_evds_parser_reads_its_column_and_sends_the_key_as_a_header() -> None:
     assert series.values == {(2024, 1): 1984.02}
     url, headers = fetch.calls[0]
     assert headers == {"key": "k"} and "k" not in url.split("series=")[1].split("&type")[0]
-    assert "series=TP.FG.J0" in url
+    assert "series=TP.GENENDEKS.T1" in url
     assert url.startswith("https://evds3.tcmb.gov.tr/igmevdsms-dis/series=")
+
+
+def test_evds_uses_the_live_series_not_the_archived_one() -> None:
+    # Regression: TP.FG.J0 was archived at 2026-01 when TÜİK rebased CPI to 2025=100, so every
+    # real return for TR stopped there. The live-shaped fixture keeps both columns; only the
+    # continued 2003=100 series reaches 2026-08.
+    fetch = Recorder(json.loads((FIXTURES / "evds" / "series_rebased.json").read_text()))
+    series = cpi.evds_tr_cpi(
+        dt.date(2025, 12, 1),
+        dt.date(2026, 8, 31),
+        env={cpi.EVDS_KEY_ENV: "k"},
+        fetch=fetch,
+        retrieved_at=STAMP,
+    )
+    assert series.series_id == "TP.GENENDEKS.T1"
+    assert series.last_month == (2026, 8)
+    assert series.values == {
+        (2025, 12): 100.0,
+        (2026, 1): 105.0,
+        (2026, 2): 110.0,
+        (2026, 8): 120.0,
+    }
+    assert series.factor((2025, 12), (2026, 8)) == pytest.approx(1.2)
+    assert "startDate=01-12-2025&endDate=01-08-2026" in fetch.calls[0][0]
+
+
+def test_fred_parser_reads_the_live_response_envelope() -> None:
+    # Live shape: metadata keys around "observations"; "." marks a month BLS did not publish
+    # (October 2025). The gap is kept, never filled.
+    fetch = Recorder(json.loads((FIXTURES / "fred" / "observations.json").read_text()))
+    series = cpi.fred_us_cpi(
+        dt.date(2025, 9, 1), env={cpi.FRED_KEY_ENV: "k"}, fetch=fetch, retrieved_at=STAMP
+    )
+    assert series.values == {(2025, 9): 200.0, (2025, 11): 202.0}
+    assert series.factor((2025, 9), (2025, 10)) is None
+    assert series.factor((2025, 9), (2025, 11)) == pytest.approx(1.01)
 
 
 def test_api_keys_never_appear_in_error_text() -> None:

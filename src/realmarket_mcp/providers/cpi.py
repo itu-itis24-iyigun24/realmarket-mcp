@@ -1,8 +1,8 @@
 """Official CPI sources: FRED (United States) and TCMB EVDS (Turkey).
 
 Both need a free API key, read from the environment. HTTP goes through one injectable
-``fetch`` callable so the parsers are tested offline. Response formats were written from the
-providers' public documentation; verify against the live APIs before relying on them.
+``fetch`` callable so the parsers are tested offline. Both response formats were checked
+against the live APIs on 2026-09-25 (see docs/providers.md).
 """
 
 from __future__ import annotations
@@ -29,7 +29,10 @@ EVDS_URL_ENV = "REALMARKET_EVDS_BASE_URL"
 # evds2.tcmb.gov.tr now redirects to evds3; the API gateway is this path (verified: it
 # answers 401 "Invalid API Key" to a bad key, while other paths serve the web app).
 EVDS_URL = "https://evds3.tcmb.gov.tr/igmevdsms-dis/"
-EVDS_SERIES = "TP.FG.J0"  # TÜFE, general index (2003=100)
+# TÜFE general index, 2003=100, chained across TÜİK's 2026 rebasing to 2025=100. The former
+# code TP.FG.J0 was archived with its last value at 2026-01 (verified live on 2026-09-25); the
+# two codes are identical through 2026-01.
+EVDS_SERIES = "TP.GENENDEKS.T1"
 
 
 def http_fetch(url: str, headers: Mapping[str, str]) -> bytes:

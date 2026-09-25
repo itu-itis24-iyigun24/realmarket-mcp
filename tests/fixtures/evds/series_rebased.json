@@ -1,0 +1,6 @@
+{"totalCount":4,"items":[
+{"Tarih":"2025-12","TP_GENENDEKS_T1":"100.00000000","TP_FG_J0":"100.00000000","UNIXTIME":{"$numberLong":"1764536400"}},
+{"Tarih":"2026-1","TP_GENENDEKS_T1":"105.00000000","TP_FG_J0":"105.00000000","UNIXTIME":{"$numberLong":"1767214800"}},
+{"Tarih":"2026-2","TP_GENENDEKS_T1":"110.00000000","TP_FG_J0":null,"UNIXTIME":{"$numberLong":"1769893200"}},
+{"Tarih":"2026-8","TP_GENENDEKS_T1":"120.00000000","TP_FG_J0":null,"UNIXTIME":{"$numberLong":"1785531600"}}
+]}
