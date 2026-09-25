@@ -1,10 +1,21 @@
-# Publishes a GitHub release with the Claude Desktop extension when a version tag is pushed.
-# The tag must match the package version; every check must pass before anything is published.
+# Publishes a GitHub release with the Claude Desktop extension for a version tag: on a pushed
+# tag, on a tag created through GitHub's "Draft a new release" page (the release then already
+# exists and only gets the files and notes), or manually from the Actions tab for an existing
+# tag. The tag must match the package version; every check must pass before anything is
+# published.
 name: release
 
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing version tag to build, e.g. v0.1.0"
+        required: true
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
 
 permissions:
   contents: write
@@ -14,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
       - uses: astral-sh/setup-uv@v6
       - uses: actions/setup-node@v4
         with:
@@ -27,7 +40,7 @@ jobs:
       - name: Tag matches the package version
         run: |
           version=$(.venv/bin/python -c "import realmarket_mcp; print(realmarket_mcp.__version__)")
-          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
+          test "v$version" = "$TAG" || { echo "tag $TAG != v$version"; exit 1; }
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
       - name: Checks
@@ -61,6 +74,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" \
-            "dist/realmarket-$VERSION.mcpb" "dist/realmarket-$VERSION.mcpb.sha256" \
-            --title "realmarket $GITHUB_REF_NAME" --notes-file notes.md
+          files=("dist/realmarket-$VERSION.mcpb" "dist/realmarket-$VERSION.mcpb.sha256")
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --clobber
+            gh release edit "$TAG" --title "realmarket $TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" "${files[@]}" --title "realmarket $TAG" --notes-file notes.md
+          fi
