@@ -20,7 +20,7 @@ def _months_before(day: dt.date, months: int) -> dt.date:
     return dt.date(year, month, min(day.day, calendar.monthrange(year, month)[1]))
 
 
-def _parse(value: str, name: str) -> dt.date:
+def parse_date(value: str, name: str) -> dt.date:
     try:
         return dt.date.fromisoformat(value)
     except ValueError:
@@ -36,11 +36,11 @@ def resolve(
     period: Period, start: str | None, end: str | None, *, today: dt.date
 ) -> tuple[dt.date, dt.date]:
     """Explicit ``start`` wins over ``period``; ``end`` defaults to ``today``."""
-    end_date = _parse(end, "end") if end else today
+    end_date = parse_date(end, "end") if end else today
     if end_date > today:
         end_date = today
     if start:
-        start_date = _parse(start, "start")
+        start_date = parse_date(start, "start")
     elif period == "max":
         start_date = EARLIEST
     elif period == "ytd":

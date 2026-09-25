@@ -129,6 +129,12 @@ class YahooProvider:
     def fx_symbol(base: str, quote: str) -> str:
         return f"{base}{quote}=X"
 
+    @staticmethod
+    def default_benchmark(symbol: str) -> str | None:
+        if symbol.upper().endswith(".IS"):
+            return "XU100.IS"  # BIST 100
+        return None
+
     def __init__(self, backend: YahooBackend | None = None, *, retrieved_at: str) -> None:
         self._backend = backend if backend is not None else YfinanceBackend()
         self._retrieved_at = retrieved_at

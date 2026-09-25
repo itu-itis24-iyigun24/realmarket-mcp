@@ -33,6 +33,10 @@ class FixtureProvider:
     def fx_symbol(base: str, quote: str) -> str:
         return f"{base}{quote}"
 
+    @staticmethod
+    def default_benchmark(symbol: str) -> str | None:
+        return "IDX" if symbol != "IDX" else None
+
     def __init__(self, root: Path, *, retrieved_at: str = "1970-01-01T00:00:00Z") -> None:
         self._root = root
         self._retrieved_at = retrieved_at

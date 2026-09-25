@@ -209,6 +209,39 @@ def build_server() -> MCPServer:
         )
 
     @server.tool(annotations=READ_ONLY)
+    def get_event_reaction(
+        symbol: Symbol,
+        event_date: Annotated[
+            str, Field(description="ISO date the news, disclosure or decision was published.")
+        ],
+        benchmark: Annotated[
+            str | None,
+            Field(description="Index to compare against; defaults to BIST 100 for .IS symbols."),
+        ] = None,
+        windows: Annotated[
+            list[int],
+            Field(min_length=1, max_length=5, description="Session counts, 1 to 60."),
+        ] = [1, 5, 20],  # noqa: B006 - pydantic copies defaults
+    ) -> CallToolResult:
+        """Measure how an asset's price moved after a dated event (earnings, a disclosure, a
+        news item, a rate decision): return from the last close before the event to the 1st,
+        5th and 20th session after it, the benchmark's return over the same sessions, the
+        excess over the benchmark, and the drift in the 5 sessions before the event. Use it
+        for "how did the market react to X" questions. It measures, it does not prove that
+        the event caused the move. Ratios are fractions (0.12 means 12%)."""
+        today = _utc_now().date()
+        return respond(
+            lambda: tools.get_event_reaction(
+                load_price_provider(retrieved_at=_stamp(_utc_now())),
+                symbol,
+                event_date,
+                benchmark,
+                windows,
+                today=today,
+            )
+        )
+
+    @server.tool(annotations=READ_ONLY)
     def get_news(
         query: Annotated[
             str,

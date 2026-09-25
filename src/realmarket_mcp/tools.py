@@ -24,7 +24,7 @@ from realmarket_mcp.contract import (
 )
 from realmarket_mcp.inflation import CpiSeries, last_day_of, month_of, month_str
 from realmarket_mcp.models import Bar, PriceSeries
-from realmarket_mcp.periods import Period, resolve
+from realmarket_mcp.periods import Period, parse_date, resolve
 from realmarket_mcp.providers.base import NewsProvider, PriceProvider
 
 MAX_SEARCH_RESULTS = 25
@@ -569,5 +569,156 @@ def get_news(
             "These are article listings, not verified facts; cite the url and publisher, and "
             "prefer official company disclosures for material claims.",
             "Duplicate titles (syndicated copies) were merged, keeping the earliest.",
+        ),
+    )
+
+
+MAX_EVENT_WINDOW = 60
+PRE_EVENT_SESSIONS = 5
+
+
+def _excess(asset: float, benchmark: float | None) -> float | None:
+    return None if benchmark is None else (1.0 + asset) / (1.0 + benchmark) - 1.0
+
+
+def get_event_reaction(
+    provider: PriceProvider,
+    symbol: str,
+    event_date: str,
+    benchmark: str | None = None,
+    windows: Sequence[int] = (1, 5, 20),
+    *,
+    today: dt.date,
+) -> ToolResult:
+    event = parse_date(event_date, "event_date")
+    if event > today:
+        raise ToolError(
+            ErrorCode.INVALID_ARGUMENT,
+            f"event_date {event} is in the future.",
+            "Pass the date the news or disclosure was published.",
+        )
+    sizes = sorted({w for w in windows if 1 <= w <= MAX_EVENT_WINDOW})
+    if not sizes:
+        raise ToolError(
+            ErrorCode.INVALID_ARGUMENT,
+            f"windows must contain session counts between 1 and {MAX_EVENT_WINDOW}.",
+            "Use the default [1, 5, 20] or similar.",
+        )
+    start = event - dt.timedelta(days=30)
+    end = min(today, event + dt.timedelta(days=sizes[-1] * 2 + 14))
+    series, usable = _load_bars(provider, symbol, start, end)
+    pre = [b for b in usable if b.date < event]
+    post = [b for b in usable if b.date >= event]
+    if not pre:
+        raise ToolError(
+            ErrorCode.NO_DATA_IN_RANGE,
+            f"{symbol} has no close before {event} to measure the reaction from.",
+            "Check the event date and the asset's listing date.",
+        )
+    base = pre[-1]
+    flags = list(quality.check_series(series, requested_end=end))
+    provenance = [_provenance(series, usable[0].date, usable[-1].date)]
+
+    bench_symbol = benchmark or provider.default_benchmark(symbol)
+    bench: list[Bar] = []
+    if bench_symbol:
+        try:
+            bench_series = provider.daily_bars(bench_symbol, start, end)
+            bench = _usable(bench_series)
+            provenance.append(_provenance(bench_series, start, end))
+        except ToolError as error:
+            flags.append(
+                QualityFlag(
+                    "benchmark_unavailable",
+                    Severity.INFO,
+                    f"Benchmark {bench_symbol} skipped: {error.message}",
+                    (bench_symbol,),
+                )
+            )
+    else:
+        flags.append(
+            QualityFlag(
+                "no_benchmark",
+                Severity.INFO,
+                "No default benchmark for this market; pass `benchmark` to get excess returns.",
+            )
+        )
+
+    def bench_return(first: dt.date, last: dt.date) -> float | None:
+        if not bench:
+            return None
+        b0, b1 = _as_of(bench, first), _as_of(bench, last)
+        if b0 is None or b1 is None:
+            return None
+        return _close(b1) / _close(b0) - 1.0
+
+    rows: list[dict[str, Any]] = []
+    for size in sizes:
+        if len(post) < size:
+            rows.append(
+                {
+                    "sessions": size,
+                    "date": None,
+                    "return": None,
+                    "benchmark_return": None,
+                    "excess_return": None,
+                }
+            )
+            continue
+        bar = post[size - 1]
+        ret = _close(bar) / _close(base) - 1.0
+        bret = bench_return(base.date, bar.date)
+        rows.append(
+            {
+                "sessions": size,
+                "date": bar.date.isoformat(),
+                "return": _round(ret),
+                "benchmark_return": _round(bret),
+                "excess_return": _round(_excess(ret, bret)),
+            }
+        )
+    if len(post) < sizes[-1]:
+        flags.append(
+            QualityFlag(
+                "window_incomplete",
+                Severity.INFO,
+                f"Only {len(post)} session(s) since the event; longer windows are null.",
+            )
+        )
+
+    drift = None
+    if len(pre) > PRE_EVENT_SESSIONS:
+        start_bar = pre[-1 - PRE_EVENT_SESSIONS]
+        ret = _close(base) / _close(start_bar) - 1.0
+        bret = bench_return(start_bar.date, base.date)
+        drift = {
+            "sessions": PRE_EVENT_SESSIONS,
+            "from": start_bar.date.isoformat(),
+            "return": _round(ret),
+            "benchmark_return": _round(bret),
+            "excess_return": _round(_excess(ret, bret)),
+        }
+
+    return ToolResult(
+        tool="get_event_reaction",
+        data={
+            "symbol": symbol,
+            "currency": series.currency,
+            "event_date": event.isoformat(),
+            "base_date": base.date.isoformat(),
+            "base_close": _round(_close(base)),
+            "benchmark": bench_symbol if bench else None,
+            "reaction": rows,
+            "pre_event_drift": drift,
+        },
+        provenance=tuple(provenance),
+        quality_flags=tuple(flags),
+        notes=(
+            f"{RATIO_NOTE} Returns are measured from base_date, the last close before "
+            "event_date, so news released after the close is captured.",
+            "Session N is the N-th trading session on or after event_date. excess_return = "
+            "(1 + return) / (1 + benchmark_return) - 1.",
+            "A price move after an event is not proof the event caused it; other news, the "
+            "whole market and chance all move prices.",
         ),
     )
