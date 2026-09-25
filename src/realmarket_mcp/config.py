@@ -12,7 +12,7 @@ PROVIDER_ENV = "REALMARKET_PRICE_PROVIDER"
 FIXTURE_DIR_ENV = "REALMARKET_FIXTURE_DIR"
 
 
-def load_price_provider() -> PriceProvider:
+def load_price_provider(*, retrieved_at: str) -> PriceProvider:
     """Build the configured price provider. Called per request so config errors reach the model."""
     choice = os.environ.get(PROVIDER_ENV, "fixture").strip().lower()
     if choice == "fixture":
@@ -27,10 +27,14 @@ def load_price_provider() -> PriceProvider:
             )
         from realmarket_mcp.providers.fixture import FixtureProvider
 
-        return FixtureProvider(Path(root))
+        return FixtureProvider(Path(root), retrieved_at=retrieved_at)
+    if choice == "yahoo":
+        from realmarket_mcp.providers.yahoo import YahooProvider
+
+        return YahooProvider(retrieved_at=retrieved_at)
     raise ToolError(
         ErrorCode.UNSUPPORTED,
         f"Unknown price provider {choice!r}.",
-        f"Set {PROVIDER_ENV} to one of: fixture.",
+        f"Set {PROVIDER_ENV} to one of: yahoo, fixture.",
         {"provider": choice},
     )

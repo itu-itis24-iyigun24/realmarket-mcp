@@ -73,7 +73,7 @@ class FixtureProvider:
             )
         series = PriceSeries(
             symbol=symbol,
-            currency=asset.currency,
+            currency=asset.currency or "unknown",
             provider=self.name,
             adjustment="as_recorded",
             retrieved_at=self._retrieved_at,

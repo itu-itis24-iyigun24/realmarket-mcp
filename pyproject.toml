@@ -28,6 +28,7 @@ dependencies = [
 realmarket-mcp = "realmarket_mcp.server:main"
 
 [project.optional-dependencies]
+yahoo = ["yfinance>=1.5"]
 dev = [
     "pytest>=8",
     "ruff>=0.6",
@@ -53,3 +54,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 files = ["src/realmarket_mcp"]
 strict = true
 python_version = "3.11"
+
+[[tool.mypy.overrides]]
+module = ["yfinance", "yfinance.*"]
+ignore_missing_imports = true

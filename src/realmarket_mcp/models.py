@@ -27,10 +27,10 @@ class AssetRef:
     symbol: str
     name: str
     asset_class: AssetClass
-    currency: str
+    currency: str | None
     exchange: str
 
-    def to_dict(self) -> dict[str, str]:
+    def to_dict(self) -> dict[str, str | None]:
         return {
             "symbol": self.symbol,
             "name": self.name,

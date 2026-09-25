@@ -34,6 +34,10 @@ def _utc_now() -> dt.datetime:
     return dt.datetime.now(dt.UTC)
 
 
+def _stamp(moment: dt.datetime) -> str:
+    return moment.isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
 def _to_call_result(payload: dict[str, object], *, is_error: bool) -> CallToolResult:
     text = json.dumps(payload, ensure_ascii=False, allow_nan=False)
     return CallToolResult(
@@ -78,11 +82,11 @@ def build_server() -> MCPServer:
         now = _utc_now()
         return respond(
             lambda: tools.search_assets(
-                load_price_provider(),
+                load_price_provider(retrieved_at=_stamp(now)),
                 query,
                 limit,
                 today=now.date(),
-                retrieved_at=now.isoformat(timespec="seconds"),
+                retrieved_at=_stamp(now),
             )
         )
 
@@ -103,10 +107,15 @@ def build_server() -> MCPServer:
         annualized volatility, maximum drawdown with its dates, and data coverage, all in the
         asset's own currency. Use it for "how did X do" questions. It does not adjust for
         inflation or convert currency. Ratios are fractions (0.12 means 12%)."""
-        today = _utc_now().date()
+        now = _utc_now()
         return respond(
             lambda: tools.get_price_summary(
-                load_price_provider(), symbol, period, start, end, today=today
+                load_price_provider(retrieved_at=_stamp(now)),
+                symbol,
+                period,
+                start,
+                end,
+                today=now.date(),
             )
         )
 
