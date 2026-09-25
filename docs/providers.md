@@ -9,7 +9,7 @@ Every provider module must have an entry here before it is merged (see the
 
 | Provider | Module | Data | Enabled by | API key | Terms | Attribution |
 |---|---|---|---|---|---|---|
-| Yahoo Finance (via the community `yfinance` library) | `providers/yahoo.py` | daily prices, FX, gold futures | `REALMARKET_PRICE_PROVIDER=yahoo` + `[yahoo]` extra | no | Yahoo terms of service; restrict automated use | not affiliated with or endorsed by Yahoo |
+| Yahoo Finance (via the community `yfinance` library) | `providers/yahoo.py` | daily prices, FX, gold futures, financial statements | `REALMARKET_PRICE_PROVIDER=yahoo` + `[yahoo]` extra | no | Yahoo terms of service; restrict automated use | not affiliated with or endorsed by Yahoo |
 | FRED (Federal Reserve Bank of St. Louis) | `providers/cpi.py` | US CPI `CPIAUCNS` (source: BLS) | `REALMARKET_FRED_API_KEY` | yes, free | FRED API terms of use | see notice below |
 | TCMB EVDS (Central Bank of the Republic of Türkiye) | `providers/cpi.py` | Turkish CPI `TP.GENENDEKS.T1` (2003=100) (source: TÜİK) | `REALMARKET_EVDS_API_KEY` | yes, free | EVDS terms of use | cite TCMB EVDS / TÜİK |
 | FRED public CSV | `providers/cpi.py` | US CPI `CPIAUCNS` without a key | default when no FRED key | no | FRED terms of use | FRED notice below |
@@ -71,3 +71,32 @@ the providers' current terms pages.
       limits.
 - [ ] Run `pip-licenses` on a clean `.[yahoo]` install (`frozendict`, pulled in by `yfinance`,
       is LGPL-3.0; acceptable as an optional, separately installed dependency).
+
+## Financial statements (Yahoo): reliability test, 2026-09-25
+
+`get_financials` output for the 2026 Q2 reports of eight Borsa Istanbul companies, compared
+with the results the companies published (via press coverage of their KAP filings).
+
+| Company | Check | Tool | Official | Result |
+|---|---|---|---|---|
+| BIMAS | Q2 revenue; YoY revenue / net income | 221.90bn; +9.6% / +125% | 221.90bn; +9.6% / +128% | match |
+| THYAO (reports in USD) | Q2 revenue, net income; YoY | 7.21bn, 0.20bn USD; +20.5% / -71.5% | 7.2bn, 0.197bn USD; +20-21% / -71% | match |
+| GARAN (bank) | Q2 and H1 net income | 30.29bn; 63.44bn | 30.29bn; 63.44bn | match |
+| AKBNK (bank) | YoY net income | +36.6% | +36.6% | match |
+| FROTO | YoY revenue / net income | -14.1% / -44.9% | -14% / -45% | match |
+| EREGL | YoY net income | +554% | +554% | match |
+| TUPRS | YoY net income / **revenue** | +291% / **+59.7%** | +291% / **+43%** | **revenue mismatch, not flagged** |
+| ASELS | Q2 revenue | 70.96bn | ~51.8bn (from official H1) | **wrong; flagged** (`missing_quarter`, `unusual_change`) |
+
+Findings that shaped the tool:
+
+- For companies under TMS 29, Yahoo stores the prior-year quarter and year **as restated in
+  the latest filing** (BIMAS Q2 2025 = 202.43bn in June 2026 money), but the previous quarter
+  **as first reported** (BIMAS Q1 2026 = 212.86bn; restated by CPI Jun/Mar = 1.0701 it gives
+  the official 227.8bn exactly). Year-on-year comparisons are therefore used as reported, and
+  quarter-on-quarter comparisons restate the earlier quarter with CPI. A first version that
+  deflated everything double-counted inflation (BIMAS "real" -17% against the official +9.6%).
+- Because of that mix, quarters are not reconciled with annual totals for TMS 29 years.
+- Latest-quarter headline figures matched in 7 of 8 companies; one error was caught by the
+  flags and one (TUPRS revenue growth) was not. The tool therefore always tells the model to
+  verify material figures in the official filing.

@@ -6,11 +6,12 @@ import datetime as dt
 import os
 from collections.abc import Mapping
 from pathlib import Path
+from typing import cast
 
 from realmarket_mcp import inflation
 from realmarket_mcp.contract import ErrorCode, ToolError
 from realmarket_mcp.providers import cpi
-from realmarket_mcp.providers.base import NewsProvider, PriceProvider
+from realmarket_mcp.providers.base import FinancialsProvider, NewsProvider, PriceProvider
 
 PROVIDER_ENV = "REALMARKET_PRICE_PROVIDER"
 FIXTURE_DIR_ENV = "REALMARKET_FIXTURE_DIR"
@@ -107,3 +108,14 @@ def load_news_provider() -> NewsProvider:
         f"Set {NEWS_PROVIDER_ENV}=gdelt in the MCP server's environment to enable news search.",
         {"provider": choice},
     )
+
+
+def load_financials_provider(*, retrieved_at: str) -> FinancialsProvider:
+    provider = load_price_provider(retrieved_at=retrieved_at)
+    if not hasattr(provider, "financials"):
+        raise ToolError(
+            ErrorCode.UNSUPPORTED,
+            f"The {provider.name} provider has no financial statements.",
+            f"Set {PROVIDER_ENV}=yahoo to use financial statements.",
+        )
+    return cast(FinancialsProvider, provider)

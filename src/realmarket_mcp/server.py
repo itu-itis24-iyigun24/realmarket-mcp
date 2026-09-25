@@ -14,7 +14,12 @@ from mcp_types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import BaseModel, Field
 
 from realmarket_mcp import __version__, tools
-from realmarket_mcp.config import load_cpi, load_news_provider, load_price_provider
+from realmarket_mcp.config import (
+    load_cpi,
+    load_financials_provider,
+    load_news_provider,
+    load_price_provider,
+)
 from realmarket_mcp.contract import ErrorCode, ToolError, ToolResult
 from realmarket_mcp.periods import Period
 from realmarket_mcp.resources import METHODOLOGY
@@ -285,6 +290,26 @@ def build_server() -> MCPServer:
                 currency,
                 inflation_region,
                 compare_with,
+                today=now.date(),
+            )
+        )
+
+    @server.tool(annotations=READ_ONLY)
+    def get_financials(symbol: Symbol) -> CallToolResult:
+        """Summarize a company's recent financial statements: latest-quarter revenue, gross,
+        operating and net profit with margins and debt-to-equity; quarter-on-quarter,
+        year-on-year and annual growth, each both as reported and in constant purchasing power
+        (real); up to eight quarters and four years of figures. Handles Turkish inflation
+        accounting (TMS 29) and flags missing quarters, quarters that do not reconcile with the
+        annual figure, and implausible jumps. Unofficial source: verify material figures in the
+        company's official filings (KAP for Borsa Istanbul). Ratios are fractions."""
+        now = _utc_now()
+        stamp = _stamp(now)
+        return respond(
+            lambda: tools.get_financials(
+                load_financials_provider(retrieved_at=stamp),
+                lambda region, first, last: load_cpi(region, first, last, retrieved_at=stamp),
+                symbol,
                 today=now.date(),
             )
         )

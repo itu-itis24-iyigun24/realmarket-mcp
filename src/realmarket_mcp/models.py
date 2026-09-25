@@ -111,3 +111,49 @@ class NewsItem:
             "language": self.language,
             "country": self.country,
         }
+
+
+FINANCIAL_FIELDS = (
+    "revenue",
+    "gross_profit",
+    "operating_income",
+    "net_income",
+    "total_assets",
+    "total_equity",
+    "total_debt",
+)
+
+
+@dataclass(frozen=True)
+class FinancialPeriod:
+    """One reporting period, values as the source reported them (in ``currency``)."""
+
+    end: dt.date
+    values: dict[str, float | None]
+
+
+@dataclass(frozen=True)
+class FinancialStatements:
+    symbol: str
+    currency: str  # reporting currency, which can differ from the share's trading currency
+    sector: str | None
+    industry: str | None
+    provider: str
+    retrieved_at: str
+    quarterly: tuple[FinancialPeriod, ...]  # ascending by end date
+    annual: tuple[FinancialPeriod, ...]  # ascending by end date
+
+    @property
+    def is_bank(self) -> bool:
+        return "bank" in (self.industry or "").lower()
+
+    @property
+    def data_version(self) -> str:
+        payload = {
+            "symbol": self.symbol,
+            "currency": self.currency,
+            "quarterly": [[p.end.isoformat(), p.values] for p in self.quarterly],
+            "annual": [[p.end.isoformat(), p.values] for p in self.annual],
+        }
+        text = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+        return "sha256:" + hashlib.sha256(text.encode()).hexdigest()

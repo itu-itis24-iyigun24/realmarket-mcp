@@ -35,6 +35,7 @@ compute these figures in code and return them with their sources:
 | `check_data_quality` | "Can I trust this data?" — gaps, placeholder bars, suspicious jumps, stale data |
 | `portfolio_real_return` | "Did my savings keep up with inflation?" — dated purchases valued today, money-weighted return, real return, and the same payments replayed into USD, gold or an index |
 | `get_event_reaction` | "How did the stock react to that announcement?" — 1/5/20-session return vs the index, plus pre-event drift |
+| `get_financials` | "How did the last quarter go?" — revenue, profit, margins, leverage and growth in real terms, with Turkish inflation accounting (TMS 29) handled and data errors flagged |
 | `get_news` | "What was in the news about it?" — recent article listings with publisher, date and link |
 
 It also ships three report prompts (`single_asset_report`, `real_return_report`,

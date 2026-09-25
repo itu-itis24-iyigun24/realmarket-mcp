@@ -10,7 +10,7 @@ from __future__ import annotations
 import datetime as dt
 from typing import Protocol
 
-from realmarket_mcp.models import AssetRef, NewsItem, PriceSeries
+from realmarket_mcp.models import AssetRef, FinancialStatements, NewsItem, PriceSeries
 
 
 class PriceProvider(Protocol):
@@ -42,3 +42,9 @@ class NewsProvider(Protocol):
         language: str | None,
         limit: int,
     ) -> list[NewsItem]: ...
+
+
+class FinancialsProvider(Protocol):
+    name: str
+
+    def financials(self, symbol: str) -> FinancialStatements: ...

@@ -18,7 +18,14 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from realmarket_mcp.contract import ErrorCode, ToolError
-from realmarket_mcp.models import AssetClass, AssetRef, Bar, PriceSeries
+from realmarket_mcp.models import (
+    AssetClass,
+    AssetRef,
+    Bar,
+    FinancialPeriod,
+    FinancialStatements,
+    PriceSeries,
+)
 
 INSTALL_HINT = 'Install the optional dependency: pip install "realmarket-mcp[yahoo]".'
 
@@ -49,10 +56,35 @@ class RawHistory:
     ]
 
 
+# Yahoo row labels for each normalized field, first match wins.
+FINANCIAL_ROWS = {
+    "revenue": ("Total Revenue", "Operating Revenue"),
+    "gross_profit": ("Gross Profit",),
+    "operating_income": ("Operating Income",),
+    "net_income": ("Net Income Common Stockholders", "Net Income"),
+    "total_assets": ("Total Assets",),
+    "total_equity": ("Stockholders Equity", "Common Stock Equity"),
+    "total_debt": ("Total Debt",),
+}
+
+Rows = list[tuple[dt.date, dict[str, float | None]]]
+
+
+@dataclass(frozen=True)
+class RawFinancials:
+    currency: str | None
+    sector: str | None
+    industry: str | None
+    quarterly: Rows
+    annual: Rows
+
+
 class YahooBackend(Protocol):
     def search(self, query: str, limit: int) -> list[dict[str, Any]]: ...
 
     def history(self, symbol: str, start: dt.date, end_inclusive: dt.date) -> RawHistory: ...
+
+    def financials(self, symbol: str) -> RawFinancials: ...
 
 
 def _clean(value: Any) -> float | None:
@@ -109,6 +141,41 @@ class YfinanceBackend:
             for index, row in frame.iterrows()
         ]
         return RawHistory(currency=currency, rows=rows)
+
+    def financials(self, symbol: str) -> RawFinancials:
+        ticker = self._yf.Ticker(symbol)
+        try:
+            quarterly = _frame_rows(ticker.quarterly_income_stmt, ticker.quarterly_balance_sheet)
+            annual = _frame_rows(ticker.income_stmt, ticker.balance_sheet)
+            info = ticker.info or {}
+        except Exception as exc:
+            raise _translate(exc) from exc
+        return RawFinancials(
+            currency=info.get("financialCurrency"),
+            sector=info.get("sector"),
+            industry=info.get("industry"),
+            quarterly=quarterly,
+            annual=annual,
+        )
+
+
+def _frame_rows(*frames: Any) -> Rows:
+    """Merge statement frames (columns are period ends) into {period end: normalized values}."""
+    merged: dict[dt.date, dict[str, float | None]] = {}
+    for frame in frames:
+        if frame is None or getattr(frame, "empty", True):
+            continue
+        for column in frame.columns:
+            end = column.date()
+            values = merged.setdefault(end, {})
+            for field, labels in FINANCIAL_ROWS.items():
+                if values.get(field) is not None:
+                    continue
+                for label in labels:
+                    if label in frame.index:
+                        values[field] = _clean(frame.loc[label, column])
+                        break
+    return sorted(merged.items())
 
 
 def _translate(exc: Exception) -> Exception:
@@ -172,6 +239,26 @@ class YahooProvider:
             adjustment=self.adjustment,
             retrieved_at=self._retrieved_at,
             bars=tuple(by_date[d] for d in sorted(by_date)),
+        )
+
+    def financials(self, symbol: str) -> FinancialStatements:
+        raw: RawFinancials = self._call(lambda: self._backend.financials(symbol), symbol=symbol)
+        if not raw.quarterly and not raw.annual:
+            raise ToolError(
+                ErrorCode.NO_DATA_IN_RANGE,
+                f"Yahoo Finance has no financial statements for {symbol}.",
+                "Funds, indices, currencies and some small companies have none; check the symbol.",
+                {"symbol": symbol},
+            )
+        return FinancialStatements(
+            symbol=symbol,
+            currency=(raw.currency or "unknown").upper(),
+            sector=raw.sector,
+            industry=raw.industry,
+            provider=self.name,
+            retrieved_at=self._retrieved_at,
+            quarterly=tuple(FinancialPeriod(end, values) for end, values in raw.quarterly),
+            annual=tuple(FinancialPeriod(end, values) for end, values in raw.annual),
         )
 
     def _call(self, fetch: Any, *, symbol: str | None) -> Any:

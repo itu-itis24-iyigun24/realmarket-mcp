@@ -133,3 +133,21 @@ def test_bars_from_the_retrieval_day_are_excluded_as_possibly_incomplete() -> No
         "THYAO.IS", D(2024, 1, 1), D(2024, 2, 1)
     )
     assert [b.date for b in series.bars] == [D(2024, 1, 31)]
+
+
+def test_statement_frames_are_merged_by_period_with_row_fallbacks() -> None:
+    pd = pytest.importorskip("pandas")
+    from realmarket_mcp.providers.yahoo import _frame_rows
+
+    ends = [pd.Timestamp("2026-06-30"), pd.Timestamp("2026-03-31")]
+    income = pd.DataFrame(
+        {ends[0]: [100.0, float("nan")], ends[1]: [90.0, 5.0]},
+        index=["Total Revenue", "Net Income"],
+    )
+    balance = pd.DataFrame({ends[0]: [1000.0]}, index=["Total Assets"])
+    rows = dict(_frame_rows(income, balance))
+    assert list(rows) == [D(2026, 3, 31), D(2026, 6, 30)]
+    assert rows[D(2026, 6, 30)]["revenue"] == 100.0
+    assert rows[D(2026, 6, 30)]["net_income"] is None  # NaN never leaks
+    assert rows[D(2026, 6, 30)]["total_assets"] == 1000.0
+    assert rows[D(2026, 3, 31)]["net_income"] == 5.0

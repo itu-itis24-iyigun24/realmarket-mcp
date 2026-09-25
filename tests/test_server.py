@@ -43,6 +43,7 @@ def test_tools_are_listed_with_descriptions_and_read_only_hints() -> None:
         "get_news",
         "get_event_reaction",
         "portfolio_real_return",
+        "get_financials",
     }
     for tool in listed:
         assert tool.description and len(tool.description) > 80

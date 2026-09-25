@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import datetime as dt
 import hashlib
+import itertools
 import json
 import math
 from collections.abc import Callable, Mapping, Sequence
@@ -23,9 +24,9 @@ from realmarket_mcp.contract import (
     ToolResult,
 )
 from realmarket_mcp.inflation import CpiSeries, last_day_of, month_of, month_str
-from realmarket_mcp.models import Bar, PriceSeries
+from realmarket_mcp.models import Bar, FinancialPeriod, PriceSeries
 from realmarket_mcp.periods import Period, parse_date, resolve
-from realmarket_mcp.providers.base import NewsProvider, PriceProvider
+from realmarket_mcp.providers.base import FinancialsProvider, NewsProvider, PriceProvider
 
 MAX_SEARCH_RESULTS = 25
 MAX_COMPARE_SYMBOLS = 10
@@ -980,5 +981,228 @@ def portfolio_real_return(
             "alternatives show where the same payments would stand in each alternative; they "
             "describe the past, not what to buy.",
             "Purchases only: sales and dividends paid out in cash are not modelled.",
+        ),
+    )
+
+
+FLOW_FIELDS = ("revenue", "gross_profit", "operating_income", "net_income")
+STOCK_FIELDS = ("total_assets", "total_equity", "total_debt")
+# Turkish listed companies other than banks restate under TMS 29 from 2023 year-end reports.
+TMS29_FIRST_PERIOD_END = dt.date(2023, 12, 31)
+MAX_QUARTERS_SHOWN = 8
+QUARTER_SUM_TOLERANCE = 0.03
+UNUSUAL_REAL_CHANGE = (-0.40, 0.60)
+
+
+def _amount(value: float | None) -> float | None:
+    return None if value is None else round(value, 2)
+
+
+def _ratio(numerator: float | None, denominator: float | None) -> float | None:
+    if numerator is None or denominator is None or denominator == 0:
+        return None
+    return _round(numerator / denominator)
+
+
+def get_financials(
+    provider: FinancialsProvider,
+    load_cpi: CpiLoader,
+    symbol: str,
+    *,
+    today: dt.date,
+) -> ToolResult:
+    st = provider.financials(symbol)
+    quarters = [p for p in st.quarterly if any(p.values.get(f) is not None for f in FLOW_FIELDS)]
+    years = [p for p in st.annual if any(p.values.get(f) is not None for f in FLOW_FIELDS)]
+    if not quarters and not years:
+        raise ToolError(
+            ErrorCode.NO_DATA_IN_RANGE,
+            f"No income statement figures for {symbol}.",
+            "Check the symbol; funds, indices and currencies have no statements.",
+        )
+    flags: list[QualityFlag] = []
+    provenance = [
+        Provenance(
+            provider=st.provider,
+            dataset="financial_statements",
+            symbols=(symbol,),
+            period_start=min(p.end for p in (*quarters, *years)).isoformat(),
+            period_end=max(p.end for p in (*quarters, *years)).isoformat(),
+            retrieved_at=st.retrieved_at,
+            data_version=st.data_version,
+            adjustment="as_reported",
+        )
+    ]
+
+    region = default_region(st.currency)
+    cpi: CpiSeries | None = None
+    if region:
+        try:
+            first = min(p.end for p in (*quarters, *years))
+            cpi = load_cpi(region, first, today)
+            provenance.append(_cpi_provenance(cpi, month_of(first), cpi.last_month))
+        except ToolError as error:
+            flags.append(
+                QualityFlag(
+                    "inflation_unavailable", Severity.WARNING, f"No real growth: {error.message}"
+                )
+            )
+    else:
+        flags.append(
+            QualityFlag(
+                "inflation_unavailable",
+                Severity.INFO,
+                f"No inflation series for reporting currency {st.currency}.",
+            )
+        )
+
+    def factor(start: dt.date, end: dt.date) -> float | None:
+        return None if cpi is None else cpi.factor(month_of(start), month_of(end))
+
+    restating = st.currency == "TRY" and not st.is_bank
+
+    def growth(
+        cur: FinancialPeriod, prev: FinancialPeriod | None, *, comparative: bool
+    ) -> dict[str, Any] | None:
+        """``comparative``: the earlier period is the one the latest filing restates alongside
+        the current one (the same quarter or year, a year earlier)."""
+        if prev is None:
+            return None
+        already_restated = restating and comparative and cur.end >= TMS29_FIRST_PERIOD_END
+        f = 1.0 if already_restated else factor(prev.end, cur.end)
+        out: dict[str, Any] = {
+            "from": prev.end.isoformat(),
+            "to": cur.end.isoformat(),
+            "real_method": (
+                "company-restated comparative (TMS 29), used as reported"
+                if already_restated
+                else "earlier figure restated with CPI"
+            ),
+        }
+        for field in FLOW_FIELDS:
+            now, before = cur.values.get(field), prev.values.get(field)
+            usable = now is not None and before is not None and before > 0 and now >= 0
+            out[field] = {
+                "as_reported": _round(now / before - 1.0) if usable else None,  # type: ignore[operator]
+                "real": _round(now / (before * f) - 1.0) if usable and f else None,  # type: ignore[operator]
+            }
+        return out
+
+    def near(
+        target: dt.date, periods: Sequence[FinancialPeriod], slack: int
+    ) -> FinancialPeriod | None:
+        hits = [p for p in periods if abs((p.end - target).days) <= slack]
+        return hits[-1] if hits else None
+
+    latest = quarters[-1] if quarters else None
+    qoq = yoy = None
+    if latest is not None:
+        qoq = growth(
+            latest, near(latest.end - dt.timedelta(days=91), quarters[:-1], 20), comparative=False
+        )
+        yoy = growth(
+            latest, near(latest.end - dt.timedelta(days=365), quarters[:-1], 20), comparative=True
+        )
+    annual = (
+        growth(
+            years[-1],
+            near(years[-1].end - dt.timedelta(days=365), years[:-1], 20),
+            comparative=True,
+        )
+        if years
+        else None
+    )
+
+    # --- consistency checks -------------------------------------------------------------
+    for prev, cur in itertools.pairwise(quarters):
+        if (cur.end - prev.end).days > 100:
+            flags.append(
+                QualityFlag(
+                    "missing_quarter",
+                    Severity.WARNING,
+                    f"No quarterly figures between {prev.end} and {cur.end}.",
+                    (prev.end.isoformat(), cur.end.isoformat()),
+                )
+            )
+    for year in years:
+        if restating and year.end >= TMS29_FIRST_PERIOD_END:
+            continue  # the source mixes restated and first-reported quarters: no reliable check
+        inside = [
+            q for q in quarters if dt.timedelta(0) <= year.end - q.end < dt.timedelta(days=360)
+        ]
+        revenues = [q.values.get("revenue") for q in inside]
+        target = year.values.get("revenue")
+        if len(inside) != 4 or not target or any(r is None for r in revenues):
+            continue
+        deviation = math.fsum(r for r in revenues if r is not None) / target - 1.0
+        if abs(deviation) > QUARTER_SUM_TOLERANCE:
+            flags.append(
+                QualityFlag(
+                    "quarters_do_not_add_up",
+                    Severity.WARNING,
+                    f"Quarterly revenue for the year ending {year.end} sums to {deviation:+.1%} "
+                    "versus the annual figure; verify against the official filing.",
+                    (year.end.isoformat(),),
+                )
+            )
+    if qoq is not None:
+        real_change = qoq["revenue"]["real"]
+        change = real_change if real_change is not None else qoq["revenue"]["as_reported"]
+        low, high = UNUSUAL_REAL_CHANGE
+        if change is not None and not low <= change <= high:
+            flags.append(
+                QualityFlag(
+                    "unusual_change",
+                    Severity.WARNING,
+                    f"Revenue changed {change:+.0%} from the previous quarter. Seasonality can "
+                    "explain this, but so can a data error; verify against the official filing.",
+                )
+            )
+
+    def row(p: FinancialPeriod) -> dict[str, Any]:
+        return {
+            "end": p.end.isoformat(),
+            **{k: _amount(p.values.get(k)) for k in (*FLOW_FIELDS, *STOCK_FIELDS)},
+        }
+
+    latest_view = None
+    if latest is not None:
+        v = latest.values
+        latest_view = {
+            **row(latest),
+            "gross_margin": _ratio(v.get("gross_profit"), v.get("revenue")),
+            "operating_margin": _ratio(v.get("operating_income"), v.get("revenue")),
+            "net_margin": _ratio(v.get("net_income"), v.get("revenue")),
+            "debt_to_equity": _ratio(v.get("total_debt"), v.get("total_equity")),
+        }
+    return ToolResult(
+        tool="get_financials",
+        data={
+            "symbol": symbol,
+            "reporting_currency": st.currency,
+            "sector": st.sector,
+            "industry": st.industry,
+            "inflation_accounting": (
+                "TMS 29 (restated) assumed for periods from 2023 year-end"
+                if restating
+                else "not applied (bank or non-TRY reporting)"
+            ),
+            "latest_quarter": latest_view,
+            "growth": {"quarter_on_quarter": qoq, "year_on_year": yoy, "annual": annual},
+            "quarters": [row(q) for q in quarters[-MAX_QUARTERS_SHOWN:]],
+            "years": [row(y) for y in years[-4:]],
+        },
+        provenance=tuple(provenance),
+        quality_flags=tuple(flags),
+        notes=(
+            f"{RATIO_NOTE} Amounts are in {st.currency}, in full units, exactly as the source "
+            "lists them; the reporting currency can differ from the share's trading currency.",
+            "Unofficial source. The official statements are the company's filings on KAP "
+            "(kap.org.tr); verify material figures there.",
+            "Each growth block states its real_method. For Turkish companies under TMS 29 the "
+            "source carries the prior-year quarter and year as restated by the company, so those "
+            "comparisons are used as reported; a previous quarter is restated with CPI "
+            "(period-end months). Elsewhere real = now / (before x CPI ratio) - 1.",
+            "Growth is null when the earlier figure is zero or a loss.",
         ),
     )
