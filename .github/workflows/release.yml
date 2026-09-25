@@ -1,0 +1,66 @@
+# Publishes a GitHub release with the Claude Desktop extension when a version tag is pushed.
+# The tag must match the package version; every check must pass before anything is published.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install
+        run: |
+          uv venv --python 3.11
+          uv pip install -e ".[dev,yahoo]"
+
+      - name: Tag matches the package version
+        run: |
+          version=$(.venv/bin/python -c "import realmarket_mcp; print(realmarket_mcp.__version__)")
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Checks
+        run: |
+          .venv/bin/python -m pytest -q
+          .venv/bin/python -m ruff check .
+          .venv/bin/python -m ruff format --check .
+          .venv/bin/python -m mypy
+
+      - name: Build the desktop extension
+        run: |
+          .venv/bin/python scripts/build_mcpb.py
+          npx -y @anthropic-ai/mcpb@2.1.2 validate build/mcpb/manifest.json
+          mkdir -p dist
+          npx -y @anthropic-ai/mcpb@2.1.2 pack build/mcpb "dist/realmarket-$VERSION.mcpb"
+          (cd dist && sha256sum "realmarket-$VERSION.mcpb" > "realmarket-$VERSION.mcpb.sha256")
+
+      - name: Release notes from CHANGELOG.md
+        run: |
+          .venv/bin/python - <<'PY'
+          import os, re, pathlib
+          text = pathlib.Path("CHANGELOG.md").read_text(encoding="utf-8")
+          version = os.environ["VERSION"]
+          match = re.search(rf"^## {re.escape(version)}\b.*?$(.*?)(?=^## |\Z)", text, re.S | re.M)
+          if not match:
+              raise SystemExit(f"CHANGELOG.md has no section for {version}")
+          pathlib.Path("notes.md").write_text(match.group(1).strip() + "\n", encoding="utf-8")
+          PY
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/realmarket-$VERSION.mcpb" "dist/realmarket-$VERSION.mcpb.sha256" \
+            --title "realmarket $GITHUB_REF_NAME" --notes-file notes.md
