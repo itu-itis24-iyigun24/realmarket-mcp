@@ -1,0 +1,48 @@
+name: Bug report
+description: A tool fails, returns an error you did not expect, or the server does not start.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. **Never paste API keys or your e-mail address** — remove them from
+        any output or log first.
+  - type: input
+    id: version
+    attributes:
+      label: realmarket version
+      description: Shown by `check_setup` ("version"), or the release you installed.
+      placeholder: "0.1.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: client
+    attributes:
+      label: Where do you run it?
+      options:
+        - Claude Desktop (.mcpb extension)
+        - Claude Code / Cowork (plugin)
+        - Another MCP client (pip install)
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: check_setup output
+      description: Ask Claude to "run check_setup" and paste the result. It shows which settings are present, never their values.
+      render: json
+  - type: textarea
+    id: what
+    attributes:
+      label: What you asked and what happened
+      description: The question you asked, the tool that failed and the error message (code and text).
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Server log (optional)
+      description: |
+        Windows: `%APPDATA%\Claude\logs`, macOS: `~/Library/Logs/Claude` — the file whose name
+        contains `realmarket`. Last 50 lines, with keys and e-mail removed.
+      render: text

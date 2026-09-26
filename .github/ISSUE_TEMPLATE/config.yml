@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: KAP disclosures
+    url: https://github.com/hasancagrigungor/kapmcp
+    about: realmarket does not read KAP (its terms require MKK's permission); kapmcp is a separate project that does.

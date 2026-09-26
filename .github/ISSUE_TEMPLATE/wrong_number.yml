@@ -1,0 +1,32 @@
+name: Wrong or suspicious number
+description: A figure disagrees with an official source (a company filing, TÜİK, the central bank, the exchange).
+labels: ["data"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        realmarket reports data as its sources publish it and flags what it can detect; some
+        source errors still get through. A report with the official figure and its link is the
+        fastest way to fix a check or add a new one.
+  - type: input
+    id: tool
+    attributes:
+      label: Tool and arguments
+      placeholder: "get_financials symbol=TUPRS.IS"
+    validations:
+      required: true
+  - type: textarea
+    id: figure
+    attributes:
+      label: The figure, as the tool returned it
+      description: Paste the relevant part of the result, including its provenance and quality_flags.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: official
+    attributes:
+      label: The official figure and its source
+      description: The value, the period and a link (e.g. the KAP or SEC filing, the TÜİK release).
+    validations:
+      required: true
