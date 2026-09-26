@@ -91,3 +91,9 @@ installs dependencies and the bundle ships no packages. Validate and pack with t
 (`npx -y @anthropic-ai/mcpb validate|pack`). `tests/test_plugin.py` keeps the extension's
 settings and environment identical to the Claude Code plugin's. `privacy_policies` is left out
 until the providers' privacy pages are verified (see `docs/providers.md`).
+
+## Commits, tags and releases
+
+Never put a Claude session link (a `Claude-Session: https://claude.ai/code/session_…` line or any
+other session URL) in commit messages, tag messages, release notes or pull requests: the
+repository is public and the maintainer does not share sessions.
