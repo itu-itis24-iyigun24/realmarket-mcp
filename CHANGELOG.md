@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 — 2026-09-26
 
 - **Official figures for European and UK companies.** New `find_official_filer` finds a company
   in the ESEF annual-report index (filings.xbrl.org, XBRL International; keyless) and returns
@@ -10,9 +10,6 @@
   country's CPI.
 - `get_financials` adds a `latest_year` block with margins and leverage, so annual-only sources
   also get ratios.
-
-## 0.1.2 — 2026-09-26
-
 - **Savings real return no longer disappears with a recent purchase.** When the inflation series
   stops before today (usual: CPI is published weeks after month end), `portfolio_real_return`
   used to return no real figure if any purchase fell after the last CPI month — that is, for
