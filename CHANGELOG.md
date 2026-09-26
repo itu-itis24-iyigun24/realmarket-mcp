@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **Official figures for European and UK companies.** New `find_official_filer` finds a company
+  in the ESEF annual-report index (filings.xbrl.org, XBRL International; keyless) and returns
+  candidates with their LEI; `get_financials` with that LEI returns the company's official IFRS
+  figures — annual, plus quarterly where the company files interim reports there. Germany and
+  Ireland are not covered by the index. Growth for euro reporters is deflated with the home
+  country's CPI.
+- `get_financials` adds a `latest_year` block with margins and leverage, so annual-only sources
+  also get ratios.
+
 ## 0.1.2 — 2026-09-26
 
 - **Savings real return no longer disappears with a recent purchase.** When the inflation series

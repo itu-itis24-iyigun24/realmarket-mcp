@@ -319,8 +319,10 @@ def build_server() -> MCPServer:
         (real); up to eight quarters and four years of figures. Handles Turkish inflation
         accounting (TMS 29) and flags missing quarters, quarters that do not reconcile with the
         annual figure, and implausible jumps. US companies come from their official SEC filings
-        (when configured); other markets from an unofficial source, so verify material figures
-        in the company's own filings (KAP for Borsa Istanbul). Ratios are fractions."""
+        (when configured); pass an LEI (from find_official_filer) for a European or UK
+        company's official annual IFRS figures; other symbols use an unofficial source, so
+        verify material figures in the company's own filings (KAP for Borsa Istanbul). Ratios
+        are fractions."""
         now = _utc_now()
         stamp = _stamp(now)
         return respond(
@@ -328,6 +330,29 @@ def build_server() -> MCPServer:
                 load_financials_provider(symbol, retrieved_at=stamp),
                 lambda region, first, last: load_cpi(region, first, last, retrieved_at=stamp),
                 symbol,
+                today=now.date(),
+            )
+        )
+
+    @server.tool(annotations=READ_ONLY)
+    def find_official_filer(
+        name: Annotated[
+            str, Field(description="Part of the company's registered name, e.g. 'ASML'.")
+        ],
+    ) -> CallToolResult:
+        """Find a European or UK listed company in the index of official annual reports
+        (ESEF, filings.xbrl.org) and return candidates with their LEI, country and number of
+        filings. Pass the chosen LEI to get_financials as the symbol for official IFRS annual
+        figures. Not covered: German and Irish companies."""
+        now = _utc_now()
+        from realmarket_mcp.providers.esef import EsefProvider
+
+        stamp = _stamp(now)
+        return respond(
+            lambda: tools.find_official_filer(
+                EsefProvider(retrieved_at=stamp).find_filer,
+                name,
+                retrieved_at=stamp,
                 today=now.date(),
             )
         )

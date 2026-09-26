@@ -21,6 +21,8 @@ Every figure in the answer must come from a realmarket tool result, never from m
    - "Compare A, B, C" → `compare_assets` (one common window)
    - "Did my savings keep up?" → `portfolio_real_return` with the user's dated purchases
    - "How did the last quarter go?" → `get_financials`
+   - Official figures for a European or UK company → `find_official_filer`, pick the listed
+     company from the candidates, then `get_financials` with its LEI
    - "How did the stock react to X?" → `get_event_reaction` with the announcement date
    - "What was in the news?" → `get_news`
 4. **When a tool returns an error,** read its `hint` and act on it (fix the argument, or tell

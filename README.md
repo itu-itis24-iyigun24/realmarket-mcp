@@ -36,6 +36,8 @@ compute these figures in code and return them with their sources:
 | `portfolio_real_return` | "Did my savings keep up with inflation?" — dated purchases valued today, money-weighted return, real return, and the same payments replayed into USD, gold or an index |
 | `get_event_reaction` | "How did the stock react to that announcement?" — 1/5/20-session return vs the index, plus pre-event drift |
 | `get_financials` | "How did the last quarter go?" — revenue, profit, margins, leverage and growth in real terms; US companies from their official SEC filings, Turkish inflation accounting (TMS 29) handled, data errors flagged |
+| `find_official_filer` | "What is ASML's identifier for its official reports?" — European and UK companies in the ESEF annual-report index, with their LEI |
+| `check_setup` | "Is everything configured?" — which data sources are on, and which settings are missing |
 | `get_news` | "What was in the news about it?" — recent article listings with publisher, date and link |
 
 It also ships three report prompts (`single_asset_report`, `real_return_report`,
@@ -162,9 +164,14 @@ wrong, and the interface may break without notice. Symbols follow Yahoo's conven
 | Market | Source | Official |
 |---|---|---|
 | US-listed companies filing US GAAP (10-Q / 10-K, and 20-F filers such as ASML) | SEC EDGAR XBRL API, with `REALMARKET_SEC_CONTACT` | yes |
+| European and UK listed companies (ESEF, IFRS), by LEI — except Germany and Ireland | filings.xbrl.org, no settings needed | yes |
 | Everything else, incl. Borsa Istanbul | Yahoo Finance (`REALMARKET_PRICE_PROVIDER=yahoo`) | no; verify in the company's filings (KAP for Borsa Istanbul) |
 
 US tickers use Yahoo's spelling (`AAPL`, `BRK-B`); a CIK such as `CIK0000320193` also works.
+For a European company, `find_official_filer` returns candidates with their LEI; passing the LEI
+as the symbol gives the annual (and, where the company files them there, quarterly) figures
+from its official ESEF reports, in IFRS — which can differ from what the same company reports
+under US GAAP to the SEC. filings.xbrl.org does not hold German or Irish reports.
 When the SEC has no statements for a company (IFRS filers such as TSM) or does not list the
 ticker, the price provider's statements are used instead, and the result's provenance names
 the source.
@@ -196,6 +203,7 @@ credit its source asks for.
 | TCMB EVDS | Turkish CPI (with key) | May be used and published with reference; not investment advice; users may not be charged for it | [policy](https://evds3.tcmb.gov.tr/igmevdsms-dis/documents/showDocument?docId=22) |
 | FRED | US CPI (API with key; CSV fallback) | [FRED® API Terms of Use](https://fred.stlouisfed.org/docs/api/terms_of_use.html) (API); FRED website terms for the CSV (personal, non-commercial use) | [policy](https://www.stlouisfed.org/about-us/privacy-policy) |
 | OECD | CPI without a key | CC BY 4.0; cite the OECD | [policy](https://www.oecd.org/en/about/privacy.html) |
+| filings.xbrl.org (XBRL International) | Official EU/UK annual reports | Free; "no restrictions on the ways that the data can be used" | receives only company names and LEIs |
 | GDELT | News listings | Free for any use; cite the GDELT Project with a link | receives only the search text |
 | Yahoo Finance (opt-in) | Prices, FX, gold, non-US statements | Terms prohibit automated access without permission (see above) | [policy](https://legal.yahoo.com/us/en/yahoo/privacy/index.html) |
 

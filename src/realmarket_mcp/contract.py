@@ -72,6 +72,8 @@ ATTRIBUTIONS = {
     "evds": "Source: TÜİK consumer price index via CBRT (TCMB) EVDS.",
     "oecd": "Source: OECD, Prices (DF_PRICES_ALL), OECD Data Explorer, licensed CC BY 4.0.",
     "gdelt": "Source: The GDELT Project (https://www.gdeltproject.org/).",
+    "esef": "Source: the company's ESEF annual financial report, via filings.xbrl.org (XBRL "
+    "International).",
 }
 
 

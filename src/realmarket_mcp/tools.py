@@ -1047,6 +1047,14 @@ def _ratio(numerator: float | None, denominator: float | None) -> float | None:
     return _round(numerator / denominator)
 
 
+def _home_region(country: str | None) -> str | None:
+    """A euro (or other shared-currency) reporter's inflation region: its home country, when
+    the OECD publishes that country's CPI."""
+    from realmarket_mcp.providers.cpi import OECD_REGIONS
+
+    return country.upper() if country and country.upper() in OECD_REGIONS else None
+
+
 def get_financials(
     provider: FinancialsProvider,
     load_cpi: CpiLoader,
@@ -1077,7 +1085,7 @@ def get_financials(
         )
     ]
 
-    region = default_region(st.currency)
+    region = default_region(st.currency) or _home_region(st.country)
     cpi: CpiSeries | None = None
     if region:
         try:
@@ -1226,16 +1234,19 @@ def get_financials(
             **{k: _amount(p.values.get(k)) for k in (*FLOW_FIELDS, *STOCK_FIELDS)},
         }
 
-    latest_view = None
-    if latest is not None:
-        v = latest.values
-        latest_view = {
-            **row(latest),
+    def with_ratios(p: FinancialPeriod | None) -> dict[str, Any] | None:
+        if p is None:
+            return None
+        v = p.values
+        return {
+            **row(p),
             "gross_margin": _ratio(v.get("gross_profit"), v.get("revenue")),
             "operating_margin": _ratio(v.get("operating_income"), v.get("revenue")),
             "net_margin": _ratio(v.get("net_income"), v.get("revenue")),
             "debt_to_equity": _ratio(v.get("total_debt"), v.get("total_equity")),
         }
+
+    latest_view = with_ratios(latest)
     return ToolResult(
         tool="get_financials",
         data={
@@ -1249,6 +1260,7 @@ def get_financials(
                 else "not applied (bank or non-TRY reporting)"
             ),
             "latest_quarter": latest_view,
+            "latest_year": with_ratios(years[-1] if years else None),
             "growth": {"quarter_on_quarter": qoq, "year_on_year": yoy, "annual": annual},
             "quarters": [row(q) for q in quarters[-MAX_QUARTERS_SHOWN:]],
             "years": [row(y) for y in years[-SHOWN_YEARS:]],
@@ -1295,5 +1307,55 @@ def check_setup(setup: dict[str, Any], *, retrieved_at: str, today: dt.date) -> 
         notes=(
             "Settings are reported as present or absent; values are never shown. After changing "
             "a setting, quit the app completely (including from the system tray) and reopen it.",
+        ),
+    )
+
+
+def find_official_filer(
+    finder: Callable[[str], list[dict[str, Any]]], name: str, *, retrieved_at: str, today: dt.date
+) -> ToolResult:
+    """European and UK companies in the ESEF annual-report index whose name contains ``name``."""
+    query = name.strip()
+    if len(query) < 3:
+        raise ToolError(
+            ErrorCode.INVALID_ARGUMENT,
+            "The name must have at least 3 characters.",
+            "Pass part of the company's registered name, e.g. 'ASML' or 'TotalEnergies'.",
+        )
+    candidates = finder(query)
+    text = json.dumps(candidates, sort_keys=True, separators=(",", ":"))
+    flags = []
+    if not candidates:
+        flags.append(
+            QualityFlag(
+                "no_match",
+                Severity.INFO,
+                f"No company in the ESEF index has a name containing {query!r}. Try the "
+                "registered legal name (e.g. 'Koninklijke Philips'); German and Irish companies "
+                "are not in the index.",
+            )
+        )
+    return ToolResult(
+        tool="find_official_filer",
+        data={"query": query, "candidates": candidates},
+        provenance=(
+            Provenance(
+                provider="esef",
+                dataset="esef_filers",
+                symbols=(),
+                period_start=today.isoformat(),
+                period_end=today.isoformat(),
+                retrieved_at=retrieved_at,
+                data_version="sha256:" + hashlib.sha256(text.encode()).hexdigest(),
+                adjustment="none",
+            ),
+        ),
+        quality_flags=tuple(flags),
+        notes=(
+            "Pick the candidate that is the listed company (not a foundation, subsidiary or a "
+            "company with a similar name) and pass its lei to get_financials as the symbol. "
+            "A candidate with 0 filings has no annual report in the index.",
+            "Coverage: EU countries, Norway and the UK, except Germany and Ireland, whose "
+            "reports are not in the index.",
         ),
     )

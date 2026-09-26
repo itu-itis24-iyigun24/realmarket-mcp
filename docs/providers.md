@@ -11,6 +11,7 @@ Every provider module must have an entry here before it is merged (see the
 |---|---|---|---|---|---|---|
 | Yahoo Finance (via the community `yfinance` library) | `providers/yahoo.py` | daily prices, FX, gold futures, financial statements | `REALMARKET_PRICE_PROVIDER=yahoo` + `[yahoo]` extra | no | Yahoo terms of service; prohibit automated access without permission | not affiliated with or endorsed by Yahoo |
 | SEC EDGAR XBRL API | `providers/sec.py` | US company financial statements (companyfacts), ticker→CIK list, SIC industry | `REALMARKET_SEC_CONTACT` (an e-mail, not a key) | no | SEC "Accessing EDGAR Data": declared User-Agent with contact, max 10 requests/s; data is public | cite "SEC EDGAR" |
+| filings.xbrl.org (XBRL International) | `providers/esef.py` | ESEF annual (and some quarterly) reports of EU/EEA/UK listed companies, xBRL-JSON, IFRS; entity search by name → LEI | default for LEI symbols | no | free API; "no restrictions on the ways that the data can be used"; may add rate limits | cite the company's ESEF report via filings.xbrl.org |
 | FRED (Federal Reserve Bank of St. Louis) | `providers/cpi.py` | US CPI `CPIAUCNS` (source: BLS) | `REALMARKET_FRED_API_KEY` | yes, free | FRED API terms of use | see notice below |
 | TCMB EVDS (Central Bank of the Republic of Türkiye) | `providers/cpi.py` | Turkish CPI `TP.GENENDEKS.T1` (2003=100) (source: TÜİK) | `REALMARKET_EVDS_API_KEY` | yes, free | EVDS terms of use | cite TCMB EVDS / TÜİK |
 | FRED public CSV | `providers/cpi.py` | US CPI `CPIAUCNS` without a key | fallback when the OECD is unavailable | no | FRED website terms (personal, non-commercial downloads) | "U.S. Bureau of Labor Statistics via FRED" |
@@ -122,6 +123,14 @@ normal connection.
       pages); OECD `https://www.oecd.org/en/about/privacy.html` and Yahoo
       `https://legal.yahoo.com/us/en/yahoo/privacy/index.html` (official-domain search results;
       not reachable here). GDELT: none found.
+- [x] filings.xbrl.org (2026-09-26): API at `/api/filings` and `/api/entities` (JSON:API; filters as a
+      JSON list, e.g. `[{"name":"entity","op":"has","val":{"name":"identifier","op":"eq","val":LEI}}]`,
+      names with `ilike`); reports as xBRL-JSON at each filing's `json_url` (up to a few MB).
+      Terms (`/docs/about`, read directly): "At present, there are no restrictions on the ways that
+      the data can be used"; the API page reserves the right to add rate limits. Coverage by
+      filing count: DE 0, IE 0; FR 1,179, NL 657, IT 872, ES 542, FI 1,169, SE 1,415, DK 2,204,
+      AT 601, BE 709, PL 877, GB 2,951, NO 958. XBRL International's privacy page (www.xbrl.org) is
+      not reachable from the build environment; the service receives only company names and LEIs.
 - [x] Licences (2026-09-25): a clean `.[yahoo]` install has 48 third-party packages, all
       permissive (MIT, BSD, Apache-2.0, PSF, ISC-style); `certifi` is MPL-2.0 (file-level,
       used unmodified); `peewee` reports "UNKNOWN" but its licence file is MIT. `frozendict`
@@ -195,3 +204,37 @@ Findings that shaped the provider:
 - Old years can mix a restated annual figure with first-reported quarters (Microsoft FY2016,
   after its ASC 606 restatement), so the quarter-to-year reconciliation covers only the four
   years shown.
+
+## Financial statements (ESEF): check, 2026-09-26
+
+`get_financials` with an LEI, against the companies' published results:
+
+| Company | Check | Tool | Published | Result |
+|---|---|---|---|---|
+| ASML | 2024 revenue (IFRS) | €28.263bn | €28.26bn | match; 2025 €32.667bn equals its SEC 20-F figure |
+| TotalEnergies (reports in USD) | 2024 sales / net income (group share) | $214.55bn / $15.758bn | $214.55bn / $15.76bn | match |
+| Nokia | 2024 revenue / net income | €19.22bn / €1.277bn | €19.22bn / €1.28bn | match |
+| Novo Nordisk (files quarterly reports in ESEF too) | 2024 revenue | DKK 290.4bn | DKK 290.4bn | match |
+| Enel | 2022 / 2023 revenue; 2024 net income | €140.5bn / €92.9bn; €7.02bn | €140.5bn / €92.9bn; ~€7.0bn | match |
+| Unilever | 2024 turnover | €52.5bn | €60.8bn as first announced | **restated**: the 2025 report restates 2024 without the ice-cream business spun off in 2025; the tool gives the latest restatement, as its notes say |
+
+Findings that shaped the provider:
+
+- IFRS and US GAAP differ: ASML's 2024 net profit is €8.35bn in its IFRS statutory report and
+  €7.57bn under US GAAP; revenue is the same in both. The result states the standard.
+- A first version summed debt parts whenever any was tagged; TotalEnergies' "debt" came out as
+  its current borrowings only (~$10bn against ~$50bn gross debt). Debt now needs a total or a
+  non-current figure, else it is null — which it is for all four companies above, since each
+  tags borrowings under other elements.
+- Novo Nordisk's two newest filings are quarterly reports with no annual period; the provider
+  reads reports newest first until two annual reports (or three years) are covered, at most six.
+- An integrity review of the first version found six ways figures could be silently wrong, all
+  fixed with regression tests: debt summed from an incomplete set of elements (now only
+  complete sets); a trailing-twelve-month figure in an interim report taken as a fiscal year
+  (now only periods ending on the fiscal year end of an annual report); the currency chosen by
+  majority across reports (now the newest report's, others named); a fourth quarter derived
+  across a restatement (now not derived when the line was restated); the inflation region taken
+  from a home country with another currency, and chosen by ingestion time for a report filed in
+  two countries (Unilever: GB and NL) — now only a country whose currency is the reporting
+  currency; and interim reports deciding which element a field uses (now the newest annual
+  report).

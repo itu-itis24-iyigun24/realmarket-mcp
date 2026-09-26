@@ -144,6 +144,9 @@ class FinancialStatements:
     annual: tuple[FinancialPeriod, ...]  # ascending by end date
     # What the tool should tell the model about this source (official or not, derivations).
     source_notes: tuple[str, ...] = ()
+    # The filer's home country (ISO 3166 alpha-2), when the source states it; used for the
+    # inflation region when the reporting currency does not name one (EUR).
+    country: str | None = None
 
     @property
     def is_bank(self) -> bool:
@@ -154,6 +157,7 @@ class FinancialStatements:
         payload = {
             "symbol": self.symbol,
             "currency": self.currency,
+            "country": self.country,
             "quarterly": [[p.end.isoformat(), p.values] for p in self.quarterly],
             "annual": [[p.end.isoformat(), p.values] for p in self.annual],
         }

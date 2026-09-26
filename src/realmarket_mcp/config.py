@@ -253,6 +253,10 @@ def load_financials_provider(
             f"Unknown financials provider {choice!r}.",
             f"Set {FINANCIALS_PROVIDER_ENV} to one of: auto, sec, price.",
         )
+    from realmarket_mcp.providers import esef
+
+    if esef.lei_of(symbol):  # an LEI names an ESEF filer; keyless, whatever the other settings
+        return esef.EsefProvider(retrieved_at=retrieved_at)
     contact = sec.contact_from(env)
     us_symbol = sec.looks_like_us_symbol(symbol)
     if choice == "sec" or (choice == "auto" and us_symbol and contact):
