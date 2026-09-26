@@ -1,7 +1,7 @@
 {
   "name": "realmarket",
   "displayName": "realmarket",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Market research from verified, sourced numbers: real (inflation-adjusted) returns, returns in US dollars and gold, data-quality checks, company financials (official SEC filings for US companies) and news. Not investment advice.",
   "author": {
     "name": "realmarket-mcp contributors",

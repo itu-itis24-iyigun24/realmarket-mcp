@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2 — 2026-09-26
 
 - **Savings real return no longer disappears with a recent purchase.** When the inflation series
   stops before today (usual: CPI is published weeks after month end), `portfolio_real_return`
@@ -12,6 +12,7 @@
   payments restated only to the last CPI month.
 - `check_setup` now says what replaces a missing source (e.g. US statements from Yahoo when no
   SEC e-mail is set) and that only Turkish CPI from the OECD lags.
+- Issue forms for bug reports and for figures that disagree with an official source.
 
 ## 0.1.1 — 2026-09-25
 
