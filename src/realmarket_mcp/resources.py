@@ -42,11 +42,20 @@ All ratios are fractions: 0.12 means 12%.
 - Gold return values the holding in ounces of gold (gold priced in USD).
 - Neither is adjusted for US inflation.
 
+## Savings (portfolio_real_return)
+- Each purchase buys `amount / price` units on its date (converted at that date's USD rates
+  for foreign assets); the value is those units at the valuation date's price.
+- Money-weighted return: the internal rate of return of the dated payments (XIRR).
+- Real return: value of the holdings on `real_return_as_of` divided by every payment made by
+  then, each restated with `CPI(last month) / CPI(purchase month)`, minus 1. `real_return_as_of`
+  is today when this month's CPI is published, otherwise the last day of the last CPI month;
+  purchases after it count only in the nominal figures and the alternatives, and are named in
+  an `inflation_window_truncated` flag. No inflation rate is assumed for unpublished months.
+
 ## Data-quality flags
-- `placeholder_bars` is informational (zero-volume flat bars, usually padded holidays; they do
-  not change returns).
-- `missing_close`,
-  `gap` (no usable bar for over 10 calendar days), `suspicious_move` (one-session move beyond
-  about -39% or +65%, often an unadjusted split or redenomination; severity critical),
-  `stale` (latest bar over 7 days before the requested end).
+- `missing_close`, `gap` (no usable bar for over 10 calendar days), `suspicious_move`
+  (one-session move beyond about -39% or +65%, often an unadjusted split or redenomination;
+  severity critical), `stale` (latest bar over 7 days before the requested end).
+- `placeholder_bars` is informational: zero-volume flat bars, usually holidays padded by the
+  provider; they do not change returns.
 """

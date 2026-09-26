@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- **Savings real return no longer disappears with a recent purchase.** When the inflation series
+  stops before today (usual: CPI is published weeks after month end), `portfolio_real_return`
+  used to return no real figure if any purchase fell after the last CPI month — that is, for
+  almost every monthly saver. The real return is now measured on the last day the series covers,
+  with that day's prices, over the purchases made by then; later purchases stay in the nominal
+  figures and are named in the flag. New fields: `real_return_as_of`,
+  `value_at_real_return_date`. This also fixes a mismatch where today's value was compared with
+  payments restated only to the last CPI month.
+- `check_setup` now says what replaces a missing source (e.g. US statements from Yahoo when no
+  SEC e-mail is set) and that only Turkish CPI from the OECD lags.
+
 ## 0.1.1 — 2026-09-25
 
 Fixes from the first hands-on test in Claude Desktop.

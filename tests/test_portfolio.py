@@ -103,3 +103,33 @@ def test_invalid_lots_are_rejected(
     with pytest.raises(ToolError) as raised:
         tools.portfolio_real_return(provider, _no_cpi, lots, today=TODAY)
     assert raised.value.code is ErrorCode.INVALID_ARGUMENT
+
+
+def test_real_return_is_measured_where_cpi_ends_and_later_purchases_are_named(
+    provider: FixtureProvider,
+) -> None:
+    # CPI stops at 2023-05, before the second purchase (a monthly saver's usual case).
+    cpi = _cpi({(2023, 1): 100.0, (2023, 5): 120.0})
+    result = tools.portfolio_real_return(provider, cpi, LOTS, compare_with=[], today=TODAY)
+    data = result.data
+
+    assert data["real_return_as_of"] == "2023-05-31"
+    # Only the first lot (10 units) counts, valued at the last TTT close on or before 05-31.
+    assert data["value_at_real_return_date"] == 1000.0
+    assert data["invested_in_todays_money"] == pytest.approx(1200.0, abs=0.01)
+    assert data["real_return"] == approx(1000 / 1200 - 1)
+    # Nominal figures still include every purchase.
+    assert (data["invested"], data["value_now"]) == (2500.0, 4000.0)
+    flag = next(f for f in result.quality_flags if f.code == "inflation_window_truncated")
+    assert "TTT 2023-06-30" in flag.message and flag.affected == ("2023-06-30",)
+
+
+def test_no_real_return_when_cpi_ends_before_the_first_purchase(
+    provider: FixtureProvider,
+) -> None:
+    cpi = _cpi({(2022, 11): 99.0, (2022, 12): 100.0})
+    result = tools.portfolio_real_return(provider, cpi, LOTS, compare_with=[], today=TODAY)
+    assert result.data["real_return"] is None
+    assert result.data["value_now"] == 4000.0
+    flag = next(f for f in result.quality_flags if f.code == "inflation_unavailable")
+    assert "before the first purchase" in flag.message

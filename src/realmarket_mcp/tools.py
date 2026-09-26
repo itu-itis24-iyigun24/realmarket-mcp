@@ -867,9 +867,12 @@ def portfolio_real_return(
     flows.append((today, value_total))
     flags: list[QualityFlag] = []
 
-    # Inflation: restate every payment in today's purchasing power.
+    # Inflation: restate every payment in the purchasing power of the last CPI month, and value
+    # the holdings on that month's last day. When CPI stops before today, later purchases are
+    # left out of the real figures (never given an assumed inflation rate).
     region = (inflation_region or default_region(report) or "").upper()
-    real = invested_real = cumulative = None
+    real = invested_real = cumulative = value_real = None
+    real_as_of: dt.date | None = None
     if not region:
         flags.append(
             QualityFlag(
@@ -883,27 +886,59 @@ def portfolio_real_return(
         try:
             cpi = load_cpi(region, first_day, today)
             end_month = min(month_of(today), cpi.last_month)
-            factors = [cpi.factor(month_of(day), end_month) for _, day, _ in parsed]
+            real_as_of = today if end_month == month_of(today) else last_day_of(end_month)
+            covered = [(sym, day, amount) for sym, day, amount in parsed if day <= real_as_of]
+            later = [(sym, day) for sym, day, _ in parsed if day > real_as_of]
+            if not covered:
+                raise ToolError(
+                    ErrorCode.NO_DATA_IN_RANGE,
+                    f"{region} CPI is published through {month_str(end_month)}, before the "
+                    "first purchase.",
+                    "Retry after the next CPI release.",
+                )
+            factors = [cpi.factor(month_of(day), end_month) for _, day, _ in covered]
             if any(f is None for f in factors):
                 raise ToolError(
                     ErrorCode.NO_DATA_IN_RANGE,
-                    "CPI does not cover every purchase.",
-                    "Use purchases inside the CPI series' coverage.",
+                    "CPI does not cover every purchase month.",
+                    "Purchases before the start of the CPI series cannot be restated.",
                 )
             invested_real = math.fsum(
-                a * f for (_, _, a), f in zip(parsed, factors, strict=True) if f is not None
+                a * f for (_, _, a), f in zip(covered, factors, strict=True) if f is not None
             )
-            real = value_total / invested_real - 1.0
+            value_real = math.fsum(
+                _convert(
+                    prices,
+                    provider,
+                    _convert(prices, provider, amount, report, prices.currency(sym), day)
+                    / prices.close(sym, day)
+                    * prices.close(sym, real_as_of),
+                    prices.currency(sym),
+                    report,
+                    real_as_of,
+                )
+                for sym, day, amount in covered
+            )
+            real = value_real / invested_real - 1.0
             cumulative_first = cpi.factor(month_of(first_day), end_month)
             cumulative = None if cumulative_first is None else cumulative_first - 1.0
             prices.provenance.append(_cpi_provenance(cpi, month_of(first_day), end_month))
-            if end_month < month_of(today):
+            if real_as_of < today:
+                excluded = (
+                    f" {len(later)} later purchase(s) are not in the real figures: "
+                    + ", ".join(f"{sym} {day}" for sym, day in later[:10])
+                    + ("…" if len(later) > 10 else "")
+                    + "."
+                    if later
+                    else ""
+                )
                 flags.append(
                     QualityFlag(
                         "inflation_window_truncated",
                         Severity.WARNING,
-                        f"{region} CPI is published through {month_str(end_month)}; "
-                        "purchasing power is restated to that month.",
+                        f"{region} CPI is published through {month_str(end_month)}; the real "
+                        f"return is measured on {real_as_of}, with that day's prices.{excluded}",
+                        tuple(day.isoformat() for _, day in later[:20]),
                     )
                 )
         except ToolError as error:
@@ -963,6 +998,8 @@ def portfolio_real_return(
             "annualized_money_weighted": _round(xirr(flows)),
             "inflation_region": region or None,
             "cumulative_inflation_since_first_purchase": _round(cumulative),
+            "real_return_as_of": None if real_as_of is None else real_as_of.isoformat(),
+            "value_at_real_return_date": None if value_real is None else round(value_real, 2),
             "invested_in_todays_money": None if invested_real is None else round(invested_real, 2),
             "real_return": _round(real),
             "real_return_positive": None if real is None else real > 0,
@@ -974,8 +1011,10 @@ def portfolio_real_return(
         notes=(
             f"{RATIO_NOTE} Amounts are in {report}; foreign assets are converted at each date's "
             "US-dollar exchange rates.",
-            "real_return compares today's value with every payment restated in today's "
-            "purchasing power: invested_in_todays_money.",
+            "real_return compares the holdings' value on real_return_as_of (the last day the "
+            "inflation series covers, or today) with every payment made by then, restated in "
+            "that month's purchasing power: invested_in_todays_money. Later purchases count "
+            "only in the nominal figures and the alternatives.",
             "annualized_money_weighted is the internal rate of return of the dated payments "
             "(it accounts for when money went in).",
             "alternatives show where the same payments would stand in each alternative; they "
