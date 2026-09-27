@@ -14,6 +14,25 @@
 - **Central deployment.** `realmarket-mcp --transport http` serves MCP over Streamable HTTP
   (default 127.0.0.1:8000, path `/mcp`), for a firm's own assistant and model;
   `docs/integration.md` describes the setup.
+- **Valuation multiples.** New `get_valuation`: market value, P/E, P/B and P/S from the latest
+  four quarters (or fiscal year). Converts statement figures to the trading currency (Yahoo's
+  own P/B for Turkish Airlines is 18.3 because it skips this; the correct figure is 0.37),
+  restates quarters under TMS 29, counts every share class, and states why a ratio is null.
+  Every figure carries its sources, including where the share count came from and as of when.
+- Checks added after an independent review of the three features above:
+  - Prices quoted in pence, cents or agorot (Yahoo's `GBp`, `ZAc`, `ILA`) are converted to the
+    major unit; before, a London share's market value was 100 times too high. An adapter must
+    send the major unit.
+  - SEC cover-page share counts are not used when they are more than 400 days older than the
+    latest statements (Berkshire's last tagged count is from 2011) or when the company files
+    20-F/40-F (the US listing is often an ADR worth several shares). Two sources' share counts
+    more than 5% apart are flagged `shares_mismatch`.
+  - `get_valuation` flags `stale_price`, sums earnings and sales over the same four quarters,
+    and flags `fiscal_year_basis` and `inflation_unavailable` when it falls back to the fiscal
+    year.
+  - The deposit model does not carry a rate across a gap of more than 21 days inside the series.
+  - An adapter's name is shown as `adapter:<name>`, so it can never pose as a built-in source.
+  - API keys and tokens are not sent on to another server when a request is redirected.
 - Tests no longer see the developer's own `REALMARKET_*` settings.
 
 ## 0.1.3 — 2026-09-27

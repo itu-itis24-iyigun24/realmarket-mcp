@@ -68,7 +68,10 @@ class DepositRates:
         value = 1.0
         day = start
         while day < end:
-            rate = self.observations[bisect.bisect_right(dates, day) - 1][1]  # fixed at opening
+            published, rate = self.observations[bisect.bisect_right(dates, day) - 1]
+            if (day - published).days > MAX_CARRY_DAYS:  # a gap inside the series
+                return None
+            # the rate is fixed at opening for the whole term
             days = min(TERM_DAYS, (end - day).days)
             value *= 1.0 + rate / 100.0 * days / 365.0
             day += dt.timedelta(days=days)

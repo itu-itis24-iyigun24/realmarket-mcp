@@ -398,6 +398,8 @@ def parse_company_facts(
             + ", ".join(recent_restated)
             + "."
         )
+    ends = [dt.date.fromisoformat(e) for e in (*quarterly, *annual)]
+    shares, shares_source, shares_as_of = _cover_shares(payload, max(ends) if ends else None)
     return FinancialStatements(
         symbol=symbol,
         currency=unit,
@@ -408,4 +410,50 @@ def parse_company_facts(
         quarterly=periods(quarterly),
         annual=periods(annual),
         source_notes=tuple(notes),
+        shares_outstanding=shares,
+        shares_source=shares_source,
+        shares_as_of=shares_as_of,
     )
+
+
+# A cover-page share count older than this, measured back from the latest statement period,
+# belongs to an old filing (Berkshire's last tagged count is from 2011) and is not used.
+MAX_SHARES_AGE_DAYS = 400
+FOREIGN_FORMS = ("20-F", "40-F")
+
+
+def _cover_shares(
+    payload: Mapping[str, Any], latest_period: dt.date | None
+) -> tuple[float | None, str | None, dt.date | None]:
+    """dei:EntityCommonStockSharesOutstanding from the latest filing's cover page. Companies with
+    several share classes tag it per class (with a dimension companyfacts omits), so the
+    element is then absent (Alphabet) — no total is guessed. Not used for foreign filers
+    (20-F, 40-F): their cover counts ordinary shares, while the US listing is often an ADR
+    representing several of them (Alibaba: 8 per ADR)."""
+    facts = payload.get("facts", {})
+    if any(
+        str(f.get("form", "")).startswith(FOREIGN_FORMS)
+        for taxonomy in facts.values()
+        for concept in taxonomy.values()
+        for unit in concept.get("units", {}).values()
+        for f in unit
+    ):
+        return None, None, None
+    cover = (
+        facts.get("dei", {})
+        .get("EntityCommonStockSharesOutstanding", {})
+        .get("units", {})
+        .get("shares", [])
+    )
+    usable = [f for f in cover if isinstance(f.get("val"), int | float) and f.get("end")]
+    if not usable:
+        return None, None, None
+    latest = max(f["end"] for f in usable)
+    values = {float(f["val"]) for f in usable if f["end"] == latest}
+    as_of = dt.date.fromisoformat(latest)
+    if len(values) != 1 or (
+        latest_period is not None and (latest_period - as_of).days > MAX_SHARES_AGE_DAYS
+    ):
+        return None, None, None
+    source = f"sec_edgar dei:EntityCommonStockSharesOutstanding as of {latest}"
+    return values.pop(), source, as_of

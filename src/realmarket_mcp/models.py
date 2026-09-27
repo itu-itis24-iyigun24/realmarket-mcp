@@ -40,6 +40,27 @@ class AssetRef:
         }
 
 
+# Quote units some exchanges use: prices in pence (London), cents (Johannesburg) or agorot
+# (Tel Aviv). Upper-casing "GBp" would silently turn pence into pounds, a 100x error.
+MINOR_UNITS: dict[str, tuple[str, int]] = {
+    "GBp": ("GBP", 100),
+    "GBX": ("GBP", 100),
+    "ZAc": ("ZAR", 100),
+    "ZAC": ("ZAR", 100),
+    "ILA": ("ILS", 100),
+    "ILa": ("ILS", 100),
+}
+
+
+def major_currency(code: str | None) -> tuple[str, int]:
+    """(ISO currency, divisor) for a quoted currency code: ("GBP", 100) for "GBp"."""
+    if not code:
+        return "unknown", 1
+    if code in MINOR_UNITS:
+        return MINOR_UNITS[code]
+    return code.upper(), 1
+
+
 @dataclass(frozen=True)
 class Bar:
     """One daily session. Prices may be ``None`` when the provider has no value."""
@@ -147,6 +168,10 @@ class FinancialStatements:
     # The filer's home country (ISO 3166 alpha-2), when the source states it; used for the
     # inflation region when the reporting currency does not name one (EUR).
     country: str | None = None
+    # Shares outstanding (all classes), where the source says, and what the number is based on.
+    shares_outstanding: float | None = None
+    shares_source: str | None = None
+    shares_as_of: dt.date | None = None
 
     @property
     def is_bank(self) -> bool:
@@ -158,6 +183,11 @@ class FinancialStatements:
             "symbol": self.symbol,
             "currency": self.currency,
             "country": self.country,
+            "shares": [
+                self.shares_outstanding,
+                self.shares_source,
+                self.shares_as_of.isoformat() if self.shares_as_of else None,
+            ],
             "quarterly": [[p.end.isoformat(), p.values] for p in self.quarterly],
             "annual": [[p.end.isoformat(), p.values] for p in self.annual],
         }
@@ -199,4 +229,18 @@ def statements_from_dict(
         retrieved_at=retrieved_at,
         quarterly=periods("quarterly"),
         annual=periods("annual"),
+        shares_outstanding=_shares(raw.get("shares_outstanding")),
+        shares_source=f"{provider} shares_outstanding" if raw.get("shares_outstanding") else None,
     )
+
+
+def _shares(value: object) -> float | None:
+    import math
+
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int | float) or not math.isfinite(value):
+        raise ValueError("shares_outstanding is not a number")
+    if value <= 0:
+        raise ValueError("shares_outstanding must be positive")
+    return float(value)

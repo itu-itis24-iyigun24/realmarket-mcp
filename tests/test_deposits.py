@@ -45,6 +45,8 @@ def test_no_growth_outside_the_published_period() -> None:
     assert series.growth(dt.date(2025, 1, 2), dt.date(2025, 1, 6)) is None  # before the first rate
     late = dt.date(2025, 1, 3) + dt.timedelta(days=MAX_CARRY_DAYS + 1)
     assert series.growth(dt.date(2025, 1, 3), late) is None  # never extrapolated for long
+    gap = rates((dt.date(2025, 1, 3), 40.0), (dt.date(2025, 6, 6), 40.0))  # months unpublished
+    assert gap.growth(dt.date(2025, 1, 3), dt.date(2025, 6, 10)) is None
 
 
 def test_rows_parse_and_reject_implausible_rates() -> None:
@@ -92,7 +94,7 @@ def test_evds_key_and_currency_are_required() -> None:
 # TTT (TRY): 100 on 2023-01-02, 200 on 2024-01-02 (fixture). A flat 36.5% deposit rolled every
 # 32 days over 365 days: 11 full terms and a 13-day remainder.
 YEAR = (1 + 0.365 * 32 / 365) ** 11 * (1 + 0.365 * 13 / 365)
-FLAT = rates((dt.date(2022, 12, 30), 36.5), (dt.date(2023, 12, 29), 36.5))
+FLAT = rates(*((dt.date(2022, 12, 30) + dt.timedelta(weeks=w), 36.5) for w in range(53)))
 
 
 def _deposit_loader(series: DepositRates) -> tools.DepositLoader:

@@ -70,12 +70,12 @@ def test_meta_defines_the_source_and_its_conventions() -> None:
     fake = FakeAdapter()
     p = provider(fake)
     assert (p.name, p.gold_usd_symbol, p.fx_symbol("USD", "TRY")) == (
-        "acme-feed",
+        "adapter:acme-feed",
         "XAUUSD",
         "USDTRY",
     )
     assert p.default_benchmark("THYAO") == "XU100"
-    assert ATTRIBUTIONS["acme-feed"] == "Source: ACME licensed feed."
+    assert ATTRIBUTIONS["adapter:acme-feed"] == "Source: ACME licensed feed."
     assert fake.calls[0][2] == {"Authorization": "Bearer tok"}  # the token goes in a header only
     assert all("tok" not in json.dumps(params) for _, params, _ in fake.calls)
 
@@ -85,7 +85,7 @@ def test_bars_are_validated_and_normalized() -> None:
     assert (series.currency, series.adjustment, series.provider) == (
         "TRY",
         "split_and_dividend",
-        "acme-feed",
+        "adapter:acme-feed",
     )
     assert [b.close for b in series.bars] == [292.0, None]  # a missing close stays missing
 
@@ -95,6 +95,7 @@ def test_bars_are_validated_and_normalized() -> None:
     [
         ({**BARS, "symbol": "OTHER"}, "answered for"),
         ({**BARS, "currency": "TL"}, "3-letter currency"),
+        ({**BARS, "currency": "GBp"}, "major unit"),
         ({**BARS, "bars": [{**BARS["bars"][0], "close": "292"}]}, "not a finite number"),
         ({**BARS, "bars": [BARS["bars"][1], BARS["bars"][0]]}, "ascending"),
         ({k: v for k, v in BARS.items() if k != "adjustment"}, "/bars"),
@@ -130,7 +131,7 @@ def test_financials_optional_and_validated() -> None:
     st = provider(FakeAdapter(**{"/financials": statements})).financials("THYAO")
     assert (st.currency, st.provider, st.quarterly[0].values["revenue"]) == (
         "TRY",
-        "acme-feed",
+        "adapter:acme-feed",
         7.2e9,
     )
     with pytest.raises(ToolError) as raised:
@@ -154,3 +155,12 @@ def test_configuration(monkeypatch: pytest.MonkeyPatch) -> None:
     assert any("REALMARKET_HTTP_URL" in m for m in setup["missing"])
     ready = config.describe_setup({config.PROVIDER_ENV: "http", http_adapter.URL_ENV: BASE})
     assert ready["price_data"]["enabled"] is True and ready["missing"][:1] != ["Prices are off"]
+
+
+def test_credentials_do_not_follow_redirects() -> None:
+    from realmarket_mcp.providers import http
+
+    request = http.build_request("https://a.example/x", {"Authorization": "Bearer t", "key": "k"})
+    assert set(request.headers) == {"User-agent"}  # all a redirect would copy
+    assert request.unredirected_hdrs.keys() == {"Authorization", "Key"}
+    assert request.get_header("User-agent", "").startswith("realmarket-mcp/")

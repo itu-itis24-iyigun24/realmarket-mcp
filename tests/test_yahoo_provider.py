@@ -151,3 +151,13 @@ def test_statement_frames_are_merged_by_period_with_row_fallbacks() -> None:
     assert rows[D(2026, 6, 30)]["net_income"] is None  # NaN never leaks
     assert rows[D(2026, 6, 30)]["total_assets"] == 1000.0
     assert rows[D(2026, 3, 31)]["net_income"] == 5.0
+
+
+def test_pence_quotes_become_pounds() -> None:
+    rows = [(D(2024, 1, 2), 250.0, 260.0, 240.0, 255.0, 1000.0)]
+    series = _provider(history=RawHistory("GBp", rows)).daily_bars(
+        "SHEL.L", D(2024, 1, 1), D(2024, 1, 5)
+    )
+    assert series.currency == "GBP"
+    bar = series.bars[0]
+    assert (bar.open, bar.close, bar.volume) == (2.5, 2.55, 1000.0)  # volume is not a price

@@ -18,6 +18,20 @@ USER_AGENT = (
 )
 
 
+# Credentials a request may carry. They are attached as "unredirected" headers, which urllib
+# does not copy onto a redirect: a server that redirects elsewhere never receives the token.
+SECRET_HEADERS = frozenset({"authorization", "key"})
+
+
+def build_request(url: str, headers: Mapping[str, str]) -> urllib.request.Request:
+    plain = {k: v for k, v in headers.items() if k.lower() not in SECRET_HEADERS}
+    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, **plain})
+    for name, value in headers.items():
+        if name.lower() in SECRET_HEADERS:
+            request.add_unredirected_header(name, value)
+    return request
+
+
 def get(
     url: str,
     headers: Mapping[str, str],
@@ -27,7 +41,7 @@ def get(
     not_found: ToolError | None = None,
     forbidden: ToolError | None = None,
 ) -> bytes:
-    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, **headers})
+    request = build_request(url, headers)
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             body: bytes = response.read()

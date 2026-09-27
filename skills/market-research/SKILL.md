@@ -17,10 +17,13 @@ Every figure in the answer must come from a realmarket tool result, never from m
    which numbers it affects.
 3. **Pick the tool for the question:**
    - "How did it do?" → `get_price_summary`
-   - "Did it beat inflation?" → `compare_real_return` (also gives USD and gold)
+   - "Did it beat inflation?" → `compare_real_return` (also gives USD, gold and, for TL
+     assets, a TL deposit account)
    - "Compare A, B, C" → `compare_assets` (one common window)
    - "Did my savings keep up?" → `portfolio_real_return` with the user's dated purchases
    - "How did the last quarter go?" → `get_financials`
+   - "Is it expensive relative to its earnings?" → `get_valuation` (describe the multiples;
+     never say whether the share is cheap, expensive or a buy)
    - Official figures for a European or UK company → `find_official_filer`, pick the listed
      company from the candidates, then `get_financials` with its LEI
    - "How did the stock react to X?" → `get_event_reaction` with the announcement date

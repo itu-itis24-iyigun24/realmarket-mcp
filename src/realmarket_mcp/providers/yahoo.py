@@ -25,6 +25,7 @@ from realmarket_mcp.models import (
     FinancialPeriod,
     FinancialStatements,
     PriceSeries,
+    major_currency,
 )
 
 INSTALL_HINT = 'Install the optional dependency: pip install "realmarket-mcp[yahoo]".'
@@ -77,6 +78,8 @@ class RawFinancials:
     industry: str | None
     quarterly: Rows
     annual: Rows
+    shares: float | None = None  # sharesOutstanding: the quoted share class
+    implied_shares: float | None = None  # impliedSharesOutstanding: all classes
 
 
 class YahooBackend(Protocol):
@@ -156,6 +159,8 @@ class YfinanceBackend:
             industry=info.get("industry"),
             quarterly=quarterly,
             annual=annual,
+            shares=_clean(info.get("sharesOutstanding")),
+            implied_shares=_clean(info.get("impliedSharesOutstanding")),
         )
 
 
@@ -176,6 +181,21 @@ def _frame_rows(*frames: Any) -> Rows:
                         values[field] = _clean(frame.loc[label, column])
                         break
     return sorted(merged.items())
+
+
+def _all_share_classes(raw: RawFinancials) -> tuple[float | None, str | None]:
+    """Yahoo's sharesOutstanding counts the quoted class only (Alphabet GOOGL: 5.87bn of
+    12.23bn on 2026-09-27); impliedSharesOutstanding counts every class. Prefer the latter."""
+    if raw.implied_shares and raw.implied_shares > 0:
+        if raw.shares and abs(raw.implied_shares / raw.shares - 1) > 0.01:
+            return raw.implied_shares, (
+                "yahoo impliedSharesOutstanding (all share classes; the quoted class alone is "
+                f"{raw.shares:,.0f})"
+            )
+        return raw.implied_shares, "yahoo impliedSharesOutstanding"
+    if raw.shares and raw.shares > 0:
+        return raw.shares, "yahoo sharesOutstanding (may cover only the quoted share class)"
+    return None, None
 
 
 def _translate(exc: Exception) -> Exception:
@@ -228,13 +248,19 @@ class YahooProvider:
         raw = self._call(lambda: self._backend.history(symbol, start, end), symbol=symbol)
         # A bar dated on or after the retrieval day may be an in-progress session: exclude it.
         cutoff = min(end, dt.date.fromisoformat(self._retrieved_at[:10]) - dt.timedelta(days=1))
+        currency, unit = major_currency(raw.currency)  # pence -> pounds, etc.
+
+        def major(value: float | None) -> float | None:
+            return None if value is None else value / unit
+
         by_date = {}
         for date, open_, high, low, close, volume in raw.rows:
-            if start <= date <= cutoff:
-                by_date[date] = Bar(date, open_, high, low, close, volume)  # last row per date wins
+            if start <= date <= cutoff:  # last row per date wins
+                prices = (major(open_), major(high), major(low), major(close))
+                by_date[date] = Bar(date, *prices, volume)
         return PriceSeries(
             symbol=symbol,
-            currency=raw.currency or "unknown",
+            currency=currency,
             provider=self.name,
             adjustment=self.adjustment,
             retrieved_at=self._retrieved_at,
@@ -250,15 +276,26 @@ class YahooProvider:
                 "Funds, indices, currencies and some small companies have none; check the symbol.",
                 {"symbol": symbol},
             )
+        shares, source = _all_share_classes(raw)
+        currency, unit = major_currency(raw.currency)
+
+        def major(rows: Rows) -> tuple[FinancialPeriod, ...]:
+            return tuple(
+                FinancialPeriod(end, {k: None if v is None else v / unit for k, v in vals.items()})
+                for end, vals in rows
+            )
+
         return FinancialStatements(
             symbol=symbol,
-            currency=(raw.currency or "unknown").upper(),
+            currency=currency,
             sector=raw.sector,
             industry=raw.industry,
             provider=self.name,
             retrieved_at=self._retrieved_at,
-            quarterly=tuple(FinancialPeriod(end, values) for end, values in raw.quarterly),
-            annual=tuple(FinancialPeriod(end, values) for end, values in raw.annual),
+            quarterly=major(raw.quarterly),
+            annual=major(raw.annual),
+            shares_outstanding=shares,
+            shares_source=source,
         )
 
     def _call(self, fetch: Any, *, symbol: str | None) -> Any:

@@ -245,3 +245,14 @@ Findings that shaped the provider:
   two countries (Unilever: GB and NL) — now only a country whose currency is the reporting
   currency; and interim reports deciding which element a field uses (now the newest annual
   report).
+
+## Valuation multiples: check, 2026-09-27
+
+`get_valuation` against the multiples Yahoo Finance itself publishes:
+
+| Company | Tool P/E, P/B | Yahoo P/E, P/B | Note |
+|---|---|---|---|
+| THYAO | 3.04, **0.37** | —, **18.3** | Yahoo divides a TRY price by USD book value (THY reports in USD); 18.3 / 48.95 USDTRY = 0.37 |
+| BIMAS | 16.7, 2.50 | 20.6, 2.50 | Under TMS 29 the tool restates each quarter to the latest quarter's purchasing power before summing; Yahoo sums quarters in different purchasing power |
+| AAPL | 38.6, 46.3 | 39.1, 46.3 | shares from SEC's cover page (dei) |
+| GOOGL | 17.2, 6.57 | 17.3, 6.76 | shares must count every class: Yahoo's `sharesOutstanding` (5.87bn) is class A only, `impliedSharesOutstanding` (12.23bn) all classes |

@@ -80,8 +80,12 @@ ATTRIBUTIONS = {
 
 
 def register_attribution(provider: str, text: str) -> None:
-    """Credit line for a provider known only at run time (an operator's data adapter)."""
-    ATTRIBUTIONS.setdefault(provider, text)
+    """Credit line for a provider known only at run time (an operator's data adapter). Such
+    providers are namespaced (``adapter:<name>``), so this can never replace a built-in source's
+    credit line; a later registration for the same adapter replaces the earlier one."""
+    if ":" not in provider:
+        raise ValueError(f"run-time provider names are namespaced, got {provider!r}")
+    ATTRIBUTIONS[provider] = text
 
 
 @dataclass(frozen=True)

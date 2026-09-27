@@ -40,7 +40,7 @@ EVDS_SERIES = "TP.GENENDEKS.T1"
 
 
 def http_fetch(url: str, headers: Mapping[str, str]) -> bytes:
-    request = urllib.request.Request(url, headers={"User-Agent": http.USER_AGENT, **headers})
+    request = http.build_request(url, headers)  # the API key never follows a redirect
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             body: bytes = response.read()

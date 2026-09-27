@@ -12,7 +12,7 @@ Configure realmarket with:
 |---|---|
 | `REALMARKET_PRICE_PROVIDER` | `http` |
 | `REALMARKET_HTTP_URL` | the adapter's base URL, e.g. `https://marketdata.internal/realmarket/v1` |
-| `REALMARKET_HTTP_TOKEN` | optional; sent as `Authorization: Bearer <token>`, never logged or returned |
+| `REALMARKET_HTTP_TOKEN` | optional; sent as `Authorization: Bearer <token>`, never logged or returned, and not sent on when the adapter redirects |
 
 All endpoints are `GET` and return `application/json`. Dates are `YYYY-MM-DD`. Numbers are
 JSON numbers (not strings); a value the source does not have is `null`, never `0` or `NaN`.
@@ -37,7 +37,7 @@ Describes the source. realmarket reads it once and caches it for an hour.
 | Field | Required | Meaning |
 |---|---|---|
 | `api_version` | yes | `1` |
-| `name` | yes | Short source name; shown as the `provider` of every figure |
+| `name` | yes | Short source name; every figure shows `adapter:<name>` as its `provider` |
 | `attribution` | no | The credit line shown with every figure from this source |
 | `gold_usd_symbol` | yes | Symbol of gold priced in US dollars per troy ounce |
 | `fx_symbol` | yes | Pattern for exchange rates: units of `{quote}` per one `{base}` (e.g. `USDTRY` = TRY per USD) |
@@ -72,7 +72,8 @@ Daily bars for one symbol between two dates, inclusive, ascending by date, one b
 }
 ```
 
-- `symbol` must equal the requested symbol; `currency` is a 3-letter ISO code.
+- `symbol` must equal the requested symbol; `currency` is a 3-letter ISO code in the major
+  unit: send pounds (`GBP`), not pence (`GBp`, `GBX`), and likewise `ZAR` and `ILS`.
 - `adjustment` states the price policy of the series, e.g. `split_and_dividend` (total-return
   adjusted), `split` or `none`. It is shown with every figure; say what the feed really does.
 - Do not include a bar for the current, unfinished session.
@@ -94,6 +95,9 @@ Financial statements, or 404 if the adapter does not serve them (realmarket then
   "annual": [{"end": "2025-12-31", "values": {"revenue": 26000000000}}]
 }
 ```
+
+An optional top-level `"shares_outstanding"` (all share classes, a positive number) lets
+`get_valuation` compute market value from the adapter's own data.
 
 Fields: `revenue`, `gross_profit`, `operating_income`, `net_income` (for the period) and
 `total_assets`, `total_equity`, `total_debt` (at the period end), in `currency`, in full units.

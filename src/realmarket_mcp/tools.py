@@ -25,7 +25,7 @@ from realmarket_mcp.contract import (
 )
 from realmarket_mcp.deposits import DepositLoader, DepositRates
 from realmarket_mcp.inflation import CpiSeries, last_day_of, month_of, month_str
-from realmarket_mcp.models import Bar, FinancialPeriod, PriceSeries
+from realmarket_mcp.models import Bar, FinancialPeriod, FinancialStatements, PriceSeries
 from realmarket_mcp.periods import Period, parse_date, resolve
 from realmarket_mcp.providers.base import FinancialsProvider, NewsProvider, PriceProvider
 
@@ -1479,5 +1479,274 @@ def find_official_filer(
             "A candidate with 0 filings has no annual report in the index.",
             "Coverage: EU countries, Norway and the UK, except Germany and Ireland, whose "
             "reports are not in the index.",
+        ),
+    )
+
+
+VALUATION_STALE_DAYS = 200
+SHARES_MISMATCH = 0.05  # two sources' share counts further apart than this are flagged
+SharesLookup = Callable[[str], FinancialStatements]
+
+
+def _trailing_window(periods: Sequence[FinancialPeriod]) -> list[FinancialPeriod]:
+    """The latest four consecutive quarters reporting net income, or [] when there are none.
+    Earnings and sales are both summed over this one window, never over different quarters."""
+    last4 = [p for p in periods if p.values.get("net_income") is not None][-4:]
+    if len(last4) < 4:
+        return []
+    if any(not 80 <= (b.end - a.end).days <= 100 for a, b in itertools.pairwise(last4)):
+        return []
+    return last4
+
+
+def _window_sum(
+    window: Sequence[FinancialPeriod], field: str, factors: Mapping[dt.date, float] | None
+) -> float | None:
+    """Sum of ``field`` over the window, each quarter multiplied by its purchasing-power factor
+    when given; None when any quarter lacks the field."""
+    total = 0.0
+    for p in window:
+        value = p.values.get(field)
+        if value is None:
+            return None
+        total += value * (factors[p.end] if factors is not None else 1.0)
+    return total
+
+
+def get_valuation(
+    price_provider: PriceProvider,
+    fin_provider: FinancialsProvider,
+    load_cpi: CpiLoader,
+    symbol: str,
+    price_symbol: str | None = None,
+    *,
+    today: dt.date,
+    shares_lookup: SharesLookup | None = None,
+) -> ToolResult:
+    from realmarket_mcp.providers.esef import lei_of
+
+    if lei_of(symbol) and not price_symbol:
+        raise ToolError(
+            ErrorCode.INVALID_ARGUMENT,
+            "An LEI identifies the company's reports, not its shares.",
+            "Pass the share's trading symbol as price_symbol (e.g. 'ASML.AS').",
+        )
+    quote = price_symbol or symbol
+    st = fin_provider.financials(symbol)
+    prices = _Prices(price_provider, today - dt.timedelta(days=21), today)
+    series, usable = prices.series(quote)
+    last = usable[-1]
+    price = _close(last)
+    trade_ccy = series.currency.upper()
+    flags: list[QualityFlag] = []
+
+    if (today - last.date).days > AS_OF_TOLERANCE_DAYS:
+        flags.append(
+            QualityFlag(
+                "stale_price",
+                Severity.WARNING,
+                f"The latest {quote} close is from {last.date}; market value uses that price.",
+                (quote, last.date.isoformat()),
+            )
+        )
+
+    # Share count: the statements' own source first; the price source's count is used when
+    # the statements give none, and otherwise as a cross-check.
+    other: FinancialStatements | None = None
+    if shares_lookup is not None:
+        try:
+            other = shares_lookup(quote)
+        except ToolError:
+            other = None
+        if other is not None and other.shares_outstanding is None:
+            other = None
+    shares_st = st if st.shares_outstanding is not None else other
+    if shares_st is other and other is not None:
+        flags.append(
+            QualityFlag(
+                "shares_from_other_source",
+                Severity.INFO,
+                f"The statements' source gives no share count; used {other.shares_source}.",
+            )
+        )
+    elif other is not None and st.shares_outstanding is not None:
+        gap = (other.shares_outstanding or 0.0) / st.shares_outstanding - 1
+        if abs(gap) > SHARES_MISMATCH:
+            flags.append(
+                QualityFlag(
+                    "shares_mismatch",
+                    Severity.WARNING,
+                    f"Share counts disagree by {gap:+.1%}: {st.shares_outstanding:,.0f} "
+                    f"({st.shares_source}) vs {other.shares_outstanding:,.0f} "
+                    f"({other.shares_source}). The first is used; market value and every "
+                    "ratio move with it.",
+                )
+            )
+    shares = shares_st.shares_outstanding if shares_st is not None else None
+    shares_source = shares_st.shares_source if shares_st is not None else None
+    if shares_st is None or shares is None:
+        raise ToolError(
+            ErrorCode.NO_DATA_IN_RANGE,
+            f"No share count for {quote}, so no market value.",
+            "The statements' source does not state shares outstanding (companies with several "
+            "share classes often do not); enable a price provider that does, such as Yahoo.",
+        )
+    market_cap = price * shares
+
+    # Earnings and sales: the latest four quarters, else the latest fiscal year.
+    restating = st.currency == "TRY" and not st.is_bank
+    factors: dict[dt.date, float] | None = None
+    cpi_provenance: list[Provenance] = []
+    if restating and st.quarterly:
+        latest_q = st.quarterly[-1].end
+        try:
+            cpi = load_cpi("TR", st.quarterly[0].end, latest_q)
+            got = {p.end: cpi.factor(month_of(p.end), month_of(latest_q)) for p in st.quarterly}
+            if all(v is not None for v in got.values()):
+                factors = {k: v for k, v in got.items() if v is not None}
+                cpi_provenance.append(
+                    _cpi_provenance(cpi, month_of(st.quarterly[0].end), month_of(latest_q))
+                )
+            else:
+                flags.append(
+                    QualityFlag(
+                        "inflation_unavailable",
+                        Severity.WARNING,
+                        "The CPI series does not cover every quarter, so quarters could not be "
+                        "restated under TMS 29.",
+                    )
+                )
+        except ToolError as error:
+            flags.append(QualityFlag("inflation_unavailable", Severity.WARNING, f"{error.message}"))
+    used = _trailing_window([] if restating and factors is None else st.quarterly)
+    earnings = _window_sum(used, "net_income", factors)
+    sales = _window_sum(used, "revenue", factors)
+    if not used and st.quarterly and st.annual:
+        flags.append(
+            QualityFlag(
+                "fiscal_year_basis",
+                Severity.INFO,
+                "Four consecutive, comparable quarters were not available; earnings and sales "
+                f"are from the fiscal year ending {st.annual[-1].end}.",
+            )
+        )
+    if used:
+        basis, period_end = "trailing_four_quarters", used[-1].end
+        periods_used = [p.end.isoformat() for p in used]
+    elif st.annual:
+        year = st.annual[-1]
+        earnings, sales = year.values.get("net_income"), year.values.get("revenue")
+        basis, period_end, periods_used = "latest_fiscal_year", year.end, [year.end.isoformat()]
+    else:
+        raise ToolError(
+            ErrorCode.NO_DATA_IN_RANGE,
+            f"No complete earnings period for {symbol}.",
+            "Four consecutive quarters or a fiscal year are needed.",
+        )
+    if (today - period_end).days > VALUATION_STALE_DAYS:
+        flags.append(
+            QualityFlag(
+                "stale_statements",
+                Severity.WARNING,
+                f"The latest earnings period ends {period_end}, over {VALUATION_STALE_DAYS} days "
+                "ago; the ratios compare today's price with old results.",
+            )
+        )
+    periods_all = sorted((*st.quarterly, *st.annual), key=lambda p: p.end)
+    equity_period = next(
+        (p for p in reversed(periods_all) if p.values.get("total_equity") is not None), None
+    )
+    equity = equity_period.values.get("total_equity") if equity_period else None
+
+    # Statement currency -> the share's trading currency, at the price date.
+    fx = 1.0
+    if st.currency != trade_ccy:
+        fx = _convert(prices, price_provider, 1.0, st.currency, trade_ccy, last.date)
+        flags.append(
+            QualityFlag(
+                "currency_converted",
+                Severity.INFO,
+                f"The company reports in {st.currency} and its shares trade in {trade_ccy}; "
+                f"statement figures were converted at {fx:.6g} {trade_ccy} per {st.currency} "
+                f"({last.date}).",
+            )
+        )
+
+    def ratio(denominator: float | None, what: str) -> tuple[float | None, str | None]:
+        if denominator is None:
+            return None, f"no {what} figure"
+        if denominator <= 0:
+            return None, f"{what} is zero or negative: the ratio is not meaningful"
+        return _round(market_cap / (denominator * fx)), None
+
+    pe, pe_reason = ratio(earnings, "earnings")
+    pb, pb_reason = ratio(equity, "equity")
+    ps, ps_reason = ratio(sales, "sales")
+    provenance = [*prices.provenance, *cpi_provenance]  # prices include any FX series used
+    if shares_st is other and other is not None:
+        as_of = (other.shares_as_of or dt.date.fromisoformat(other.retrieved_at[:10])).isoformat()
+        provenance.append(
+            Provenance(
+                provider=other.provider,
+                dataset="shares_outstanding",
+                symbols=(quote,),
+                period_start=as_of,
+                period_end=as_of,
+                retrieved_at=other.retrieved_at,
+                data_version=other.data_version,
+                adjustment="as_reported",
+            )
+        )
+    provenance.append(
+        Provenance(
+            provider=st.provider,
+            dataset="financial_statements",
+            symbols=(symbol,),
+            period_start=periods_all[0].end.isoformat(),
+            period_end=periods_all[-1].end.isoformat(),
+            retrieved_at=st.retrieved_at,
+            data_version=st.data_version,
+            adjustment="as_reported",
+        )
+    )
+    reasons = {k: v for k, v in (("pe", pe_reason), ("pb", pb_reason), ("ps", ps_reason)) if v}
+    return ToolResult(
+        tool="get_valuation",
+        data={
+            "symbol": quote,
+            "price": price,
+            "price_date": last.date.isoformat(),
+            "trading_currency": trade_ccy,
+            "shares_outstanding": shares,
+            "shares_source": shares_source,
+            "shares_as_of": shares_st.shares_as_of.isoformat() if shares_st.shares_as_of else None,
+            "market_cap": round(market_cap, 0),
+            "reporting_currency": st.currency,
+            "fx_to_trading_currency": None if fx == 1.0 else _round(fx),
+            "earnings_basis": basis,
+            "periods_used": periods_used,
+            "earnings": _amount(earnings),
+            "sales": _amount(sales),
+            "equity": _amount(equity),
+            "equity_as_of": equity_period.end.isoformat() if equity_period else None,
+            "price_to_earnings": pe,
+            "price_to_book": pb,
+            "price_to_sales": ps,
+            "not_meaningful": reasons,
+        },
+        provenance=tuple(provenance),
+        quality_flags=tuple(prices.flags + flags),
+        notes=(
+            "price_to_earnings = market_cap / earnings (net income attributable to owners), "
+            "price_to_book = market_cap / equity, price_to_sales = market_cap / sales; "
+            "market_cap = latest close x shares outstanding. Figures in the reporting currency "
+            "are converted to the trading currency first.",
+            "earnings_basis trailing_four_quarters sums the latest four consecutive quarters; "
+            "for Turkish companies under TMS 29 each quarter is first restated to the latest "
+            "quarter's purchasing power with CPI. Otherwise the latest fiscal year is used.",
+            "A ratio is null when its denominator is missing, zero or negative (not_meaningful "
+            "says which). Ratios describe today's price against past results; they are not a "
+            "view on whether the share is cheap or expensive.",
+            *st.source_notes[:1],
         ),
     )

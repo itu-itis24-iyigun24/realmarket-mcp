@@ -36,6 +36,7 @@ from typing import Any
 
 from realmarket_mcp.contract import ErrorCode, ToolError, register_attribution
 from realmarket_mcp.models import (
+    MINOR_UNITS,
     AssetClass,
     AssetRef,
     Bar,
@@ -87,7 +88,8 @@ class HttpAdapterProvider:
         self._retrieved_at = retrieved_at
         self._fetch = fetch or self._default_fetch
         meta = self._meta()
-        self.name = str(meta["name"])
+        # Namespaced, so an adapter can never pose as a built-in source ("yahoo", "sec_edgar").
+        self.name = f"adapter:{meta['name']}"
         self.gold_usd_symbol = str(meta["gold_usd_symbol"])
         self._fx_pattern = str(meta["fx_symbol"])
         self._benchmarks = {str(k).upper(): str(v) for k, v in meta.get("benchmarks", {}).items()}
@@ -176,6 +178,8 @@ class HttpAdapterProvider:
         try:
             if payload["symbol"] != symbol:
                 raise _bad(f"/bars answered for {payload['symbol']!r}, not {symbol!r}")
+            if payload["currency"] in MINOR_UNITS:
+                raise _bad("/bars currency must be the major unit (GBP, not pence)")
             currency = str(payload["currency"]).upper()
             adjustment = str(payload["adjustment"])
             if len(currency) != 3 or not adjustment:

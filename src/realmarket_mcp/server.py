@@ -345,6 +345,52 @@ def build_server() -> MCPServer:
         )
 
     @server.tool(annotations=READ_ONLY)
+    def get_valuation(
+        symbol: Annotated[
+            str,
+            Field(description="The company: a symbol from search_assets, a US ticker, or an LEI."),
+        ],
+        price_symbol: Annotated[
+            str | None,
+            Field(
+                description="The share's trading symbol when `symbol` is an LEI (e.g. "
+                "'ASML.AS'); otherwise leave empty."
+            ),
+        ] = None,
+    ) -> CallToolResult:
+        """Price multiples of a listed company: market value (latest close x shares
+        outstanding), price-to-earnings, price-to-book and price-to-sales, from the latest four
+        quarters (or the latest fiscal year) and the latest equity. Converts statement figures
+        to the share's trading currency when they differ (e.g. a company reporting in USD whose
+        shares trade in TRY) and restates quarters under Turkish inflation accounting. A ratio
+        is null, with the reason, when its denominator is missing or not positive. Describes
+        the past; not a view on value. Ratios are plain numbers (12.5 means 12.5x)."""
+        now = _utc_now()
+        stamp = _stamp(now)
+
+        def run() -> ToolResult:
+            price_provider = load_price_provider(retrieved_at=stamp)
+            fin_provider = load_financials_provider(symbol, retrieved_at=stamp)
+            # The price source's own statements supply or cross-check the share count, unless
+            # they are the very statements already used.
+            lookup = getattr(price_provider, "financials", None)
+            if price_symbol is None and getattr(fin_provider, "name", None) == getattr(
+                price_provider, "name", None
+            ):
+                lookup = None
+            return tools.get_valuation(
+                price_provider,
+                fin_provider,
+                lambda region, first, last: load_cpi(region, first, last, retrieved_at=stamp),
+                symbol,
+                price_symbol,
+                today=now.date(),
+                shares_lookup=lookup,
+            )
+
+        return respond(run)
+
+    @server.tool(annotations=READ_ONLY)
     def find_official_filer(
         name: Annotated[
             str, Field(description="Part of the company's registered name, e.g. 'ASML'.")

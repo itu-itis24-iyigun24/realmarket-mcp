@@ -50,6 +50,16 @@ All ratios are fractions: 0.12 means 12%.
   days after the last publication, never extrapolated.
 - `deposit_real_return` deflates the deposit over the same window as `real_return`.
 
+## Valuation (get_valuation)
+- market_cap = latest close x shares outstanding (all share classes; the source is named).
+- price_to_earnings = market_cap / earnings, price_to_book = market_cap / equity,
+  price_to_sales = market_cap / sales, with statement figures converted to the share's trading
+  currency at the price date when the company reports in another currency.
+- Earnings and sales: the latest four consecutive quarters (80-100 days apart); for Turkish
+  companies under TMS 29 each quarter is first restated to the latest quarter's purchasing
+  power with CPI. Otherwise the latest fiscal year. Equity: the latest period that has it.
+- A ratio is null, with the reason, when its denominator is missing, zero or negative.
+
 ## Savings (portfolio_real_return)
 - Each purchase buys `amount / price` units on its date (converted at that date's USD rates
   for foreign assets); the value is those units at the valuation date's price.

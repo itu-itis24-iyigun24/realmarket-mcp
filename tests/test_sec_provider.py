@@ -345,3 +345,20 @@ def test_without_a_price_provider_the_sec_error_is_kept() -> None:
     with pytest.raises(ToolError) as raised:
         config._WithFallback(_Stub("sec_edgar", ifrs), missing).financials("TSM")
     assert raised.value is ifrs
+
+
+def _with_cover(end: str, val: float, form: str = "10-K") -> dict[str, Any]:
+    payload = company(Revenues=REVENUE, **BALANCE)
+    cover = concept(fact(None, end, val, end, form), unit="shares")
+    payload["facts"]["dei"] = {"EntityCommonStockSharesOutstanding": cover}
+    return payload
+
+
+def test_cover_page_share_count_is_checked() -> None:
+    st = parse(_with_cover("2026-01-20", 5000))
+    assert (st.shares_outstanding, st.shares_as_of) == (5000, dt.date(2026, 1, 20))
+    stale = parse(_with_cover("2011-02-15", 941_481))  # Berkshire's last tagged count
+    assert stale.shares_outstanding is None
+    foreign = parse(_with_cover("2026-01-20", 5000, form="20-F"))  # ADR ratio unknown here
+    assert foreign.shares_outstanding is None
+    assert st.data_version != parse(_with_cover("2026-01-20", 5001)).data_version

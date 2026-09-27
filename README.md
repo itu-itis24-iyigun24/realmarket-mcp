@@ -36,6 +36,7 @@ compute these figures in code and return them with their sources:
 | `portfolio_real_return` | "Did my savings keep up with inflation?" — dated purchases valued today, money-weighted return, real return, and the same payments replayed into USD, gold, a TL deposit or an index |
 | `get_event_reaction` | "How did the stock react to that announcement?" — 1/5/20-session return vs the index, plus pre-event drift |
 | `get_financials` | "How did the last quarter go?" — revenue, profit, margins, leverage and growth in real terms; US companies from their official SEC filings, Turkish inflation accounting (TMS 29) handled, data errors flagged |
+| `get_valuation` | "Is it priced high relative to its earnings?" — market value, P/E, P/B and P/S, with currency conversion and Turkish inflation accounting handled |
 | `find_official_filer` | "What is ASML's identifier for its official reports?" — European and UK companies in the ESEF annual-report index, with their LEI |
 | `check_setup` | "Is everything configured?" — which data sources are on, and which settings are missing |
 | `get_news` | "What was in the news about it?" — recent article listings with publisher, date and link |
