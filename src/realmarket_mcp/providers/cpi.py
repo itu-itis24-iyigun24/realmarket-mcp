@@ -146,7 +146,15 @@ def evds_tr_cpi(
 
 # Weighted average annual rate on new TL deposits with maturity up to 3 months (weekly, flow),
 # which covers the common 32-day deposit (EVDS data group bie_mt100h, verified 2026-09-27).
-EVDS_DEPOSIT_SERIES = {"TRY": "TP.TRY.MT02"}
+# TCMB's weekly weighted average rates on new TL deposits, EVDS group bie_mt100h (verified
+# 2026-09-27). The usual saver's product, a 32-day deposit, falls in the "up to 3 months"
+# bucket (1-3 months; the "up to 1 month" bucket pays less throughout). Savings deposits
+# (individuals) are the saver's comparison; the all-deposits series also includes commercial
+# deposits, which paid up to 5 points more in 2024. Savings rates start in July 2012; a period
+# that starts earlier uses the all-deposits series throughout rather than a spliced one.
+EVDS_DEPOSIT_SERIES: dict[str, tuple[tuple[str, dt.date | None], ...]] = {
+    "TRY": (("TP.TRYTAS.MT02", dt.date(2012, 7, 6)), ("TP.TRY.MT02", None)),
+}
 
 
 def evds_deposit_rates(
@@ -158,8 +166,8 @@ def evds_deposit_rates(
     fetch: Fetch = http_fetch,
     retrieved_at: str,
 ) -> DepositRates:
-    series = EVDS_DEPOSIT_SERIES.get(currency.upper())
-    if series is None:
+    choices = EVDS_DEPOSIT_SERIES.get(currency.upper())
+    if choices is None:
         raise ToolError(
             ErrorCode.UNSUPPORTED,
             f"No deposit rate series for {currency}.",
@@ -178,6 +186,7 @@ def evds_deposit_rates(
     if not base.endswith("/"):
         base += "/"
     first = start - dt.timedelta(days=14)  # the rate in force on the start day
+    series = next(code for code, since in choices if since is None or since <= first)
     url = f"{base}series={series}&startDate={first:%d-%m-%Y}&endDate={end:%d-%m-%Y}&type=json"
     body = fetch(url, {"key": key})
     column = series.replace(".", "_")

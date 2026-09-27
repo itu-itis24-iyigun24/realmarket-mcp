@@ -124,8 +124,11 @@ normal connection.
       `https://legal.yahoo.com/us/en/yahoo/privacy/index.html` (official-domain search results;
       not reachable here). GDELT: none found.
 - [x] EVDS deposit rates (2026-09-27): data group `bie_mt100h` "Mevduat Faiz Oranları (Akım)",
-      weekly (Friday) from 2002; `TP.TRY.MT02` is the weighted average annual rate on new TL
-      deposits up to 3 months. Response items: `Tarih` as `dd-mm-yyyy`, the value as a string
+      weekly (Friday); `TP.TRYTAS.MT02` (from July 2012) is the weighted average annual rate on
+      new TL savings deposits of 1-3 months, `TP.TRY.MT02` (from 2002) on all new TL deposits of
+      1-3 months, commercial included. The up-to-1-month rate (`MT01`) is lower throughout, and a
+      32-day deposit belongs to the 1-3 month bucket. Savings and all-deposit rates differed by
+      up to 5 points (2024-04 monthly average: 66.56% vs 67.57%, commercial 71.88%). Response items: `Tarih` as `dd-mm-yyyy`, the value as a string
       (`"44.02000000"` on 2026-09-18). Same EVDS terms as CPI (use with reference; not investment
       advice). A 32-day rolling deposit at these rates returned +58.6% gross over the year to
       2026-09-26, consistent with the published 44–49% rates.

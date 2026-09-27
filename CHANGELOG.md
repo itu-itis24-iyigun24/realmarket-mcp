@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **Deposit comparison uses savings-deposit rates.** The TL deposit alternative now follows
+  TCMB's rate on new *savings* deposits of 1-3 months (`TP.TRYTAS.MT02`), the account a saver
+  actually holds, instead of all TL deposits including commercial ones (`TP.TRY.MT02`, which
+  paid up to 5 points more in 2024). The 1-3 month bucket stays: a 32-day deposit falls in it,
+  and the up-to-1-month rate is lower throughout. Periods starting before July 2012, when the
+  savings series begins, use the all-deposits series throughout instead of splicing the two.
+  Over THYAO's last three years the deposit return moves from 371.18% to 371.27%.
+
 ## 0.1.5 — 2026-09-27
 
 - **Model qualification.** `realmarket-qualify --base-url <OpenAI-compatible API> --model <name>`

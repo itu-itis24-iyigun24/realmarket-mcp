@@ -69,15 +69,25 @@ class Recorder:
 
 
 def test_evds_request_and_response() -> None:
-    fetch = Recorder({"items": [{"Tarih": "18-09-2026", "TP_TRY_MT02": "44.02000000"}]})
+    fetch = Recorder({"items": [{"Tarih": "18-09-2026", "TP_TRYTAS_MT02": "44.02000000"}]})
     env = {cpi.EVDS_KEY_ENV: "secret"}
     series = config.load_deposit_rates(
         "TRY", dt.date(2026, 9, 1), dt.date(2026, 9, 27), retrieved_at=STAMP, env=env, fetch=fetch
     )
     assert series.observations == ((dt.date(2026, 9, 18), 44.02),)
+    assert series.series_id == "TP.TRYTAS.MT02"  # savings deposits of 1-3 months: the saver's
     url, headers = fetch.calls[0]
-    assert "series=TP.TRY.MT02" in url and "startDate=18-08-2026" in url  # rate in force at start
+    assert "series=TP.TRYTAS.MT02" in url and "startDate=18-08-2026" in url  # rate at start
     assert headers == {"key": "secret"} and "secret" not in url
+
+
+def test_periods_before_savings_rates_use_all_deposits_throughout() -> None:
+    fetch = Recorder({"items": [{"Tarih": "07-01-2011", "TP_TRY_MT02": "7.50"}]})
+    series = config.load_deposit_rates(
+        "TRY", dt.date(2011, 1, 10), dt.date(2015, 1, 1), retrieved_at=STAMP,
+        env={cpi.EVDS_KEY_ENV: "k"}, fetch=fetch,
+    )  # fmt: skip
+    assert series.series_id == "TP.TRY.MT02" and "series=TP.TRY.MT02&" in fetch.calls[0][0]
 
 
 def test_evds_key_and_currency_are_required() -> None:

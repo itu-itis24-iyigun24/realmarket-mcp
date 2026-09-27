@@ -44,7 +44,8 @@ All ratios are fractions: 0.12 means 12%.
 
 ## TL deposit comparison
 - A 32-day deposit opened at the rate TCMB most recently published (weighted average on new TL
-  deposits up to 3 months, EVDS `TP.TRY.MT02`), earning `rate x days / 365` for its term and
+  savings deposits of 1-3 months, EVDS `TP.TRYTAS.MT02`; periods starting before July 2012
+  use all TL deposits, `TP.TRY.MT02`), earning `rate x days / 365` for its term and
   renewed at maturity — principal plus interest — at the rate then in force; a final partial
   term earns pro rata. Gross of withholding tax (stopaj). Rates are carried forward at most 21
   days after the last publication, never extrapolated.

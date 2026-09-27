@@ -40,9 +40,10 @@ REGION_CURRENCY = {"TR": "TRY", "US": "USD"}
 CpiLoader = Callable[[str, dt.date, dt.date], CpiSeries]
 DEPOSIT_NOTE = (
     "Deposit figures model a 32-day TL deposit renewed at each maturity at the weekly weighted "
-    "average rate TCMB publishes for new deposits up to 3 months (simple interest within a "
-    "term); they are gross of withholding tax (stopaj), and a real account earns its own "
-    "bank's rate."
+    "average rate TCMB publishes for new TL savings deposits of 1-3 months (series "
+    "TP.TRYTAS.MT02; periods starting before July 2012 use all TL deposits, TP.TRY.MT02), with "
+    "simple interest within a term. They are gross of withholding tax (stopaj), and a real "
+    "account earns its own bank's rate."
 )
 
 

@@ -200,7 +200,8 @@ reused for six hours; results keep the original retrieval time.
 
 With a TCMB EVDS key, TL results also show what the same money earned in a deposit account:
 a 32-day deposit renewed at each maturity at the weekly weighted average rate TCMB publishes for
-new TL deposits up to 3 months (EVDS `TP.TRY.MT02`). Figures are **gross of withholding tax
+new TL savings deposits of 1-3 months (EVDS `TP.TRYTAS.MT02`; before July 2012, all TL
+deposits, `TP.TRY.MT02`). Figures are **gross of withholding tax
 (stopaj)**, and a real account earns its own bank's rate.
 
 ### Your own data, your own model
