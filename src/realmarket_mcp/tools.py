@@ -416,12 +416,14 @@ def get_price_summary(
         notes=(
             f"{RATIO_NOTE} Returns are nominal, in the asset's own currency.",
             "annualized_return is null for spans under 180 days.",
-            "total_return includes dividends (reinvested on the ex-date). price_return is the "
-            "share price alone; dividend_return = total_return - price_return is what the "
-            "dividends added. dividends_per_share sums the cash dividends with ex-dates after "
-            "first_date, up to last_date. dividend_yield_trailing_12m is the cash dividends of "
-            "the 12 months to last_date over the last price (0 when none was paid). They are "
-            "null when the source does not report dividends separately.",
+            "total_return includes dividends (reinvested on the ex-date), so first_close and "
+            "last_close are dividend-adjusted: first_close is below the price actually traded then."
+            " first_price and last_price are the traded prices (adjusted for splits only) and "
+            "price_return is their change; dividend_return = total_return - price_return is what "
+            "the dividends added. dividends_per_share sums the cash dividends with ex-dates after "
+            "first_date, up to last_date. dividend_yield_trailing_12m is the cash dividends of the "
+            "12 months to last_date over the last price (0 when none was paid). They are null when "
+            "the source does not report dividends separately.",
         ),
     )
 
@@ -461,6 +463,8 @@ def _income_split(series: PriceSeries, usable: Sequence[Bar]) -> dict[str, objec
     """Total return split into price and dividends, where the source reports both."""
     first, last = usable[0], usable[-1]
     empty: dict[str, object] = {
+        "first_price": None,
+        "last_price": None,
         "price_return": None,
         "dividend_return": None,
         "dividends_per_share": None,
@@ -472,6 +476,8 @@ def _income_split(series: PriceSeries, usable: Sequence[Bar]) -> dict[str, objec
     price = last.price_close / first.price_close - 1
     paid = [a for d, a in series.dividends if first.date < d <= last.date]
     return {
+        "first_price": _round(first.price_close),
+        "last_price": _round(last.price_close),
         "price_return": _round(price),
         "dividend_return": _round(total - price),
         "dividends_per_share": _round(sum(paid)) if paid else 0.0,

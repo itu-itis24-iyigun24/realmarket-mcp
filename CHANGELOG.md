@@ -21,6 +21,9 @@
     asset return into other rows). The server instructions now require a fresh tool call per
     asset (the model had reused Tüpraş's P/B for THYAO) and keeping each figure with its
     window.
+  - The price summary adds `first_price`/`last_price`, the prices actually traded: with
+    dividends included, `first_close` is dividend-adjusted (Tüpraş: 113.58 TL against 163.70
+    TL traded), and the model had presented it as the starting price.
   - An empty EVDS series (a house index before 2010) now says so instead of reporting a
     format change; a failed 12-month fetch for the dividend yield is flagged.
 
