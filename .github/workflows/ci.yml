@@ -1,0 +1,33 @@
+# Tests, lint and type checks on every push to main and every pull request.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install
+        run: |
+          uv venv --python ${{ matrix.python }}
+          uv pip install -e ".[dev,yahoo]"
+      - name: Tests
+        run: .venv/bin/python -m pytest -q
+      - name: Lint and format
+        run: |
+          .venv/bin/python -m ruff check .
+          .venv/bin/python -m ruff format --check .
+      - name: Types
+        run: .venv/bin/python -m mypy
