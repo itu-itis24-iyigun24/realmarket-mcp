@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.6 — 2026-09-27
 
 - **Gram gold.** `compare_real_return` gives gold's own return in the asset's currency
   (`gold_return_in_currency`, `beat_gold`) and, for TL assets, the gram gold price in TL at
