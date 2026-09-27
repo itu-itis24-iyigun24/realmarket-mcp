@@ -2,13 +2,15 @@
 
 ## Unreleased
 
-- **Valuation under TMS 29 uses the fiscal year.** Yahoo's quarterly figures for Turkish
-  companies mix quarters restated by later filings with first-reported ones (BIMAS 2025's
-  quarters reconcile with the annual on neither basis), so summing four of them was unreliable.
-  `get_valuation` now uses the latest fiscal year and restates it, and the latest equity, with
-  CPI to the latest CPI month (`restated_to_money_of`); `cpi_behind_price` flags a CPI series
-  that ends months before the price date, and `newer_quarters_not_used` says when published
-  quarters after that fiscal year are left out (Tüpraş: one 2026 quarter out-earned all of 2025).
+- **No P/E or P/S for TMS 29 companies without a proper trailing figure.** The market
+  convention for Turkish companies under inflation accounting is the trailing twelve months
+  from the latest report, in that report's money (BIMAS P/E 17.26 in a brokerage app). Yahoo's
+  quarterly figures mix restated and first-reported values and lack the restated comparatives:
+  summing them gave 16.7, the CPI-restated fiscal year 22.1. `get_valuation` now gives market
+  value and P/B for these companies from Yahoo, and P/E and P/S only when the source states the
+  trailing twelve months (adapter API: optional `ttm`). Figures are restated with CPI to the
+  latest CPI month (`restated_to_money_of`); `cpi_behind_price` flags a lagging CPI series and
+  `newer_quarters_not_used` a fiscal-year basis that leaves out published quarters.
 
 ## 0.1.4 — 2026-09-27
 

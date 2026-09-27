@@ -56,9 +56,13 @@ All ratios are fractions: 0.12 means 12%.
   price_to_sales = market_cap / sales, with statement figures converted to the share's trading
   currency at the price date when the company reports in another currency.
 - Earnings and sales: the latest four consecutive quarters (80-100 days apart), otherwise the
-  latest fiscal year. Equity: the latest period that has it. Turkish companies under TMS 29
-  always use the fiscal year, since quarterly figures mix restated and first-reported values;
-  the year and the equity are restated with CPI to the latest CPI month.
+  latest fiscal year. Equity: the latest period that has it.
+- Turkish companies under TMS 29 (not banks): earnings and sales are the trailing twelve months
+  as the source states them from the latest report (year to date + last fiscal year - the same
+  period last year, in that report's money). A source that does not state them (Yahoo) gets no
+  P/E or P/S for these companies, only market value and P/B: summing its quarters or using the
+  fiscal year gave multiples 25-30% off the market figures. Do not compute a P/E from other
+  tools' figures instead. Figures are restated with CPI to the latest CPI month.
 - A ratio is null, with the reason, when its denominator is missing, zero or negative.
 
 ## Savings (portfolio_real_return)

@@ -172,6 +172,10 @@ class FinancialStatements:
     shares_outstanding: float | None = None
     shares_source: str | None = None
     shares_as_of: dt.date | None = None
+    # Trailing twelve months as the source states it from the latest report, in that report's
+    # money (TMS 29: year to date + last fiscal year - same period last year, all as restated
+    # in the latest report). Needed for P/E under inflation accounting; see get_valuation.
+    trailing_twelve_months: FinancialPeriod | None = None
 
     @property
     def is_bank(self) -> bool:
@@ -188,6 +192,11 @@ class FinancialStatements:
                 self.shares_source,
                 self.shares_as_of.isoformat() if self.shares_as_of else None,
             ],
+            "ttm": (
+                [self.trailing_twelve_months.end.isoformat(), self.trailing_twelve_months.values]
+                if self.trailing_twelve_months
+                else None
+            ),
             "quarterly": [[p.end.isoformat(), p.values] for p in self.quarterly],
             "annual": [[p.end.isoformat(), p.values] for p in self.annual],
         }
@@ -199,25 +208,26 @@ def statements_from_dict(
     raw: dict[str, object], *, symbol: str, provider: str, retrieved_at: str
 ) -> FinancialStatements:
     """Statements from the JSON shape the fixture and adapter providers share:
-    {currency, sector, industry, quarterly, annual}, each period list holding
-    {"end": "YYYY-MM-DD", "values": {field: number | null}}. Unknown fields are ignored;
-    a non-finite number is an error, never repaired."""
+    {currency, sector, industry, quarterly, annual, shares_outstanding?, ttm?}, each period
+    (and ttm) holding {"end": "YYYY-MM-DD", "values": {field: number | null}}. Unknown fields
+    are ignored; a non-finite number is an error, never repaired."""
     import math
 
+    def period(p: dict[str, object]) -> FinancialPeriod:
+        values: dict[str, float | None] = {}
+        for field in FINANCIAL_FIELDS:
+            value = p["values"].get(field)  # type: ignore[attr-defined]
+            if value is not None:
+                if isinstance(value, bool) or not isinstance(value, int | float):
+                    raise ValueError(f"{field} on {p['end']} is not a number")
+                if not math.isfinite(value):
+                    raise ValueError(f"{field} on {p['end']} is not finite")
+                value = float(value)
+            values[field] = value
+        return FinancialPeriod(dt.date.fromisoformat(str(p["end"])), values)
+
     def periods(key: str) -> tuple[FinancialPeriod, ...]:
-        items = []
-        for p in raw.get(key, []) or []:  # type: ignore[attr-defined]
-            values: dict[str, float | None] = {}
-            for field in FINANCIAL_FIELDS:
-                value = p["values"].get(field)
-                if value is not None:
-                    if isinstance(value, bool) or not isinstance(value, int | float):
-                        raise ValueError(f"{field} on {p['end']} is not a number")
-                    if not math.isfinite(value):
-                        raise ValueError(f"{field} on {p['end']} is not finite")
-                    value = float(value)
-                values[field] = value
-            items.append(FinancialPeriod(dt.date.fromisoformat(str(p["end"])), values))
+        items = [period(p) for p in raw.get(key, []) or []]  # type: ignore[attr-defined]
         return tuple(sorted(items, key=lambda p: p.end))
 
     return FinancialStatements(
@@ -231,6 +241,7 @@ def statements_from_dict(
         annual=periods("annual"),
         shares_outstanding=_shares(raw.get("shares_outstanding")),
         shares_source=f"{provider} shares_outstanding" if raw.get("shares_outstanding") else None,
+        trailing_twelve_months=period(ttm) if isinstance(ttm := raw.get("ttm"), dict) else None,
     )
 
 

@@ -253,6 +253,6 @@ Findings that shaped the provider:
 | Company | Tool P/E, P/B | Yahoo P/E, P/B | Note |
 |---|---|---|---|
 | THYAO | 3.04, **0.37** | —, **18.3** | Yahoo divides a TRY price by USD book value (THY reports in USD); 18.3 / 48.95 USDTRY = 0.37 |
-| BIMAS | 27.0, 2.50 (CPI to 2025-12, flagged `cpi_behind_price`); lower with current CPI | 20.6, 2.50 | Yahoo's quarters reconcile with the 2025 annual on neither basis (the Q1 2025 they imply would be 82bn if each quarter is in its own money, 131bn if restated, against 180–208bn for the others), so the tool uses the fiscal year under TMS 29, restated with CPI |
+| BIMAS | —, 2.41 | 20.6, 2.50 | A brokerage app shows P/E 17.26 (ASELS 41.15; Yahoo 47.4): the TMS 29 trailing twelve months from the latest report. Yahoo's quarters reconcile with the 2025 annual on neither basis and lack the restated comparatives, so the tool gives no P/E for TMS 29 reporters from Yahoo (a fiscal-year P/E was 22.1, 28% off); an adapter can supply `ttm` |
 | AAPL | 38.6, 46.3 | 39.1, 46.3 | shares from SEC's cover page (dei) |
 | GOOGL | 17.2, 6.57 | 17.3, 6.76 | shares must count every class: Yahoo's `sharesOutstanding` (5.87bn) is class A only, `impliedSharesOutstanding` (12.23bn) all classes |

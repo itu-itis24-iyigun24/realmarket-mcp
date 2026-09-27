@@ -99,6 +99,18 @@ Financial statements, or 404 if the adapter does not serve them (realmarket then
 An optional top-level `"shares_outstanding"` (all share classes, a positive number) lets
 `get_valuation` compute market value from the adapter's own data.
 
+An optional top-level `"ttm"` gives the trailing twelve months from the latest report:
+
+```json
+"ttm": {"end": "2026-06-30", "values": {"net_income": 29180000000, "revenue": 880000000000}}
+```
+
+For Turkish companies under TMS 29 (not banks) this is the only basis for P/E and P/S: this
+year to date + the last fiscal year − the same period last year, the last two as restated in
+the latest report, all in that report's money (the "son 12 ay" figure data vendors publish).
+Without it, `get_valuation` gives market value and P/B for those companies but no P/E or P/S,
+because summing quarters or using the last fiscal year gives materially wrong multiples.
+
 Fields: `revenue`, `gross_profit`, `operating_income`, `net_income` (for the period) and
 `total_assets`, `total_equity`, `total_debt` (at the period end), in `currency`, in full units.
 Unknown fields are ignored. For Turkish companies other than banks, provide the figures as the
