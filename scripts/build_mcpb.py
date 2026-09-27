@@ -75,6 +75,7 @@ PRIVACY_POLICIES = [
     "https://www.stlouisfed.org/about-us/privacy-policy",
     "https://evds3.tcmb.gov.tr/igmevdsms-dis/documents/showDocument?docId=22",
     "https://www.oecd.org/en/about/privacy.html",
+    "https://www.xbrl.org/the-consortium/about/legal/privacy-policy/",
 ]
 ENV = {
     USE_YAHOO_ENV: "${user_config.use_yahoo}",

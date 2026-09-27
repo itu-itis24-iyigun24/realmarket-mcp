@@ -117,7 +117,7 @@ normal connection.
       on (date))" — provenance names the dataflow and retrieval time. Anonymous limit: 60 data
       downloads per hour per IP; each region's series is now fetched once and reused for six
       hours (`config.OECD_CACHE_SECONDS`), keeping its original retrieval time.
-- [x] Desktop extension `privacy_policies` (2026-09-25): SEC
+- [x] Desktop extension `privacy_policies` (2026-09-25; XBRL International added 2026-09-27): SEC
       `https://www.sec.gov/about/privacy-information` (opened); TCMB EVDS docId 22 (opened);
       FRED `https://www.stlouisfed.org/about-us/privacy-policy` (linked from FRED's own terms
       pages); OECD `https://www.oecd.org/en/about/privacy.html` and Yahoo
@@ -129,8 +129,9 @@ normal connection.
       Terms (`/docs/about`, read directly): "At present, there are no restrictions on the ways that
       the data can be used"; the API page reserves the right to add rate limits. Coverage by
       filing count: DE 0, IE 0; FR 1,179, NL 657, IT 872, ES 542, FI 1,169, SE 1,415, DK 2,204,
-      AT 601, BE 709, PL 877, GB 2,951, NO 958. XBRL International's privacy page (www.xbrl.org) is
-      not reachable from the build environment; the service receives only company names and LEIs.
+      AT 601, BE 709, PL 877, GB 2,951, NO 958. XBRL International's privacy policy,
+      `https://www.xbrl.org/the-consortium/about/legal/privacy-policy/`, is an official-domain search result (www.xbrl.org is not reachable from the build
+      environment); the service receives only company names and LEIs.
 - [x] Licences (2026-09-25): a clean `.[yahoo]` install has 48 third-party packages, all
       permissive (MIT, BSD, Apache-2.0, PSF, ISC-style); `certifi` is MPL-2.0 (file-level,
       used unmodified); `peewee` reports "UNKNOWN" but its licence file is MIT. `frozendict`

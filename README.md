@@ -203,7 +203,7 @@ credit its source asks for.
 | TCMB EVDS | Turkish CPI (with key) | May be used and published with reference; not investment advice; users may not be charged for it | [policy](https://evds3.tcmb.gov.tr/igmevdsms-dis/documents/showDocument?docId=22) |
 | FRED | US CPI (API with key; CSV fallback) | [FRED® API Terms of Use](https://fred.stlouisfed.org/docs/api/terms_of_use.html) (API); FRED website terms for the CSV (personal, non-commercial use) | [policy](https://www.stlouisfed.org/about-us/privacy-policy) |
 | OECD | CPI without a key | CC BY 4.0; cite the OECD | [policy](https://www.oecd.org/en/about/privacy.html) |
-| filings.xbrl.org (XBRL International) | Official EU/UK annual reports | Free; "no restrictions on the ways that the data can be used" | receives only company names and LEIs |
+| filings.xbrl.org (XBRL International) | Official EU/UK annual reports | Free; "no restrictions on the ways that the data can be used" | [policy](https://www.xbrl.org/the-consortium/about/legal/privacy-policy/); receives only company names and LEIs |
 | GDELT | News listings | Free for any use; cite the GDELT Project with a link | receives only the search text |
 | Yahoo Finance (opt-in) | Prices, FX, gold, non-US statements | Terms prohibit automated access without permission (see above) | [policy](https://legal.yahoo.com/us/en/yahoo/privacy/index.html) |
 
