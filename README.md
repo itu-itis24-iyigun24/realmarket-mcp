@@ -29,7 +29,7 @@ compute these figures in code and return them with their sources:
 | Tool | What it answers |
 |---|---|
 | `search_assets` | "What is the symbol for Turkish Airlines?" |
-| `get_price_summary` | "How did it do over the last year?" — return, annualized return, volatility, max drawdown |
+| `get_price_summary` | "How did it do over the last year?" — return, annualized return, volatility, max drawdown, and how much of the return came from dividends |
 | `compare_real_return` | "Did it beat inflation?" — nominal vs real return, plus the same holding in US dollars, in gold, and (TL assets) against a TL deposit account |
 | `compare_assets` | "How do these compare?" — 2 to 10 assets over one common window |
 | `check_data_quality` | "Can I trust this data?" — gaps, placeholder bars, suspicious jumps, stale data |

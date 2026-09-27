@@ -105,11 +105,13 @@ def test_yfinance_adapter_reads_session_dates_and_currency(monkeypatch: pytest.M
             index = pd.DatetimeIndex(["2024-01-02 00:00", "2024-01-03 00:00"], tz="Europe/Istanbul")
             return pd.DataFrame(
                 {
-                    "Open": [1.0, 2.0],
-                    "High": [1.0, 2.0],
-                    "Low": [1.0, 2.0],
-                    "Close": [1.0, float("nan")],
+                    "Open": [10.0, 2.0],
+                    "High": [12.0, 2.0],
+                    "Low": [8.0, 2.0],
+                    "Close": [10.0, float("nan")],
+                    "Adj Close": [9.0, float("nan")],  # a later dividend lowers earlier prices
                     "Volume": [5, 6],
+                    "Dividends": [0.0, 0.5],
                 },
                 index=index,
             )
@@ -118,10 +120,14 @@ def test_yfinance_adapter_reads_session_dates_and_currency(monkeypatch: pytest.M
     raw = YfinanceBackend().history("THYAO.IS", D(2024, 1, 1), D(2024, 1, 3))
 
     assert calls["end"] == "2024-01-04"  # yfinance's end is exclusive
-    assert calls["auto_adjust"] is True
+    assert calls["auto_adjust"] is False and calls["actions"] is True
     assert raw.currency == "TRY"
     assert [r[0] for r in raw.rows] == [D(2024, 1, 2), D(2024, 1, 3)]
+    # Adjusted like Yahoo's auto-adjustment: every price times Adj Close / Close (0.9).
+    assert raw.rows[0][1:5] == pytest.approx((9.0, 10.8, 7.2, 9.0))
     assert raw.rows[1][4] is None  # NaN close becomes None, never NaN
+    assert raw.price_closes == {D(2024, 1, 2): 10.0, D(2024, 1, 3): None}
+    assert list(raw.dividends) == [(D(2024, 1, 3), 0.5)]
 
 
 def test_bars_from_the_retrieval_day_are_excluded_as_possibly_incomplete() -> None:
@@ -161,3 +167,30 @@ def test_pence_quotes_become_pounds() -> None:
     assert series.currency == "GBP"
     bar = series.bars[0]
     assert (bar.open, bar.close, bar.volume) == (2.5, 2.55, 1000.0)  # volume is not a price
+
+
+def test_price_summary_splits_the_return_into_price_and_dividends() -> None:
+    from realmarket_mcp import tools
+
+    # A 10 TL dividend on 2024-01-04: the adjusted closes scale the earlier prices by 0.9.
+    rows = [
+        (D(2024, 1, 2), 90.0, 90.0, 90.0, 90.0, 1.0),
+        (D(2024, 1, 3), 99.0, 99.0, 99.0, 99.0, 1.0),
+        (D(2024, 1, 4), 100.0, 100.0, 100.0, 100.0, 1.0),
+    ]
+    raw = RawHistory(
+        "TRY",
+        rows,
+        {D(2024, 1, 2): 100.0, D(2024, 1, 3): 110.0, D(2024, 1, 4): 100.0},
+        [(D(2024, 1, 4), 10.0)],
+    )
+    provider = _provider(history=raw)
+    data = tools.get_price_summary(
+        provider, "TUPRS.IS", start="2024-01-01", end="2024-01-05", today=D(2024, 2, 1)
+    ).data
+    assert data["total_return"] == pytest.approx(100 / 90 - 1, abs=1e-6)
+    assert data["price_return"] == 0.0  # 100 -> 100 in price alone
+    assert data["dividend_return"] == pytest.approx(100 / 90 - 1, abs=1e-6)
+    assert (data["dividends_per_share"], data["dividend_payments"]) == (10.0, 1)
+    series = provider.daily_bars("TUPRS.IS", D(2024, 1, 1), D(2024, 1, 5))
+    assert series.dividends == ((D(2024, 1, 4), 10.0),)

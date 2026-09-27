@@ -17,6 +17,12 @@ All ratios are fractions: 0.12 means 12%.
 - Volatility: sample standard deviation of daily log returns x sqrt(252).
 - Maximum drawdown: largest peak-to-trough fall of the close, with its peak and trough dates.
 
+## Dividends
+- With Yahoo prices, `total_return` includes dividends reinvested on the ex-date. The price
+  summary also gives `price_return` (split-adjusted close only), `dividend_return` =
+  total - price, and the cash `dividends_per_share` and count paid in the period. Null when
+  the source does not report dividends separately (the data adapter API has no dividends).
+
 ## Inflation and real return
 - Cumulative inflation: `CPI(month of last date) / CPI(month of first date) - 1`, using index
   levels. Missing months are never estimated.

@@ -216,14 +216,42 @@ def get_price_summary(
             "requested_start": start_date.isoformat(),
             "requested_end": end_date.isoformat(),
             **_metrics(usable),
+            **_income_split(series, usable),
         },
         provenance=(_provenance(series, usable[0].date, usable[-1].date),),
         quality_flags=tuple(quality.check_series(series, requested_end=end_date)),
         notes=(
             f"{RATIO_NOTE} Returns are nominal, in the asset's own currency.",
             "annualized_return is null for spans under 180 days.",
+            "total_return includes dividends (reinvested on the ex-date). price_return is the "
+            "share price alone; dividend_return = total_return - price_return is what the "
+            "dividends added. dividends_per_share sums the cash dividends with ex-dates after "
+            "first_date, up to last_date. They are null when the source does not report "
+            "dividends separately.",
         ),
     )
+
+
+def _income_split(series: PriceSeries, usable: Sequence[Bar]) -> dict[str, object]:
+    """Total return split into price and dividends, where the source reports both."""
+    first, last = usable[0], usable[-1]
+    empty: dict[str, object] = {
+        "price_return": None,
+        "dividend_return": None,
+        "dividends_per_share": None,
+        "dividend_payments": None,
+    }
+    if not first.price_close or last.price_close is None or not first.close or last.close is None:
+        return empty
+    total = last.close / first.close - 1
+    price = last.price_close / first.price_close - 1
+    paid = [a for d, a in series.dividends if first.date < d <= last.date]
+    return {
+        "price_return": _round(price),
+        "dividend_return": _round(total - price),
+        "dividends_per_share": _round(sum(paid)) if paid else 0.0,
+        "dividend_payments": len(paid),
+    }
 
 
 def check_data_quality(

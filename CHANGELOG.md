@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Dividends.** `get_price_summary` splits the return into the share price and dividends
+  (`price_return`, `dividend_return`) and lists the cash dividends per share paid in the
+  period, from the same Yahoo request as the prices. Tüpraş over three years: 257% in total,
+  of which 109 points from six dividends worth 62.95 TL a share.
 - **Deposit comparison uses savings-deposit rates.** The TL deposit alternative now follows
   TCMB's rate on new *savings* deposits of 1-3 months (`TP.TRYTAS.MT02`), the account a saver
   actually holds, instead of all TL deposits including commercial ones (`TP.TRY.MT02`, which

@@ -71,6 +71,9 @@ class Bar:
     low: float | None
     close: float | None
     volume: float | None
+    # Close adjusted for splits only, when the series is also dividend-adjusted: the price
+    # part of the return, without dividends.
+    price_close: float | None = None
 
 
 @dataclass(frozen=True)
@@ -83,6 +86,8 @@ class PriceSeries:
     adjustment: str
     retrieved_at: str
     bars: tuple[Bar, ...]
+    # Cash dividends per share (split-adjusted), by ex-date, where the provider reports them.
+    dividends: tuple[tuple[dt.date, float], ...] = ()
 
     def __post_init__(self) -> None:
         dates = [bar.date for bar in self.bars]
@@ -91,21 +96,33 @@ class PriceSeries:
 
     def between(self, start: dt.date, end: dt.date) -> PriceSeries:
         kept = tuple(bar for bar in self.bars if start <= bar.date <= end)
+        paid = tuple(d for d in self.dividends if start <= d[0] <= end)
         return PriceSeries(
-            self.symbol, self.currency, self.provider, self.adjustment, self.retrieved_at, kept
+            self.symbol,
+            self.currency,
+            self.provider,
+            self.adjustment,
+            self.retrieved_at,
+            kept,
+            paid,
         )
 
     @property
     def data_version(self) -> str:
         """SHA-256 over the canonical bar content: changes exactly when the numbers change."""
         rows = [[b.date.isoformat(), b.open, b.high, b.low, b.close, b.volume] for b in self.bars]
+        content: dict[str, object] = {
+            "symbol": self.symbol,
+            "currency": self.currency,
+            "adjustment": self.adjustment,
+            "bars": rows,
+        }
+        if any(b.price_close is not None for b in self.bars) or self.dividends:
+            # Only when present, so versions of series without them are unchanged.
+            content["price_closes"] = [b.price_close for b in self.bars]
+            content["dividends"] = [[d.isoformat(), a] for d, a in self.dividends]
         canonical = json.dumps(
-            {
-                "symbol": self.symbol,
-                "currency": self.currency,
-                "adjustment": self.adjustment,
-                "bars": rows,
-            },
+            content,
             separators=(",", ":"),
             sort_keys=True,
         )

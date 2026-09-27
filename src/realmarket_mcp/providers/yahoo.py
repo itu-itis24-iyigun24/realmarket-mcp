@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import datetime as dt
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -54,7 +54,9 @@ class RawHistory:
     currency: str | None
     rows: Sequence[
         tuple[dt.date, float | None, float | None, float | None, float | None, float | None]
-    ]
+    ]  # prices adjusted for splits and dividends
+    price_closes: Mapping[dt.date, float | None] | None = None  # split-adjusted only
+    dividends: Sequence[tuple[dt.date, float]] = ()
 
 
 # Yahoo row labels for each normalized field, first match wins.
@@ -125,25 +127,41 @@ class YfinanceBackend:
                 start=start.isoformat(),
                 end=(end_inclusive + dt.timedelta(days=1)).isoformat(),  # yfinance end is exclusive
                 interval="1d",
-                auto_adjust=True,
-                actions=False,
+                auto_adjust=False,  # adjusted here, so the split-only close is kept too
+                actions=True,
                 raise_errors=True,
             )
             currency = (ticker.history_metadata or {}).get("currency")
         except Exception as exc:
             raise _translate(exc) from exc
-        rows = [
-            (
-                index.date(),  # the exchange-local session date
-                _clean(row.get("Open")),
-                _clean(row.get("High")),
-                _clean(row.get("Low")),
-                _clean(row.get("Close")),
-                _clean(row.get("Volume")),
+        rows = []
+        price_closes: dict[dt.date, float | None] = {}
+        dividends: list[tuple[dt.date, float]] = []
+        for index, row in frame.iterrows():
+            day = index.date()  # the exchange-local session date
+            close, adjusted = _clean(row.get("Close")), _clean(row.get("Adj Close"))
+            # Yahoo's own auto-adjustment: every price scaled by Adj Close / Close.
+            factor = adjusted / close if close and adjusted is not None else None
+
+            def scaled(value: Any, factor: float | None = factor) -> float | None:
+                number = _clean(value)
+                return None if number is None or factor is None else number * factor
+
+            rows.append(
+                (
+                    day,
+                    scaled(row.get("Open")),
+                    scaled(row.get("High")),
+                    scaled(row.get("Low")),
+                    adjusted,
+                    _clean(row.get("Volume")),
+                )
             )
-            for index, row in frame.iterrows()
-        ]
-        return RawHistory(currency=currency, rows=rows)
+            price_closes[day] = close
+            amount = _clean(row.get("Dividends"))
+            if amount:
+                dividends.append((day, amount))
+        return RawHistory(currency, rows, price_closes, dividends)
 
     def financials(self, symbol: str) -> RawFinancials:
         ticker = self._yf.Ticker(symbol)
@@ -257,7 +275,8 @@ class YahooProvider:
         for date, open_, high, low, close, volume in raw.rows:
             if start <= date <= cutoff:  # last row per date wins
                 prices = (major(open_), major(high), major(low), major(close))
-                by_date[date] = Bar(date, *prices, volume)
+                split_only = major((raw.price_closes or {}).get(date))
+                by_date[date] = Bar(date, *prices, volume, split_only)
         return PriceSeries(
             symbol=symbol,
             currency=currency,
@@ -265,6 +284,9 @@ class YahooProvider:
             adjustment=self.adjustment,
             retrieved_at=self._retrieved_at,
             bars=tuple(by_date[d] for d in sorted(by_date)),
+            dividends=tuple(
+                (d, a / unit) for d, a in raw.dividends if start <= d <= cutoff and d in by_date
+            ),
         )
 
     def financials(self, symbol: str) -> FinancialStatements:
