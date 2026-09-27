@@ -52,7 +52,12 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
     )
     news = env.get(NEWS_PROVIDER_ENV, "gdelt").strip().lower() or "gdelt"
     missing: list[str] = []
-    if not yahoo:
+    if price == "http" and not env.get("REALMARKET_HTTP_URL", "").strip():
+        missing.append(
+            "The data adapter is selected but REALMARKET_HTTP_URL is not set; set it to the "
+            "adapter's base URL, then restart."
+        )
+    elif price not in {"yahoo", "http"}:
         missing.append(
             "Prices are off: tick 'Use Yahoo Finance' in the plugin or extension settings "
             f"(or set {PROVIDER_ENV}=yahoo), then restart the app."
@@ -76,7 +81,9 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
     return {
         "price_data": {
             "provider": price,
-            "enabled": yahoo or (price == "fixture" and bool(env.get(FIXTURE_DIR_ENV, "").strip())),
+            "enabled": yahoo
+            or (price == "http" and bool(env.get("REALMARKET_HTTP_URL", "").strip()))
+            or (price == "fixture" and bool(env.get(FIXTURE_DIR_ENV, "").strip())),
         },
         "financial_statements": {
             "us_companies": "sec_edgar" if contact else ("yahoo" if yahoo else "unavailable"),
@@ -140,10 +147,22 @@ def load_price_provider(*, retrieved_at: str) -> PriceProvider:
         from realmarket_mcp.providers.yahoo import YahooProvider
 
         return YahooProvider(retrieved_at=retrieved_at)
+    if choice == "http":
+        from realmarket_mcp.providers import http_adapter
+
+        url = os.environ.get(http_adapter.URL_ENV, "").strip()
+        if not url:
+            raise ToolError(
+                ErrorCode.MISSING_API_KEY,
+                "The data adapter's address is not configured.",
+                f"Set {http_adapter.URL_ENV} to the adapter's base URL (see docs/adapter-api.md).",
+            )
+        token = os.environ.get(http_adapter.TOKEN_ENV, "").strip() or None
+        return http_adapter.HttpAdapterProvider(url, token=token, retrieved_at=retrieved_at)
     raise ToolError(
         ErrorCode.UNSUPPORTED,
         f"Unknown price provider {choice!r}.",
-        f"Set {PROVIDER_ENV} to one of: yahoo, fixture.",
+        f"Set {PROVIDER_ENV} to one of: yahoo, http, fixture.",
         {"provider": choice},
     )
 

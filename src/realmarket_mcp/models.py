@@ -163,3 +163,40 @@ class FinancialStatements:
         }
         text = json.dumps(payload, separators=(",", ":"), sort_keys=True)
         return "sha256:" + hashlib.sha256(text.encode()).hexdigest()
+
+
+def statements_from_dict(
+    raw: dict[str, object], *, symbol: str, provider: str, retrieved_at: str
+) -> FinancialStatements:
+    """Statements from the JSON shape the fixture and adapter providers share:
+    {currency, sector, industry, quarterly, annual}, each period list holding
+    {"end": "YYYY-MM-DD", "values": {field: number | null}}. Unknown fields are ignored;
+    a non-finite number is an error, never repaired."""
+    import math
+
+    def periods(key: str) -> tuple[FinancialPeriod, ...]:
+        items = []
+        for p in raw.get(key, []) or []:  # type: ignore[attr-defined]
+            values: dict[str, float | None] = {}
+            for field in FINANCIAL_FIELDS:
+                value = p["values"].get(field)
+                if value is not None:
+                    if isinstance(value, bool) or not isinstance(value, int | float):
+                        raise ValueError(f"{field} on {p['end']} is not a number")
+                    if not math.isfinite(value):
+                        raise ValueError(f"{field} on {p['end']} is not finite")
+                    value = float(value)
+                values[field] = value
+            items.append(FinancialPeriod(dt.date.fromisoformat(str(p["end"])), values))
+        return tuple(sorted(items, key=lambda p: p.end))
+
+    return FinancialStatements(
+        symbol=symbol,
+        currency=str(raw.get("currency", "unknown")).upper(),
+        sector=raw.get("sector"),  # type: ignore[arg-type]
+        industry=raw.get("industry"),  # type: ignore[arg-type]
+        provider=provider,
+        retrieved_at=retrieved_at,
+        quarterly=periods("quarterly"),
+        annual=periods("annual"),
+    )

@@ -79,6 +79,11 @@ ATTRIBUTIONS = {
 }
 
 
+def register_attribution(provider: str, text: str) -> None:
+    """Credit line for a provider known only at run time (an operator's data adapter)."""
+    ATTRIBUTIONS.setdefault(provider, text)
+
+
 @dataclass(frozen=True)
 class Provenance:
     """Where one block of numbers came from."""

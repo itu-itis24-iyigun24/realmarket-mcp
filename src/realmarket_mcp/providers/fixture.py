@@ -19,9 +19,9 @@ from realmarket_mcp.models import (
     AssetClass,
     AssetRef,
     Bar,
-    FinancialPeriod,
     FinancialStatements,
     PriceSeries,
+    statements_from_dict,
 )
 
 
@@ -113,21 +113,6 @@ class FixtureProvider:
                 {"symbol": symbol},
             )
         raw = json.loads(path.read_text(encoding="utf-8"))
-
-        def periods(key: str) -> tuple[FinancialPeriod, ...]:
-            items = [
-                FinancialPeriod(dt.date.fromisoformat(p["end"]), dict(p["values"]))
-                for p in raw.get(key, [])
-            ]
-            return tuple(sorted(items, key=lambda p: p.end))
-
-        return FinancialStatements(
-            symbol=symbol,
-            currency=str(raw.get("currency", "unknown")).upper(),
-            sector=raw.get("sector"),
-            industry=raw.get("industry"),
-            provider=self.name,
-            retrieved_at=self._retrieved_at,
-            quarterly=periods("quarterly"),
-            annual=periods("annual"),
+        return statements_from_dict(
+            raw, symbol=symbol, provider=self.name, retrieved_at=self._retrieved_at
         )

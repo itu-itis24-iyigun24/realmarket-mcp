@@ -135,7 +135,8 @@ For Claude Code: `claude mcp add realmarket -e REALMARKET_PRICE_PROVIDER=yahoo -
 
 | Variable | Purpose |
 |---|---|
-| `REALMARKET_PRICE_PROVIDER` | `yahoo`, or `fixture` for offline test data |
+| `REALMARKET_PRICE_PROVIDER` | `yahoo`, `http` (your own data adapter, see below), or `fixture` for offline test data |
+| `REALMARKET_HTTP_URL`, `REALMARKET_HTTP_TOKEN` | Base URL and optional bearer token of your data adapter |
 | `REALMARKET_USE_YAHOO` | `true` enables Yahoo when `REALMARKET_PRICE_PROVIDER` is not set (the plugin and extension checkbox) |
 | `REALMARKET_SEC_CONTACT` | *Optional.* Your e-mail address, which the SEC requires in every automated request. With it, US companies' financial statements come from their official SEC filings (no key or sign-up) |
 | `REALMARKET_FINANCIALS_PROVIDER` | `auto` (default: SEC for US tickers when the contact is set, else the price provider), `sec` or `price` |
@@ -200,6 +201,14 @@ With a TCMB EVDS key, TL results also show what the same money earned in a depos
 a 32-day deposit renewed at each maturity at the weekly weighted average rate TCMB publishes for
 new TL deposits up to 3 months (EVDS `TP.TRY.MT02`). Figures are **gross of withholding tax
 (stopaj)**, and a real account earns its own bank's rate.
+
+### Your own data, your own model
+
+Firms with licensed market data can plug it in through a small HTTP **data adapter**
+([`docs/adapter-api.md`](docs/adapter-api.md), with a runnable example in
+`examples/adapter/`), and run realmarket centrally with `realmarket-mcp --transport http` for
+their own AI assistant — any model with tool calling, not only Claude. See
+[`docs/integration.md`](docs/integration.md).
 
 ## Data sources, terms and privacy
 

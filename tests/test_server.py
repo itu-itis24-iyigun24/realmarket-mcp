@@ -181,3 +181,18 @@ def test_check_setup_says_what_replaces_a_missing_source() -> None:
     assert any("Turkish inflation (only)" in m for m in with_yahoo)
     bare = config.describe_setup({})["missing"]
     assert any("US financial statements are unavailable" in m for m in bare)
+
+
+def test_transport_option(monkeypatch: pytest.MonkeyPatch) -> None:
+    import realmarket_mcp.server as server_module
+
+    runs: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+
+    class Recorder:
+        def run(self, *args: Any, **kwargs: Any) -> None:
+            runs.append((args, kwargs))
+
+    monkeypatch.setattr(server_module, "build_server", Recorder)
+    server_module.main([])
+    server_module.main(["--transport", "http", "--port", "9000"])
+    assert runs == [((), {}), (("streamable-http",), {"host": "127.0.0.1", "port": 9000})]

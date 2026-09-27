@@ -7,6 +7,13 @@
   `deposit_real_return` and `beat_deposit`, and `portfolio_real_return` accepts `DEPOSIT` as an
   alternative: a 32-day deposit renewed at TCMB's weekly weighted average rate for new TL
   deposits up to 3 months, gross of withholding tax.
+- **Bring your own data.** `REALMARKET_PRICE_PROVIDER=http` reads prices, search and
+  (optionally) financial statements from an operator-run HTTP adapter, validated strictly
+  against the adapter API v1 (`docs/adapter-api.md`); a runnable example adapter is in
+  `examples/adapter/`. The adapter's name and attribution appear on every figure it supplies.
+- **Central deployment.** `realmarket-mcp --transport http` serves MCP over Streamable HTTP
+  (default 127.0.0.1:8000, path `/mcp`), for a firm's own assistant and model;
+  `docs/integration.md` describes the setup.
 - Tests no longer see the developer's own `REALMARKET_*` settings.
 
 ## 0.1.3 — 2026-09-27

@@ -464,10 +464,24 @@ Report rules:
 """
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    """stdio by default (a desktop or IDE client starts the server); --transport http serves
+    MCP over Streamable HTTP for a central deployment. The HTTP endpoint has no authentication
+    of its own: keep it on 127.0.0.1 or put it behind the operator's gateway."""
+    import argparse
+
+    parser = argparse.ArgumentParser(prog="realmarket-mcp", description="realmarket MCP server")
+    parser.add_argument("--transport", choices=("stdio", "http"), default="stdio")
+    parser.add_argument("--host", default="127.0.0.1", help="HTTP only; default 127.0.0.1")
+    parser.add_argument("--port", type=int, default=8000, help="HTTP only; default 8000")
+    args = parser.parse_args(argv)
     logging.basicConfig(level=logging.WARNING)
     config.dropped_at_startup[:] = drop_unset_values(os.environ)
-    build_server().run()
+    server = build_server()
+    if args.transport == "http":
+        server.run("streamable-http", host=args.host, port=args.port)
+    else:
+        server.run()
 
 
 if __name__ == "__main__":
