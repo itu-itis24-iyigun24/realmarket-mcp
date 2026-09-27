@@ -27,3 +27,13 @@ def _block_network(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(socket.socket, "connect_ex", _refuse)
     monkeypatch.setattr(socket, "create_connection", _refuse)
     monkeypatch.setattr(socket, "getaddrinfo", _refuse)
+
+
+@pytest.fixture(autouse=True)
+def _no_provider_pacing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Providers space their requests to respect rate limits; tests must not wait for real."""
+    from realmarket_mcp.providers import gdelt
+
+    monkeypatch.setattr(gdelt, "MIN_INTERVAL_SECONDS", 0.0)
+    monkeypatch.setattr(gdelt, "RETRY_WAIT_SECONDS", 0.0)
+    monkeypatch.setattr(gdelt, "_last_request", 0.0)

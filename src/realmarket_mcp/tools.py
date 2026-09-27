@@ -1198,22 +1198,28 @@ def get_financials(
             )
     if latest is not None:
         net, operating = latest.values.get("net_income"), latest.values.get("operating_income")
-        if (
-            net is not None
-            and operating is not None
-            and 0 < operating * NON_OPERATING_DOMINANCE < net
-        ):
-            flags.append(
-                QualityFlag(
-                    "non_operating_items_dominate",
-                    Severity.INFO,
-                    f"Net income in the quarter ending {latest.end} is {net / operating:.1f}x "
-                    "operating income: non-operating items such as investment gains or one-off "
-                    "items drive it, so net margin and net income growth do not describe the "
-                    "operating business. Check the filing for the source.",
-                    (latest.end.isoformat(),),
+        if net is not None and operating is not None and net > 0:
+            if operating <= 0:
+                detail = (
+                    f"the operating business lost {abs(operating):,.0f} {st.currency} while net "
+                    f"income was {net:,.0f}"
                 )
-            )
+            elif net > operating * NON_OPERATING_DOMINANCE:
+                detail = f"net income is {net / operating:.1f}x operating income"
+            else:
+                detail = ""
+            if detail:
+                flags.append(
+                    QualityFlag(
+                        "non_operating_items_dominate",
+                        Severity.INFO,
+                        f"In the quarter ending {latest.end}, {detail}: non-operating items such "
+                        "as investment or financial gains, tax effects or one-off items drive "
+                        "the result, so net margin and net income growth do not describe the "
+                        "operating business. Check the filing for the source.",
+                        (latest.end.isoformat(),),
+                    )
+                )
     if qoq is not None:
         real_change = qoq["revenue"]["real"]
         change = real_change if real_change is not None else qoq["revenue"]["as_reported"]

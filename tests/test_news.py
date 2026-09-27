@@ -126,3 +126,51 @@ def test_short_queries_are_rejected() -> None:
     with pytest.raises(ToolError) as raised:
         tools.get_news(provider, "TH", now=NOW, retrieved_at="t")
     assert raised.value.code is ErrorCode.INVALID_ARGUMENT
+
+
+class Clock:
+    def __init__(self) -> None:
+        self.now = 1000.0
+        self.slept: list[float] = []
+
+    def time(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.slept.append(round(seconds, 2))
+        self.now += seconds
+
+
+LIMITED = b"Please limit requests to one every 5 seconds or contact kalev.leetaru5@gmail.com"
+
+
+def test_requests_are_spaced_and_a_rate_limit_is_retried_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(gdelt, "MIN_INTERVAL_SECONDS", 5.5)
+    monkeypatch.setattr(gdelt, "RETRY_WAIT_SECONDS", 6.0)
+    clock = Clock()
+    replies = [
+        json.dumps({"articles": []}).encode(),
+        LIMITED,
+        json.dumps({"articles": []}).encode(),
+    ]
+    provider = gdelt.GdeltNewsProvider(
+        fetch=lambda _u, _h: replies.pop(0), sleep=clock.sleep, clock=clock.time
+    )
+    start, end = NOW - dt.timedelta(days=7), NOW
+    provider.search("Turkish Airlines", start, end, language=None, limit=5)
+    provider.search("Turkish Airlines", start, end, language=None, limit=5)
+    # Second search: wait for the 5.5 s spacing, get refused, wait 6 s, then 5.5 s spacing again.
+    assert clock.slept == [5.5, 6.0]
+    assert replies == []
+
+
+def test_a_second_refusal_is_reported(monkeypatch: pytest.MonkeyPatch) -> None:
+    clock = Clock()
+    provider = gdelt.GdeltNewsProvider(
+        fetch=lambda _u, _h: LIMITED, sleep=clock.sleep, clock=clock.time
+    )
+    with pytest.raises(ToolError) as raised:
+        provider.search("Turkish Airlines", NOW - dt.timedelta(days=7), NOW, language=None, limit=5)
+    assert raised.value.code is ErrorCode.RATE_LIMITED

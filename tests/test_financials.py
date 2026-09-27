@@ -200,3 +200,20 @@ def test_non_operating_items_dominating_net_income_are_flagged(tmp_path: Path) -
         _provider(tmp_path, "RET", _retailer()), _loader, "RET", today=TODAY
     ).quality_flags
     assert "non_operating_items_dominate" not in {f.code for f in ordinary}
+
+
+def test_positive_net_income_from_an_operating_loss_is_flagged(tmp_path: Path) -> None:
+    spec = _retailer()
+    spec["quarterly"][-1]["values"]["operating_income"] = -88
+    spec["quarterly"][-1]["values"]["net_income"] = 198  # THYAO 2026 Q2 shape, in millions
+    flags = tools.get_financials(
+        _provider(tmp_path, "OPL", spec), _loader, "OPL", today=TODAY
+    ).quality_flags
+    flag = next(f for f in flags if f.code == "non_operating_items_dominate")
+    assert "lost 88" in flag.message
+
+    spec["quarterly"][-1]["values"]["net_income"] = -120  # a loss everywhere: nothing to flag
+    flags = tools.get_financials(
+        _provider(tmp_path, "OPL2", spec), _loader, "OPL2", today=TODAY
+    ).quality_flags
+    assert "non_operating_items_dominate" not in {f.code for f in flags}

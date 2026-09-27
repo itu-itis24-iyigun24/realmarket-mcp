@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+From the Claude Desktop test round of v0.1.2:
+
+- **News search copes with GDELT's rate limit.** GDELT allows one request every 5 seconds;
+  requests are now spaced 5.5 seconds apart and a refused request is retried once after 6
+  seconds, instead of failing (two quick searches both failed in the test).
+- **An operating loss hidden by non-operating gains is flagged.** `non_operating_items_dominate`
+  now also fires when net income is positive while the operating result is a loss (Turkish
+  Airlines, 2026 Q2: operating loss $88m, net income $198m).
+- XBRL International's privacy policy is listed for the desktop extension; CI runs the tests on
+  every push.
+
 ## 0.1.2 — 2026-09-26
 
 - **Official figures for European and UK companies.** New `find_official_filer` finds a company
