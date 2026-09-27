@@ -102,16 +102,18 @@ def test_yfinance_adapter_reads_session_dates_and_currency(monkeypatch: pytest.M
 
         def history(self, **kwargs: Any) -> Any:
             calls.update(kwargs)
-            index = pd.DatetimeIndex(["2024-01-02 00:00", "2024-01-03 00:00"], tz="Europe/Istanbul")
+            index = pd.DatetimeIndex(
+                ["2024-01-02 00:00", "2024-01-03 00:00", "2024-01-04 00:00"], tz="Europe/Istanbul"
+            )
             return pd.DataFrame(
                 {
-                    "Open": [10.0, 2.0],
-                    "High": [12.0, 2.0],
-                    "Low": [8.0, 2.0],
-                    "Close": [10.0, float("nan")],
-                    "Adj Close": [9.0, float("nan")],  # a later dividend lowers earlier prices
-                    "Volume": [5, 6],
-                    "Dividends": [0.0, 0.5],
+                    "Open": [10.0, 9.5, 2.0],
+                    "High": [12.0, 9.5, 2.0],
+                    "Low": [8.0, 9.5, 2.0],
+                    "Close": [10.0, 9.5, float("nan")],
+                    "Adj Close": [1.0, 1.0, 1.0],  # ignored: computed from the dividends
+                    "Volume": [5, 6, 7],
+                    "Dividends": [0.0, 0.5, 0.0],
                 },
                 index=index,
             )
@@ -122,11 +124,12 @@ def test_yfinance_adapter_reads_session_dates_and_currency(monkeypatch: pytest.M
     assert calls["end"] == "2024-01-04"  # yfinance's end is exclusive
     assert calls["auto_adjust"] is False and calls["actions"] is True
     assert raw.currency == "TRY"
-    assert [r[0] for r in raw.rows] == [D(2024, 1, 2), D(2024, 1, 3)]
-    # Adjusted like Yahoo's auto-adjustment: every price times Adj Close / Close (0.9).
-    assert raw.rows[0][1:5] == pytest.approx((9.0, 10.8, 7.2, 9.0))
-    assert raw.rows[1][4] is None  # NaN close becomes None, never NaN
-    assert raw.price_closes == {D(2024, 1, 2): 10.0, D(2024, 1, 3): None}
+    assert [r[0] for r in raw.rows] == [D(2024, 1, 2), D(2024, 1, 3), D(2024, 1, 4)]
+    # The 0.5 dividend on 2024-01-03 scales earlier prices by 1 - 0.5 / 10 = 0.95.
+    assert raw.rows[0][1:5] == pytest.approx((9.5, 11.4, 7.6, 9.5))
+    assert raw.rows[1][4] == 9.5  # the ex-date itself is not adjusted
+    assert raw.rows[2][4] is None  # NaN close becomes None, never NaN
+    assert raw.price_closes == {D(2024, 1, 2): 10.0, D(2024, 1, 3): 9.5, D(2024, 1, 4): None}
     assert list(raw.dividends) == [(D(2024, 1, 3), 0.5)]
 
 
@@ -195,3 +198,13 @@ def test_price_summary_splits_the_return_into_price_and_dividends() -> None:
     assert data["dividend_yield_trailing_12m"] == 0.1  # 10 TL over the last price of 100
     series = provider.daily_bars("TUPRS.IS", D(2024, 1, 1), D(2024, 1, 5))
     assert series.dividends == ((D(2024, 1, 4), 10.0),)
+
+
+def test_dividend_adjustment_is_computed_not_taken_from_yahoo() -> None:
+    from realmarket_mcp.providers.yahoo import _dividend_factors
+
+    # BP.L-like, in pence: a 8.32p dividend on a 568p close scales earlier prices by 0.98535.
+    # Yahoo's own Adj Close treated it as pounds (factor 0.99985), losing the dividend.
+    factors = _dividend_factors([570.0, 568.0, 560.0, 565.0], [0.0, 0.0, 8.32, 0.0])
+    assert factors == pytest.approx([1 - 8.32 / 568, 1 - 8.32 / 568, 1.0, 1.0])
+    assert _dividend_factors([None, 100.0], [0.0, 5.0]) == [1.0, 1.0]  # no previous close

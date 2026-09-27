@@ -107,3 +107,32 @@ def test_evds_house_price_request() -> None:
             "TR", dt.date(2026, 1, 1), dt.date(2026, 9, 1), retrieved_at=STAMP, env={}
         )
     assert raised.value.code is ErrorCode.MISSING_API_KEY
+
+
+def test_an_empty_evds_series_says_so() -> None:
+    def fetch(url: str, headers: object) -> bytes:
+        return b'{"items": [{"Tarih": "2007-1", "TP_KFE_TR": null}]}'
+
+    with pytest.raises(ToolError) as raised:
+        config.load_house_prices(
+            "TR",
+            dt.date(2006, 1, 1),
+            dt.date(2007, 12, 1),
+            retrieved_at=STAMP,
+            env={cpi.EVDS_KEY_ENV: "k"},
+            fetch=fetch,
+        )
+    assert raised.value.code is ErrorCode.NO_DATA_IN_RANGE and "later" in raised.value.hint
+
+
+def test_turkish_notes_only_for_tl_assets() -> None:
+    usd = tools.compare_real_return(
+        FixtureProvider(FIXTURES),
+        lambda *_: CPI,
+        "BBB",
+        start="2024-01-01",
+        end="2024-01-26",
+        today=dt.date(2024, 2, 1),
+        inflation_region="TR",
+    )
+    assert not any("minimum wage" in n or "house price" in n for n in usd.notes)

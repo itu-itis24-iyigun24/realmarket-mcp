@@ -201,3 +201,16 @@ def test_minimum_wage_table() -> None:
     )
     # From 2022 the net is exactly 85% of the gross (no income tax or stamp duty).
     assert tr_reference.minimum_wage_on(dt.date(2026, 3, 1)).value == round(33030.00 * 0.85, 2)  # type: ignore[union-attr]
+
+
+def test_withholding_table_starts_in_2006() -> None:
+    from realmarket_mcp import tr_reference
+
+    assert tr_reference.withholding_on(dt.date(2005, 12, 31)) is None
+    assert tr_reference.withholding_on(dt.date(2006, 1, 1)) == 0.15
+    early = rates((dt.date(2005, 12, 30), 20.0), (dt.date(2006, 1, 6), 20.0))
+    assert early.growth(dt.date(2005, 12, 30), dt.date(2006, 1, 20)) is not None
+    assert (
+        early.growth(dt.date(2005, 12, 30), dt.date(2006, 1, 20), tr_reference.withholding_on)
+        is None
+    )

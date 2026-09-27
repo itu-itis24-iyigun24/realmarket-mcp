@@ -199,6 +199,15 @@ def evds_monthly_index(
     try:
         items: list[dict[str, Any]] = json.loads(body)["items"]
         rows = [(str(item["Tarih"]), str(item.get(column) or "")) for item in items]
+    except (KeyError, TypeError, ValueError) as exc:
+        raise _bad_payload("EVDS", exc) from None
+    if not any(value.strip() for _, value in rows):
+        raise ToolError(
+            ErrorCode.NO_DATA_IN_RANGE,
+            f"EVDS has no {series} values for {start:%Y-%m} to {end:%Y-%m}.",
+            "The series may start later than the requested period; use a later start date.",
+        )
+    try:
         return series_from_rows(
             rows, region=region, source=source, series_id=series, retrieved_at=retrieved_at
         )

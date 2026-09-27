@@ -71,7 +71,7 @@ ATTRIBUTIONS = {
     "Louis.",
     "evds": "Source: TÜİK consumer price index via CBRT (TCMB) EVDS.",
     "evds_deposit": "Source: CBRT (TCMB) EVDS, weighted average interest rates on new TL "
-    "savings deposits (1-3 months).",
+    "deposits (1-3 months).",
     "evds_house_price": "Source: CBRT (TCMB) EVDS, Residential Property Price Index (KFE).",
     "tr_reference": "Source: Resmî Gazete decisions (deposit withholding under GVK geçici md. "
     "67; minimum wage by the Asgari Ücret Tespit Komisyonu, ÇSGB), compiled by realmarket-mcp.",

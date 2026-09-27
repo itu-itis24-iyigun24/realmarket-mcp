@@ -42,16 +42,17 @@ DEPOSIT_NOTE = (
     "Deposit figures model a 32-day TL deposit renewed at each maturity at the weekly weighted "
     "average rate TCMB publishes for new TL savings deposits of 1-3 months (series "
     "TP.TRYTAS.MT02; periods starting before July 2012 use all TL deposits, TP.TRY.MT02), with "
-    "simple interest within a term. They are gross of withholding tax (stopaj), and a real "
-    "account earns its own bank's rate."
+    "simple interest within a term. deposit_return and deposit_real_return are before "
+    "withholding tax (stopaj); a real account earns its own bank's rate."
 )
 
 
 WITHHOLDING_NOTE = (
     "The _after_tax deposit figures deduct the withholding tax (stopaj) on each 32-day term's "
     "interest at the rate in force on the day the term opens or renews (resident individuals, "
-    "TL time deposits up to 6 months: 15% until 2018, 5% from 2020-09-30, 7.5% from "
-    "2024-05-01, 10% from 2024-11-01, 15% from 2025-02-01, 17.5% from 2025-07-09). Gains on "
+    "TL time deposits up to 6 months: 15% from 2006, 5% from 2018-08-31, 15% from 2018-12-01, "
+    "5% from 2020-09-30, 7.5% from 2024-05-01, 10% from 2024-11-01, 15% from 2025-02-01, "
+    "17.5% from 2025-07-09). Gains on "
     "Borsa Istanbul shares held by resident individuals are generally not subject to this "
     "withholding; dividends are taxed at source by the company."
 )
@@ -156,6 +157,14 @@ HOUSE_NOTE = (
 )
 
 
+HOUSE_NOTE_SAVINGS = (
+    "HOUSE replays each payment into TCMB's Türkiye house price index from its month to the "
+    "last month the index covers (valued_as_of, about two months before as_of, so it misses "
+    "the latest months' price changes). Sale prices only: no rent, and no purchase, ownership "
+    "or selling costs."
+)
+
+
 def _house_terms(
     load_house: HouseLoader | None,
     area: str,
@@ -247,6 +256,7 @@ def _minimum_wage_terms(
         )
         return empty
     growth = last.value / first.value - 1.0
+    flags.extend(_reference_flags(tr_reference.MINIMUM_WAGE_NET, start, end, "minimum wage"))
     provenance.append(
         _reference_provenance("minimum_wage_net", tr_reference.MINIMUM_WAGE_NET, start, end)
     )
@@ -382,7 +392,10 @@ def get_price_summary(
     start_date, end_date = resolve(period, start, end, today=today)
     series, usable = _load_bars(provider, symbol, start_date, end_date)
     provenance = [_provenance(series, usable[0].date, usable[-1].date)]
-    dividend_yield = _trailing_dividend_yield(provider, symbol, series, usable[-1], provenance)
+    yield_flags: list[QualityFlag] = []
+    dividend_yield = _trailing_dividend_yield(
+        provider, symbol, series, usable[-1], provenance, yield_flags
+    )
     return ToolResult(
         tool="get_price_summary",
         data={
@@ -395,7 +408,7 @@ def get_price_summary(
             "dividend_yield_trailing_12m": dividend_yield,
         },
         provenance=tuple(provenance),
-        quality_flags=tuple(quality.check_series(series, requested_end=end_date)),
+        quality_flags=(*quality.check_series(series, requested_end=end_date), *yield_flags),
         notes=(
             f"{RATIO_NOTE} Returns are nominal, in the asset's own currency.",
             "annualized_return is null for spans under 180 days.",
@@ -403,8 +416,8 @@ def get_price_summary(
             "share price alone; dividend_return = total_return - price_return is what the "
             "dividends added. dividends_per_share sums the cash dividends with ex-dates after "
             "first_date, up to last_date. dividend_yield_trailing_12m is the cash dividends of "
-            "the 12 months to last_date over the last price. They are null when the source "
-            "does not report dividends separately.",
+            "the 12 months to last_date over the last price (0 when none was paid). They are "
+            "null when the source does not report dividends separately.",
         ),
     )
 
@@ -415,6 +428,7 @@ def _trailing_dividend_yield(
     series: PriceSeries,
     last: Bar,
     provenance: list[Provenance],
+    flags: list[QualityFlag],
 ) -> float | None:
     """Cash dividends with ex-dates in the 12 months to ``last`` over its share price (both
     split-adjusted), or None when the source does not report dividends. A year of data is
@@ -425,7 +439,14 @@ def _trailing_dividend_yield(
     if not series.bars or series.bars[0].date > since:
         try:
             series = provider.daily_bars(symbol, since, last.date)
-        except ToolError:
+        except ToolError as error:
+            flags.append(
+                QualityFlag(
+                    "dividend_yield_unavailable",
+                    Severity.INFO,
+                    f"No dividend yield: the year of prices could not be loaded ({error.message}).",
+                )
+            )
             return None
         provenance.append(_provenance(series, since, last.date))
     paid = sum(a for d, a in series.dividends if since < d <= last.date)
@@ -774,12 +795,21 @@ def compare_real_return(
             net_in_window = rates.growth(first.date, real_end, tax)
             if net_in_window is not None:
                 deposit_net_real = analytics.real_return(net_in_window - 1.0, inflation)
-        if deposit_net is not None:
+        if deposit_net is not None or deposit_net_real is not None:
             table = tr_reference.DEPOSIT_WITHHOLDING
             provenance.append(
                 _reference_provenance("deposit_withholding", table, first.date, last.date)
             )
             flags.extend(_reference_flags(table, first.date, last.date, "withholding rate"))
+        elif growth is not None:
+            flags.append(
+                QualityFlag(
+                    "withholding_unavailable",
+                    Severity.INFO,
+                    "No after-tax deposit figures: the withholding table starts on "
+                    f"{tr_reference.DEPOSIT_WITHHOLDING[0].effective_from}.",
+                )
+            )
         if growth is None:
             flags.append(
                 QualityFlag(
@@ -829,9 +859,12 @@ def compare_real_return(
         notes=(
             RATIO_NOTE,
             *((DEPOSIT_NOTE,) if deposit_return is not None else ()),
-            *((WITHHOLDING_NOTE,) if deposit_net is not None else ()),
-            MINIMUM_WAGE_NOTE,
-            HOUSE_NOTE,
+            *(
+                (WITHHOLDING_NOTE,)
+                if deposit_net is not None or deposit_net_real is not None
+                else ()
+            ),
+            *((MINIMUM_WAGE_NOTE, HOUSE_NOTE) if currency == "TRY" else ()),
             "real_return = (1 + nominal) / (1 + cumulative_inflation) - 1, with inflation "
             "measured from the CPI of the first month to the CPI of the last month.",
             "usd_return values the holding in US dollars at each end; gold_return values it "
@@ -839,9 +872,10 @@ def compare_real_return(
             "adjusted for US inflation.",
             "gold_return_in_currency is what the same money put into gold earned, in the "
             "asset's currency; beat_gold compares the two. For TL assets gram_gold_try_start "
-            "and _end are the gram gold price derived from the international spot price (US "
-            "dollars per troy ounce x USDTRY / 31.1035); shop and bank gram gold prices add "
-            "a spread and, at times, a local premium.",
+            "and _end are the gram gold price derived from the price source's gold price in US "
+            "dollars per troy ounce (with Yahoo, the front-month COMEX future, which sits "
+            "slightly above spot) x USDTRY / 31.1035; shop and bank gram gold prices add a "
+            "spread and, at times, a local premium.",
             "All figures describe the past period only (the real return up to "
             "inflation_window_end) and say nothing about future returns.",
         ),
@@ -1447,7 +1481,16 @@ def portfolio_real_return(
             "(it accounts for when money went in).",
             "alternatives show where the same payments would stand in each alternative; they "
             "describe the past, not what to buy.",
-            *((DEPOSIT_NOTE,) if any(a["alternative"] == "DEPOSIT" for a in alternatives) else ()),
+            *(
+                (DEPOSIT_NOTE, WITHHOLDING_NOTE)
+                if any(a["alternative"] == "DEPOSIT" for a in alternatives)
+                else ()
+            ),
+            *(
+                (HOUSE_NOTE_SAVINGS,)
+                if any(a["alternative"] == "HOUSE" for a in alternatives)
+                else ()
+            ),
             "Purchases only: sales and dividends paid out in cash are not modelled.",
         ),
     )
@@ -2068,7 +2111,7 @@ def get_valuation(
         return _round(market_cap / (denominator * fx)), None
 
     extra: list[Provenance] = []
-    dividend_yield = _trailing_dividend_yield(price_provider, quote, series, last, extra)
+    dividend_yield = _trailing_dividend_yield(price_provider, quote, series, last, extra, flags)
     pe, pe_reason = ratio(earnings, "earnings")
     pb, pb_reason = ratio(equity, "equity")
     ps, ps_reason = ratio(sales, "sales")

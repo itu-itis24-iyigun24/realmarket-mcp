@@ -32,7 +32,7 @@ class Row:
 # it). A term is taxed at the rate in force on the day it is opened or renewed: every decision
 # applies to accounts "açılan veya vadesi yenilenen" from its date.
 DEPOSIT_WITHHOLDING: tuple[Row, ...] = (
-    Row(dt.date(2006, 10, 1), 0.15, "BKK 2006/10731 (RG 23.07.2006)"),
+    Row(dt.date(2006, 1, 1), 0.15, "GVK geçici md. 67 (5281 s. Kanun); BKK 2006/10731"),
     Row(dt.date(2018, 8, 31), 0.05, "CK 53 (RG 31.08.2018), for three months"),
     Row(dt.date(2018, 12, 1), 0.15, "CK 53 lapsed without extension", weak=True),
     Row(dt.date(2020, 9, 30), 0.05, "CK 3032 (RG 30.09.2020), extended to 30.04.2024"),

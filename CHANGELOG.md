@@ -2,6 +2,22 @@
 
 ## 0.1.6 — 2026-09-27
 
+- Fixes from an independent review of this release:
+  - **Dividends on pence-quoted shares.** Yahoo's own adjusted closes treat a dividend in pence
+    as pounds, so a London share's total return left its dividends out (BP.L, one year: 0.06
+    points instead of 6.6). The total-return adjustment is now computed from the dividends and
+    the split-adjusted closes (`1 - dividend / previous close` at each ex-date); results for
+    other markets are unchanged.
+  - Because Yahoo series now carry their split-only closes and dividends, their `data_version`
+    hashes differ from v0.1.5 for the same prices. Compare audit-log versions within a release.
+  - After-tax deposit figures are cited and explained whenever either is given; periods the
+    withholding table does not cover (before 2006) are flagged. The withholding note lists
+    every rate change, including the 2018 cut.
+  - The savings tool explains that HOUSE is valued as of the index's last month and notes the
+    withholding tax next to DEPOSIT. Turkish-only notes are left off non-TRY results.
+  - An empty EVDS series (a house index before 2010) now says so instead of reporting a
+    format change; a failed 12-month fetch for the dividend yield is flagged.
+
 - **Gram gold.** `compare_real_return` gives gold's own return in the asset's currency
   (`gold_return_in_currency`, `beat_gold`) and, for TL assets, the gram gold price in TL at
   both ends, from the spot price: 1,662 TL to 6,801 TL over THYAO's last three years.

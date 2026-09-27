@@ -99,6 +99,23 @@ def _clean(value: Any) -> float | None:
     return number if math.isfinite(number) else None
 
 
+def _dividend_factors(closes: Sequence[float | None], dividends: Sequence[float]) -> list[float]:
+    """Total-return adjustment per bar: each cash dividend scales every earlier price by
+    ``1 - dividend / previous close``, the standard back-adjustment. Computed here rather than
+    taken from Yahoo's Adj Close, which is wrong for pence-quoted shares (it treats a dividend
+    in pence as pounds: BP.L's 2025-08-14 factor was 0.99985 instead of 0.98519). Dividend and
+    close are in the same unit, so the ratio is unit-free."""
+    factors = [1.0] * len(closes)
+    running = 1.0
+    previous_close: list[float | None] = [None, *closes[:-1]]
+    for index in range(len(closes) - 1, -1, -1):
+        factors[index] = running
+        dividend, before = dividends[index], previous_close[index]
+        if dividend and before and dividend < before:
+            running *= 1.0 - dividend / before
+    return factors
+
+
 class YfinanceBackend:
     """The only code in this project that imports ``yfinance``."""
 
@@ -134,33 +151,29 @@ class YfinanceBackend:
             currency = (ticker.history_metadata or {}).get("currency")
         except Exception as exc:
             raise _translate(exc) from exc
-        rows = []
-        price_closes: dict[dt.date, float | None] = {}
-        dividends: list[tuple[dt.date, float]] = []
-        for index, row in frame.iterrows():
-            day = index.date()  # the exchange-local session date
-            close, adjusted = _clean(row.get("Close")), _clean(row.get("Adj Close"))
-            # Yahoo's own auto-adjustment: every price scaled by Adj Close / Close.
-            factor = adjusted / close if close and adjusted is not None else None
-
-            def scaled(value: Any, factor: float | None = factor) -> float | None:
-                number = _clean(value)
-                return None if number is None or factor is None else number * factor
-
-            rows.append(
-                (
-                    day,
-                    scaled(row.get("Open")),
-                    scaled(row.get("High")),
-                    scaled(row.get("Low")),
-                    adjusted,
-                    _clean(row.get("Volume")),
-                )
+        raw = [
+            (
+                index.date(),  # the exchange-local session date
+                _clean(row.get("Open")),
+                _clean(row.get("High")),
+                _clean(row.get("Low")),
+                _clean(row.get("Close")),  # adjusted for splits only
+                _clean(row.get("Volume")),
+                _clean(row.get("Dividends")) or 0.0,
             )
-            price_closes[day] = close
-            amount = _clean(row.get("Dividends"))
-            if amount:
-                dividends.append((day, amount))
+            for index, row in frame.iterrows()
+        ]
+        factors = _dividend_factors([r[4] for r in raw], [r[6] for r in raw])
+
+        def scaled(value: float | None, factor: float) -> float | None:
+            return None if value is None else value * factor
+
+        rows = [
+            (day, *(scaled(v, f) for v in (open_, high, low, close)), volume)
+            for (day, open_, high, low, close, volume, _), f in zip(raw, factors, strict=True)
+        ]
+        price_closes = {r[0]: r[4] for r in raw}
+        dividends = [(r[0], r[6]) for r in raw if r[6]]
         return RawHistory(currency, rows, price_closes, dividends)
 
     def financials(self, symbol: str) -> RawFinancials:
