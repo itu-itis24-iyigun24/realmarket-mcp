@@ -64,8 +64,38 @@ Tool use quality varies more between models than answer quality does. Before rol
 | `REALMARKET_EVDS_API_KEY` | Turkish CPI (current) and TL deposit rates |
 | `REALMARKET_SEC_CONTACT` | official US company statements (the firm's contact e-mail) |
 | `REALMARKET_NEWS_PROVIDER=none` | turn off GDELT news if the firm uses its own news source |
+| `REALMARKET_AUDIT_LOG=/var/log/realmarket/audit.jsonl` | audit log, one line per tool call (below) |
+| `REALMARKET_AUDIT_FULL=1` | also store each full response in the audit log |
 
 `check_setup` reports what is configured, without showing values.
+
+## Audit log
+
+With `REALMARKET_AUDIT_LOG` set, every tool call appends one JSON line to that file on the
+firm's own server, so the firm can show afterwards what the assistant was given:
+
+```json
+{"time": "2026-09-27T12:00:03.114Z", "server_version": "0.1.4", "tool": "get_valuation",
+ "arguments": {"symbol": "BIMAS.IS", "price_symbol": null}, "outcome": "ok", "error_code": null,
+ "duration_ms": 842.6,
+ "provenance": [{"provider": "adapter:acme-feed", "dataset": "daily_bars", "symbols": ["BIMAS.IS"],
+   "period_start": "2026-09-06", "period_end": "2026-09-25", "retrieved_at": "2026-09-27T12:00:02Z",
+   "data_version": "sha256:…"}, …],
+ "quality_flags": ["warning:no_tms29_trailing_earnings"],
+ "response_sha256": "…"}
+```
+
+- `arguments` are the tool's own parameters with defaults filled in, so the call can be
+  repeated; `data_version` identifies the exact data each figure came from.
+- `response_sha256` is the SHA-256 of the exact response text the model received. If the
+  firm's application also stores the response, the two can be matched.
+- `REALMARKET_AUDIT_FULL=1` stores the full response as well.
+- Settings, API keys and tokens are never written. Arguments can contain a customer's
+  portfolio amounts: retention, access control and rotation of the file are the firm's.
+- If the file cannot be written (path, permissions, disk), the tool returns an error instead
+  of answering unlogged. `check_setup` reports whether the log is on.
+- The log records what the tools returned, not what the model then wrote to the customer;
+  the firm's application should keep the final answer next to it.
 
 ## Responsibilities that stay with the firm
 

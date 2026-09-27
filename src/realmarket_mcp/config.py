@@ -9,7 +9,7 @@ from collections.abc import Callable, Mapping, MutableMapping
 from pathlib import Path
 from typing import cast
 
-from realmarket_mcp import inflation
+from realmarket_mcp import audit, inflation
 from realmarket_mcp.contract import ErrorCode, ToolError
 from realmarket_mcp.deposits import DepositRates
 from realmarket_mcp.models import FinancialStatements
@@ -101,6 +101,10 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
         },
         "deposit_rates": {"TRY": "evds" if evds else "unavailable (needs the EVDS key)"},
         "news": news,
+        "audit_log": {
+            "enabled": audit.audit_path(env) is not None,
+            "full_responses": audit.full_responses(env),
+        },
         # Optional settings the user left empty (the app passes them as empty or placeholder
         # values). This is normal and needs no action; listed only for troubleshooting.
         "optional_settings_left_empty": list(dropped_at_startup),

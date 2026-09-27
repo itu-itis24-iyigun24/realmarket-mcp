@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Audit log.** `REALMARKET_AUDIT_LOG=<file>` appends one JSON line per tool call: tool,
+  arguments, outcome, the provenance and exact data version of every figure, the quality
+  flags, and a SHA-256 of the exact response the model received (`REALMARKET_AUDIT_FULL=1`
+  stores the response too). No settings or keys are written; if the file cannot be written
+  the tool refuses to answer rather than leave a gap. See `docs/integration.md`.
 - **No P/E or P/S for TMS 29 companies without a proper trailing figure.** The market
   convention for Turkish companies under inflation accounting is the trailing twelve months
   from the latest report, in that report's money (BIMAS P/E 17.26 in a brokerage app). Yahoo's

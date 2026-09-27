@@ -4,17 +4,20 @@ envelopes into MCP results. All logic lives in ``tools``; this module is wiring 
 from __future__ import annotations
 
 import datetime as dt
+import functools
+import inspect
 import json
 import logging
 import os
+import time
 from collections.abc import Callable
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal, TypeVar
 
 from mcp.server.mcpserver import MCPServer
 from mcp_types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import BaseModel, Field
 
-from realmarket_mcp import __version__, config, tools
+from realmarket_mcp import __version__, audit, config, tools
 from realmarket_mcp.config import (
     drop_unset_values,
     load_cpi,
@@ -89,6 +92,50 @@ def respond(produce: Callable[[], ToolResult]) -> CallToolResult:
         return _to_call_result(internal.to_dict(), is_error=True)
 
 
+F = TypeVar("F", bound=Callable[..., CallToolResult])
+
+
+def audited(fn: F) -> F:
+    """Append one audit line per call when REALMARKET_AUDIT_LOG is set (see ``audit``). The
+    wrapper keeps the tool's signature, so its MCP schema is unchanged."""
+    signature = inspect.signature(fn)
+
+    @functools.wraps(fn)
+    def wrapper(*args: Any, **kwargs: Any) -> CallToolResult:
+        path = audit.audit_path()
+        if path is None:
+            return fn(*args, **kwargs)
+        started_at, clock = _utc_now(), time.monotonic()
+        result = fn(*args, **kwargs)
+        bound = signature.bind(*args, **kwargs)
+        bound.apply_defaults()
+        text = result.content[0].text if result.content else ""  # type: ignore[union-attr]
+        record = audit.entry(
+            tool=fn.__name__,
+            arguments=bound.arguments,
+            started_at=started_at,
+            duration_ms=(time.monotonic() - clock) * 1000,
+            response_text=text,
+            payload=result.structured_content or {},
+            full=audit.full_responses(),
+        )
+        try:
+            audit.write(path, record)
+        except OSError as exc:
+            log.error("audit log not written: %s", type(exc).__name__)
+            refused = ToolError(
+                ErrorCode.INTERNAL,
+                f"The audit log could not be written ({type(exc).__name__}), so no answer is "
+                "given.",
+                f"The operator must fix the file set in {audit.AUDIT_ENV} (path, permissions, "
+                "disk space). Do not retry until then.",
+            )
+            return _to_call_result(refused.to_dict(), is_error=True)
+        return result
+
+    return wrapper  # type: ignore[return-value]
+
+
 def build_server() -> MCPServer:
     server: MCPServer = MCPServer(
         name="realmarket",
@@ -98,6 +145,7 @@ def build_server() -> MCPServer:
     )
 
     @server.tool(annotations=READ_ONLY)
+    @audited
     def search_assets(
         query: Annotated[str, Field(description="Company, index or asset name, or a ticker.")],
         limit: Annotated[int, Field(ge=1, le=25, description="Maximum results.")] = 10,
@@ -117,6 +165,7 @@ def build_server() -> MCPServer:
         )
 
     @server.tool(annotations=READ_ONLY)
+    @audited
     def check_setup() -> CallToolResult:
         """Report which data sources this server will use and which settings are missing:
         price data, financial statements (SEC for US companies), inflation per region and
@@ -130,6 +179,7 @@ def build_server() -> MCPServer:
         )
 
     @server.tool(annotations=READ_ONLY)
+    @audited
     def get_price_summary(
         symbol: Symbol,
         period: PeriodArg = "1y",
@@ -154,6 +204,7 @@ def build_server() -> MCPServer:
         )
 
     @server.tool(annotations=READ_ONLY)
+    @audited
     def compare_real_return(
         symbol: Symbol,
         period: PeriodArg = "5y",
@@ -195,6 +246,7 @@ def build_server() -> MCPServer:
         )
 
     @server.tool(annotations=READ_ONLY)
+    @audited
     def compare_assets(
         symbols: Annotated[
             list[str],
@@ -221,6 +273,7 @@ def build_server() -> MCPServer:
         )
 
     @server.tool(annotations=READ_ONLY)
+    @audited
     def check_data_quality(
         symbol: Symbol,
         period: PeriodArg = "5y",
@@ -244,6 +297,7 @@ def build_server() -> MCPServer:
         )
 
     @server.tool(annotations=READ_ONLY)
+    @audited
     def get_event_reaction(
         symbol: Symbol,
         event_date: Annotated[
@@ -277,6 +331,7 @@ def build_server() -> MCPServer:
         )
 
     @server.tool(annotations=READ_ONLY)
+    @audited
     def portfolio_real_return(
         purchases: Annotated[
             list[Purchase], Field(min_length=1, max_length=50, description="Dated purchases.")
@@ -322,6 +377,7 @@ def build_server() -> MCPServer:
         )
 
     @server.tool(annotations=READ_ONLY)
+    @audited
     def get_financials(symbol: Symbol) -> CallToolResult:
         """Summarize a company's recent financial statements: latest-quarter revenue, gross,
         operating and net profit with margins and debt-to-equity; quarter-on-quarter,
@@ -345,6 +401,7 @@ def build_server() -> MCPServer:
         )
 
     @server.tool(annotations=READ_ONLY)
+    @audited
     def get_valuation(
         symbol: Annotated[
             str,
@@ -392,6 +449,7 @@ def build_server() -> MCPServer:
         return respond(run)
 
     @server.tool(annotations=READ_ONLY)
+    @audited
     def find_official_filer(
         name: Annotated[
             str, Field(description="Part of the company's registered name, e.g. 'ASML'.")
@@ -415,6 +473,7 @@ def build_server() -> MCPServer:
         )
 
     @server.tool(annotations=READ_ONLY)
+    @audited
     def get_news(
         query: Annotated[
             str,
