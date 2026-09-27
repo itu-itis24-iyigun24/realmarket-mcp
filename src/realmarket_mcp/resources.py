@@ -56,6 +56,18 @@ All ratios are fractions: 0.12 means 12%.
   term earns pro rata. Gross of withholding tax (stopaj). Rates are carried forward at most 21
   days after the last publication, never extrapolated.
 - `deposit_real_return` deflates the deposit over the same window as `real_return`.
+- `_after_tax` figures deduct the withholding tax (stopaj) from each term's interest at the
+  rate in force on the day the term opens or renews (TL time deposits up to 6 months, resident
+  individuals): 15% until 2018-08-30, 5% from 2018-08-31, 15% from 2018-12-01, 5% from
+  2020-09-30, 7.5% from 2024-05-01, 10% from 2024-11-01, 15% from 2025-02-01, 17.5% from
+  2025-07-09. Hand-maintained from Resmî Gazete decisions; rows resting on one source and dates
+  after the table was last checked are flagged.
+
+## Minimum wage
+- `minimum_wage_growth`: the change in the monthly net minimum wage (single worker, ÇSGB
+  figure; before 2022 including AGİ) in force on the first and last dates. From 2012.
+- `return_in_minimum_wages = (1 + nominal) / (1 + minimum_wage_growth) - 1`: whether the
+  holding bought more or fewer months of minimum wage at the end than at the start.
 
 ## Valuation (get_valuation)
 - market_cap = latest close x shares outstanding (all share classes; the source is named).

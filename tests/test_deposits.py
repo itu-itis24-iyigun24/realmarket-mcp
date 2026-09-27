@@ -104,6 +104,8 @@ def test_evds_key_and_currency_are_required() -> None:
 # TTT (TRY): 100 on 2023-01-02, 200 on 2024-01-02 (fixture). A flat 36.5% deposit rolled every
 # 32 days over 365 days: 11 full terms and a 13-day remainder.
 YEAR = (1 + 0.365 * 32 / 365) ** 11 * (1 + 0.365 * 13 / 365)
+# The same year after the 5% withholding in force throughout 2023.
+YEAR_NET = (1 + 0.365 * 0.95 * 32 / 365) ** 11 * (1 + 0.365 * 0.95 * 13 / 365)
 FLAT = rates(*((dt.date(2022, 12, 30) + dt.timedelta(weeks=w), 36.5) for w in range(53)))
 
 
@@ -122,7 +124,14 @@ def test_compare_real_return_adds_the_deposit_alternative() -> None:
     assert data["deposit_return"] == pytest.approx(deposit, abs=1e-6)
     assert data["deposit_real_return"] == pytest.approx((1 + deposit) / 1.5 - 1, abs=1e-6)
     assert data["beat_deposit"] is True  # +100% against about +44%
-    assert "evds_deposit" in {p.provider for p in result.provenance}
+    assert data["deposit_return_after_tax"] == pytest.approx(YEAR_NET - 1, abs=1e-6)
+    assert data["deposit_real_return_after_tax"] == pytest.approx(YEAR_NET / 1.5 - 1, abs=1e-6)
+    assert data["beat_deposit_after_tax"] is True
+    # Net minimum wage 8,506.80 TL in January 2023, 17,002.12 TL in January 2024.
+    wage = 17002.12 / 8506.80 - 1
+    assert data["minimum_wage_growth"] == pytest.approx(wage, abs=1e-6)
+    assert data["return_in_minimum_wages"] == pytest.approx(2.0 / (1 + wage) - 1, abs=1e-6)
+    assert {"evds_deposit", "tr_reference"} <= {p.provider for p in result.provenance}
     assert any("stopaj" in n for n in result.notes)
 
 
@@ -152,8 +161,43 @@ def test_portfolio_replays_payments_into_a_deposit() -> None:
     assert alternative["annualized_money_weighted"] == pytest.approx(
         YEAR ** (365.25 / 365) - 1, abs=1e-4
     )
+    assert alternative["value_now_after_tax"] == pytest.approx(1000 * YEAR_NET, abs=0.01)
+    assert alternative["return_after_tax"] == pytest.approx(YEAR_NET - 1, abs=1e-6)
 
 
 def test_check_setup_reports_deposit_availability() -> None:
     assert config.describe_setup({})["deposit_rates"]["TRY"].startswith("unavailable")
     assert config.describe_setup({cpi.EVDS_KEY_ENV: "k"})["deposit_rates"]["TRY"] == "evds"
+
+
+def test_withholding_follows_the_rate_in_force_when_each_term_opens() -> None:
+    from realmarket_mcp import tr_reference
+
+    assert tr_reference.withholding_on(dt.date(2019, 6, 1)) == 0.15
+    assert tr_reference.withholding_on(dt.date(2023, 6, 1)) == 0.05
+    assert tr_reference.withholding_on(dt.date(2025, 7, 8)) == 0.15
+    assert tr_reference.withholding_on(dt.date(2025, 7, 9)) == 0.175
+    # Opened on 2025-07-08 at 15%; the renewal on 2025-08-09 is taxed at the new 17.5%.
+    weekly = rates(*((dt.date(2025, 6, 27) + dt.timedelta(weeks=w), 36.5) for w in range(8)))
+    net = weekly.growth(dt.date(2025, 7, 8), dt.date(2025, 8, 19), tr_reference.withholding_on)
+    expected = (1 + 0.365 * 0.85 * 32 / 365) * (1 + 0.365 * 0.825 * 10 / 365)
+    assert net == pytest.approx(expected)
+    unknown = weekly.growth(dt.date(2025, 7, 8), dt.date(2025, 8, 19), lambda _d: None)
+    assert unknown is None
+
+
+def test_minimum_wage_table() -> None:
+    from realmarket_mcp import tr_reference
+
+    assert tr_reference.minimum_wage_on(dt.date(2022, 6, 30)).value == 4253.40  # type: ignore[union-attr]
+    assert tr_reference.minimum_wage_on(dt.date(2022, 7, 1)).value == 5500.35  # type: ignore[union-attr]
+    assert tr_reference.minimum_wage_on(dt.date(2011, 12, 31)) is None  # before the table
+    last_year = tr_reference.MINIMUM_WAGE_NET[-1].effective_from.year
+    assert tr_reference.minimum_wage_on(dt.date(last_year + 1, 1, 1)) is None  # not decided yet
+    dates = [r.effective_from for r in tr_reference.MINIMUM_WAGE_NET]
+    assert dates == sorted(dates)
+    assert all(
+        r.source for r in (*tr_reference.MINIMUM_WAGE_NET, *tr_reference.DEPOSIT_WITHHOLDING)
+    )
+    # From 2022 the net is exactly 85% of the gross (no income tax or stamp duty).
+    assert tr_reference.minimum_wage_on(dt.date(2026, 3, 1)).value == round(33030.00 * 0.85, 2)  # type: ignore[union-attr]

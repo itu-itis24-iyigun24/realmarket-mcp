@@ -13,7 +13,7 @@ import math
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
-from realmarket_mcp import __version__, analytics, quality
+from realmarket_mcp import __version__, analytics, quality, tr_reference
 from realmarket_mcp.config import default_region
 from realmarket_mcp.contract import (
     ErrorCode,
@@ -44,6 +44,23 @@ DEPOSIT_NOTE = (
     "TP.TRYTAS.MT02; periods starting before July 2012 use all TL deposits, TP.TRY.MT02), with "
     "simple interest within a term. They are gross of withholding tax (stopaj), and a real "
     "account earns its own bank's rate."
+)
+
+
+WITHHOLDING_NOTE = (
+    "The _after_tax deposit figures deduct the withholding tax (stopaj) on each 32-day term's "
+    "interest at the rate in force on the day the term opens or renews (resident individuals, "
+    "TL time deposits up to 6 months: 15% until 2018, 5% from 2020-09-30, 7.5% from "
+    "2024-05-01, 10% from 2024-11-01, 15% from 2025-02-01, 17.5% from 2025-07-09). Gains on "
+    "Borsa Istanbul shares held by resident individuals are generally not subject to this "
+    "withholding; dividends are taxed at source by the company."
+)
+MINIMUM_WAGE_NOTE = (
+    "minimum_wage_growth is the change in the monthly net minimum wage (single worker, as "
+    "ÇSGB publishes it) in force on first_date and last_date; return_in_minimum_wages is "
+    "the holding measured in minimum wages, (1 + nominal) / (1 + minimum_wage_growth) - 1: "
+    "negative means it bought fewer months of minimum wage at the end than at the start. "
+    "Only for TRY assets, from 2012."
 )
 
 
@@ -82,6 +99,84 @@ def _deposit_rates(
         )
     )
     return rates
+
+
+def _reference_provenance(
+    dataset: str, table: tuple[tr_reference.Row, ...], start: dt.date, end: dt.date
+) -> Provenance:
+    """Provenance for a hand-maintained table: the rows used and the date it was checked."""
+    rows = tr_reference.rows_between(table, start, end)
+    text = json.dumps([[r.effective_from.isoformat(), r.value, r.source] for r in rows])
+    return Provenance(
+        provider="tr_reference",
+        dataset=dataset,
+        symbols=("TR",),
+        period_start=start.isoformat(),
+        period_end=end.isoformat(),
+        retrieved_at=f"{tr_reference.CHECKED.isoformat()}T00:00:00Z",
+        data_version="sha256:" + hashlib.sha256(text.encode()).hexdigest(),
+        adjustment="none",
+    )
+
+
+def _reference_flags(
+    table: tuple[tr_reference.Row, ...], start: dt.date, end: dt.date, what: str
+) -> list[QualityFlag]:
+    flags = []
+    weak = [r for r in tr_reference.rows_between(table, start, end) if r.weak]
+    if weak:
+        flags.append(
+            QualityFlag(
+                "reference_rate_uncertain",
+                Severity.INFO,
+                f"The {what} from {weak[0].effective_from} rests on a single source "
+                f"({weak[0].source}).",
+            )
+        )
+    if end > tr_reference.CHECKED:
+        flags.append(
+            QualityFlag(
+                "reference_table_unchecked",
+                Severity.INFO,
+                f"The {what} table was last checked on {tr_reference.CHECKED}; the latest "
+                "rate is assumed to apply after that.",
+            )
+        )
+    return flags
+
+
+def _minimum_wage_terms(
+    currency: str,
+    nominal: float,
+    start: dt.date,
+    end: dt.date,
+    flags: list[QualityFlag],
+    provenance: list[Provenance],
+) -> dict[str, object]:
+    """The holding measured in Turkish net minimum wages: did it keep up with wages?"""
+    empty: dict[str, object] = {"minimum_wage_growth": None, "return_in_minimum_wages": None}
+    if currency != "TRY":
+        return empty
+    first, last = tr_reference.minimum_wage_on(start), tr_reference.minimum_wage_on(end)
+    if first is None or last is None:
+        flags.append(
+            QualityFlag(
+                "minimum_wage_unavailable",
+                Severity.INFO,
+                "No minimum-wage comparison: the table covers "
+                f"{tr_reference.MINIMUM_WAGE_NET[0].effective_from} to the end of "
+                f"{tr_reference.MINIMUM_WAGE_NET[-1].effective_from.year}.",
+            )
+        )
+        return empty
+    growth = last.value / first.value - 1.0
+    provenance.append(
+        _reference_provenance("minimum_wage_net", tr_reference.MINIMUM_WAGE_NET, start, end)
+    )
+    return {
+        "minimum_wage_growth": _round(growth),
+        "return_in_minimum_wages": _round((1.0 + nominal) / (1.0 + growth) - 1.0),
+    }
 
 
 RATIO_NOTE = "Ratios are fractions (0.12 = 12%)."
@@ -551,16 +646,28 @@ def compare_real_return(
         if gold is not None:
             gold_return = (1.0 + usd_return) * gold[0] / gold[1] - 1.0
 
-    # The same money kept in a TL deposit account instead.
-    deposit_return = deposit_real = None
+    # The same money kept in a TL deposit account instead, gross and after withholding tax.
+    deposit_return = deposit_real = deposit_net = deposit_net_real = None
     rates = _deposit_rates(load_deposit, currency, first.date, last.date, flags, provenance)
     if rates is not None:
         growth = rates.growth(first.date, last.date)
         deposit_return = None if growth is None else growth - 1.0
+        tax = tr_reference.withholding_on
+        net_growth = rates.growth(first.date, last.date, tax)
+        deposit_net = None if net_growth is None else net_growth - 1.0
         if real_end is not None and inflation is not None:
             in_window = rates.growth(first.date, real_end)
             if in_window is not None:
                 deposit_real = analytics.real_return(in_window - 1.0, inflation)
+            net_in_window = rates.growth(first.date, real_end, tax)
+            if net_in_window is not None:
+                deposit_net_real = analytics.real_return(net_in_window - 1.0, inflation)
+        if deposit_net is not None:
+            table = tr_reference.DEPOSIT_WITHHOLDING
+            provenance.append(
+                _reference_provenance("deposit_withholding", table, first.date, last.date)
+            )
+            flags.extend(_reference_flags(table, first.date, last.date, "withholding rate"))
         if growth is None:
             flags.append(
                 QualityFlag(
@@ -593,12 +700,20 @@ def compare_real_return(
             "beat_deposit": (
                 None if deposit_return is None else (1.0 + nominal) > (1.0 + deposit_return)
             ),
+            "deposit_return_after_tax": _round(deposit_net),
+            "deposit_real_return_after_tax": _round(deposit_net_real),
+            "beat_deposit_after_tax": (
+                None if deposit_net is None else (1.0 + nominal) > (1.0 + deposit_net)
+            ),
+            **_minimum_wage_terms(currency, nominal, first.date, last.date, flags, provenance),
         },
         provenance=tuple(provenance),
         quality_flags=tuple(flags),
         notes=(
             RATIO_NOTE,
             *((DEPOSIT_NOTE,) if deposit_return is not None else ()),
+            *((WITHHOLDING_NOTE,) if deposit_net is not None else ()),
+            MINIMUM_WAGE_NOTE,
             "real_return = (1 + nominal) / (1 + cumulative_inflation) - 1, with inflation "
             "measured from the CPI of the first month to the CPI of the last month.",
             "usd_return values the holding in US dollars at each end; gold_return values it "
@@ -1057,6 +1172,7 @@ def portfolio_real_return(
     for name in dict.fromkeys(c.strip().upper() for c in compare_with if c.strip()):
         try:
             alt_value = 0.0
+            alt_net: float | None = 0.0  # the deposit after withholding tax
             deposit = None
             if name == "DEPOSIT":
                 if report != "TRY":
@@ -1080,6 +1196,8 @@ def portfolio_real_return(
                             "Use purchases inside the published deposit-rate period.",
                         )
                     alt_value += amount * growth
+                    net = deposit.growth(day, today, tr_reference.withholding_on)
+                    alt_net = None if alt_net is None or net is None else alt_net + amount * net
                     continue
                 if name == "USD":
                     usd = _convert(prices, provider, amount, report, "USD", day)
@@ -1107,14 +1225,23 @@ def portfolio_real_return(
                         adjustment="none",
                     )
                 )
-            alternatives.append(
-                {
-                    "alternative": name,
-                    "value_now": round(alt_value, 2),
-                    "return": _round(alt_value / invested - 1.0),
-                    "annualized_money_weighted": _round(xirr(alt_flows)),
-                }
-            )
+            entry: dict[str, object] = {
+                "alternative": name,
+                "value_now": round(alt_value, 2),
+                "return": _round(alt_value / invested - 1.0),
+                "annualized_money_weighted": _round(xirr(alt_flows)),
+            }
+            if name == "DEPOSIT" and alt_net is not None:
+                net_flows = [(d, cf) for d, cf in flows[:-1]] + [(today, alt_net)]
+                entry["value_now_after_tax"] = round(alt_net, 2)
+                entry["return_after_tax"] = _round(alt_net / invested - 1.0)
+                entry["annualized_money_weighted_after_tax"] = _round(xirr(net_flows))
+                table = tr_reference.DEPOSIT_WITHHOLDING
+                prices.provenance.append(
+                    _reference_provenance("deposit_withholding", table, first_day, today)
+                )
+                flags.extend(_reference_flags(table, first_day, today, "withholding rate"))
+            alternatives.append(entry)
         except ToolError as error:
             flags.append(
                 QualityFlag(

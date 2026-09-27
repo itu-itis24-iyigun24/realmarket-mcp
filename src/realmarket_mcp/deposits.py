@@ -57,9 +57,16 @@ class DepositRates:
         text = json.dumps([self.series_id, payload], separators=(",", ":"))
         return "sha256:" + hashlib.sha256(text.encode()).hexdigest()
 
-    def growth(self, start: dt.date, end: dt.date) -> float | None:
+    def growth(
+        self,
+        start: dt.date,
+        end: dt.date,
+        withholding: Callable[[dt.date], float | None] | None = None,
+    ) -> float | None:
         """Value of 1 unit deposited on ``start`` and held to ``end`` (interest from the day
-        after ``start`` through ``end``), or None when the series does not cover the span."""
+        after ``start`` through ``end``), or None when the series does not cover the span.
+        ``withholding(opening_day)`` gives the tax rate (a fraction) deducted from each term's
+        interest; None from it means the rate is not known, so no net figure."""
         if end <= start:
             return 1.0
         if start < self.first_date or end > self.covered_until:
@@ -73,7 +80,10 @@ class DepositRates:
                 return None
             # the rate is fixed at opening for the whole term
             days = min(TERM_DAYS, (end - day).days)
-            value *= 1.0 + rate / 100.0 * days / 365.0
+            tax = 0.0 if withholding is None else withholding(day)
+            if tax is None:
+                return None
+            value *= 1.0 + rate / 100.0 * days / 365.0 * (1.0 - tax)
             day += dt.timedelta(days=days)
         return value
 

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Deposit after withholding tax.** `compare_real_return` adds `deposit_return_after_tax`,
+  `deposit_real_return_after_tax` and `beat_deposit_after_tax`, and the savings tool's DEPOSIT
+  alternative its after-tax value: each 32-day term's interest is taxed at the stopaj rate in
+  force when it opens or renews (5% to 17.5% since 2018, from a table of Resmî Gazete
+  decisions). THYAO's last three years: a deposit returned 371% gross, 293% after tax.
+- **Minimum wage.** `compare_real_return` measures TL holdings in net minimum wages
+  (`minimum_wage_growth`, `return_in_minimum_wages`, from 2012): the wage rose 146% over the
+  last three years, so THYAO's shares buy 48% fewer months of it than at the start.
 - **Dividends.** `get_price_summary` splits the return into the share price and dividends
   (`price_return`, `dividend_return`) and lists the cash dividends per share paid in the
   period, from the same Yahoo request as the prices. Tüpraş over three years: 257% in total,

@@ -30,10 +30,10 @@ compute these figures in code and return them with their sources:
 |---|---|
 | `search_assets` | "What is the symbol for Turkish Airlines?" |
 | `get_price_summary` | "How did it do over the last year?" — return, annualized return, volatility, max drawdown, and how much of the return came from dividends |
-| `compare_real_return` | "Did it beat inflation?" — nominal vs real return, plus the same holding in US dollars, in gold, and (TL assets) against a TL deposit account |
+| `compare_real_return` | "Did it beat inflation?" — nominal vs real return, plus the same holding in US dollars, in gold, in minimum wages, and (TL assets) against a TL deposit account before and after withholding tax |
 | `compare_assets` | "How do these compare?" — 2 to 10 assets over one common window |
 | `check_data_quality` | "Can I trust this data?" — gaps, placeholder bars, suspicious jumps, stale data |
-| `portfolio_real_return` | "Did my savings keep up with inflation?" — dated purchases valued today, money-weighted return, real return, and the same payments replayed into USD, gold, a TL deposit or an index |
+| `portfolio_real_return` | "Did my savings keep up with inflation?" — dated purchases valued today, money-weighted return, real return, and the same payments replayed into USD, gold, a TL deposit (also after withholding tax) or an index |
 | `get_event_reaction` | "How did the stock react to that announcement?" — 1/5/20-session return vs the index, plus pre-event drift |
 | `get_financials` | "How did the last quarter go?" — revenue, profit, margins, leverage and growth in real terms; US companies from their official SEC filings, Turkish inflation accounting (TMS 29) handled, data errors flagged |
 | `get_valuation` | "Is it priced high relative to its earnings?" — market value, P/E, P/B and P/S, with currency conversion and Turkish inflation accounting handled |
