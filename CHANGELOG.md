@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.4 — 2026-09-27
 
 - **TL deposit comparison.** "Did it beat a deposit account?" is the question a Turkish saver
   faces. With an EVDS key, `compare_real_return` for TL assets adds `deposit_return`,
