@@ -79,6 +79,7 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
         },
         "financial_statements": {
             "us_companies": "sec_edgar" if contact else ("yahoo" if yahoo else "unavailable"),
+            "eu_uk_companies_by_lei": "esef",  # official, keyless, always on
             "other_markets": "yahoo" if yahoo else "unavailable",
             "sec_contact_set": contact,
         },
@@ -91,7 +92,9 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
             "csv_regions": csv_regions,
         },
         "news": news,
-        "settings_ignored_at_startup": list(dropped_at_startup),
+        # Optional settings the user left empty (the app passes them as empty or placeholder
+        # values). This is normal and needs no action; listed only for troubleshooting.
+        "optional_settings_left_empty": list(dropped_at_startup),
         "missing": missing,
     }
 

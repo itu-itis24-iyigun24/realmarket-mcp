@@ -90,6 +90,9 @@ npx -y @anthropic-ai/mcpb pack build/mcpb dist/realmarket-<version>.mcpb
 
 - **Ask Claude to run `check_setup`.** It lists which sources the server will use and which
   settings are missing, without showing any values.
+- **After installing a new version of the extension,** open its settings and check them:
+  Claude Desktop may not carry the previous values over (for example, **Use Yahoo Finance** may
+  be unticked again).
 - **"No price data source is configured" after changing a setting:** settings reach the server
   only when it starts. Quit the app completely (system tray on Windows, menu bar on macOS) and
   reopen it, then start a new chat.

@@ -160,7 +160,8 @@ def test_check_setup_reports_presence_never_values() -> None:
     bare = config.describe_setup({})
     assert bare["price_data"]["enabled"] is False
     assert bare["financial_statements"] == {
-        "us_companies": "unavailable", "other_markets": "unavailable", "sec_contact_set": False
+        "us_companies": "unavailable", "eu_uk_companies_by_lei": "esef",
+        "other_markets": "unavailable", "sec_contact_set": False,
     }  # fmt: skip
     assert len(bare["missing"]) == 3 and "Use Yahoo Finance" in bare["missing"][0]
 

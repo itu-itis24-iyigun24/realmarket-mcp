@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.3 — 2026-09-27
 
 From the Claude Desktop test round of v0.1.2:
 
@@ -10,6 +10,12 @@ From the Claude Desktop test round of v0.1.2:
 - **An operating loss hidden by non-operating gains is flagged.** `non_operating_items_dominate`
   now also fires when net income is positive while the operating result is a loss (Turkish
   Airlines, 2026 Q2: operating loss $88m, net income $198m).
+- `check_setup` no longer presents optional settings left empty as a problem (the model read
+  "ignored at startup" as a fault): the field is now `optional_settings_left_empty`, with a note
+  that it needs no action. It also lists official EU/UK figures by LEI, which work without Yahoo.
+- `portfolio_real_return`: `invested_in_todays_money` is renamed
+  `invested_in_money_of_real_return_date` — it is restated to the last CPI month, not to today.
+- README: check the extension's settings after installing a new version.
 - XBRL International's privacy policy is listed for the desktop extension; CI runs the tests on
   every push.
 

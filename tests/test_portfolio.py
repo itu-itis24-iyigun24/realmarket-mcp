@@ -47,7 +47,7 @@ def test_value_return_and_real_return(provider: FixtureProvider) -> None:
     assert data["return"] == approx(0.6)
     # Each payment in today's money: 1000 * 160/100 + 1500 * 160/130.
     invested_real = 1000 * 1.6 + 1500 * 160 / 130
-    assert data["invested_in_todays_money"] == pytest.approx(invested_real, abs=0.01)
+    assert data["invested_in_money_of_real_return_date"] == pytest.approx(invested_real, abs=0.01)
     assert data["real_return"] == approx(4000 / invested_real - 1)
     assert data["cumulative_inflation_since_first_purchase"] == approx(0.6)
     assert [lot["value_now"] for lot in data["lots"]] == [2000.0, 2000.0]
@@ -116,7 +116,7 @@ def test_real_return_is_measured_where_cpi_ends_and_later_purchases_are_named(
     assert data["real_return_as_of"] == "2023-05-31"
     # Only the first lot (10 units) counts, valued at the last TTT close on or before 05-31.
     assert data["value_at_real_return_date"] == 1000.0
-    assert data["invested_in_todays_money"] == pytest.approx(1200.0, abs=0.01)
+    assert data["invested_in_money_of_real_return_date"] == pytest.approx(1200.0, abs=0.01)
     assert data["real_return"] == approx(1000 / 1200 - 1)
     # Nominal figures still include every purchase.
     assert (data["invested"], data["value_now"]) == (2500.0, 4000.0)

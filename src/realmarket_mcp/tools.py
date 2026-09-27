@@ -1000,7 +1000,9 @@ def portfolio_real_return(
             "cumulative_inflation_since_first_purchase": _round(cumulative),
             "real_return_as_of": None if real_as_of is None else real_as_of.isoformat(),
             "value_at_real_return_date": None if value_real is None else round(value_real, 2),
-            "invested_in_todays_money": None if invested_real is None else round(invested_real, 2),
+            "invested_in_money_of_real_return_date": (
+                None if invested_real is None else round(invested_real, 2)
+            ),
             "real_return": _round(real),
             "real_return_positive": None if real is None else real > 0,
             "lots": rows,
@@ -1013,7 +1015,8 @@ def portfolio_real_return(
             "US-dollar exchange rates.",
             "real_return compares the holdings' value on real_return_as_of (the last day the "
             "inflation series covers, or today) with every payment made by then, restated in "
-            "that month's purchasing power: invested_in_todays_money. Later purchases count "
+            "that month's purchasing power: invested_in_money_of_real_return_date. Later "
+            "purchases count "
             "only in the nominal figures and the alternatives.",
             "annualized_money_weighted is the internal rate of return of the dated payments "
             "(it accounts for when money went in).",
@@ -1313,6 +1316,9 @@ def check_setup(setup: dict[str, Any], *, retrieved_at: str, today: dt.date) -> 
         notes=(
             "Settings are reported as present or absent; values are never shown. After changing "
             "a setting, quit the app completely (including from the system tray) and reopen it.",
+            "optional_settings_left_empty lists optional settings the user did not fill in; that "
+            "is normal and needs no action. Only the items in 'missing' limit what the tools "
+            "can do.",
         ),
     )
 
