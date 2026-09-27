@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.5 — 2026-09-27
 
 - **Model qualification.** `realmarket-qualify --base-url <OpenAI-compatible API> --model <name>`
   checks the language model a firm puts in front of realmarket (a local model served by Ollama,
