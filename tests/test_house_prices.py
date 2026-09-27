@@ -34,12 +34,13 @@ def test_compare_real_return_against_house_prices() -> None:
         today=dt.date(2024, 2, 1),
         load_house=lambda *_: kfe,
     )
-    data = result.data
-    assert data["house_price_return"] == pytest.approx(0.8)
-    assert data["house_price_window_end"] == "2023-12"  # published late: measured to there
+    house = result.data["house_prices"]
+    assert house["house_price_return"] == pytest.approx(0.8)
+    assert (house["from_month"], house["to_month"]) == ("2023-01", "2023-12")  # published late
     # The asset over the same months: 100 on 2023-01-02 -> 150, its last close by 2023-12-31.
-    assert data["nominal_return_in_house_window"] == pytest.approx(0.5)
-    assert data["beat_house_prices"] is False  # +50% against +80%, although TTT ends at +100%
+    assert house["asset_return_same_months"] == pytest.approx(0.5)
+    assert house["asset_beat_house_prices"] is False  # +50% against +80%; TTT ends at +100%
+    assert house["house_price_real_return"] is None  # this CPI has no December 2023 figure
     assert "evds_house_price" in {p.provider for p in result.provenance}
     assert any("rent" in note for note in result.notes)
 
@@ -57,7 +58,7 @@ def test_house_prices_unavailable_is_explained() -> None:
         today=dt.date(2024, 2, 1),
         load_house=no_key,
     )
-    assert result.data["house_price_return"] is None
+    assert result.data["house_prices"] is None
     assert "house_prices_unavailable" in {f.code for f in result.quality_flags}
 
 
@@ -136,3 +137,19 @@ def test_turkish_notes_only_for_tl_assets() -> None:
         inflation_region="TR",
     )
     assert not any("minimum wage" in n or "house price" in n for n in usd.notes)
+
+
+def test_house_price_real_return_uses_cpi_over_the_same_months() -> None:
+    kfe = index({(2023, 1): 100.0, (2023, 12): 180.0})
+    cpi_series = CpiSeries("TR", "t", "C", STAMP, {(2023, 1): 100.0, (2023, 12): 200.0})
+    result = tools.compare_real_return(
+        FixtureProvider(FIXTURES),
+        lambda *_: cpi_series,
+        "TTT",
+        start="2023-01-01",
+        end="2024-01-02",
+        today=dt.date(2024, 2, 1),
+        load_house=lambda *_: kfe,
+    )
+    # Houses +80% while prices doubled: a 10% real loss, whatever the nominal gain.
+    assert result.data["house_prices"]["house_price_real_return"] == pytest.approx(-0.1)

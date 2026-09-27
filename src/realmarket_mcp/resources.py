@@ -30,9 +30,10 @@ All ratios are fractions: 0.12 means 12%.
   (gold in US dollars x the exchange rate). For TL assets `gram_gold_try_start`/`_end` =
   US dollars per troy ounce x USDTRY / 31.1035: the international spot price, without the
   spread or local premium of shop and bank gram gold.
-- `house_price_return`: TCMB's residential property price index (KFE; Türkiye, Istanbul,
-  Ankara or Izmir) from the month of the first date to the last month it covers, about two
-  months behind; `nominal_return_in_house_window` is the asset over the same months. Sale
+- `house_prices`: TCMB's residential property price index (KFE; Türkiye, Istanbul, Ankara or
+  Izmir) from the month of the first date to the last month it covers, about two months
+  behind, with its real return over the same months and the asset over the same months
+  (`asset_return_same_months`, not the main `nominal_return`). Sale
   prices only: no rent, and no purchase, ownership or selling costs. The savings tool's HOUSE
   alternative uses the Türkiye index.
 

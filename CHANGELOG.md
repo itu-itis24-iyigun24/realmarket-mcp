@@ -15,6 +15,12 @@
     every rate change, including the 2018 cut.
   - The savings tool explains that HOUSE is valued as of the index's last month and notes the
     withholding tax next to DEPOSIT. Turkish-only notes are left off non-TRY results.
+  - From the Claude Desktop test: the house comparison is grouped in one `house_prices`
+    object with its own window and a `house_price_real_return` (the model had called Istanbul
+    housing an inflation beater at +100.6% against +153.6% CPI, and put the house window's
+    asset return into other rows). The server instructions now require a fresh tool call per
+    asset (the model had reused Tüpraş's P/B for THYAO) and keeping each figure with its
+    window.
   - An empty EVDS series (a house index before 2010) now says so instead of reporting a
     format change; a failed 12-month fetch for the dividend yield is flagged.
 

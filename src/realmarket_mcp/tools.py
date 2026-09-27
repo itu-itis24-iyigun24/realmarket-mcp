@@ -148,10 +148,12 @@ def _reference_flags(
 
 HouseLoader = Callable[[str, dt.date, dt.date], CpiSeries]
 HOUSE_NOTE = (
-    "house_price_return is the change in TCMB's residential property price index (KFE) for "
-    "house_price_area between the month of first_date and house_price_window_end (the index "
-    "is published about two months late); nominal_return_in_house_window is the asset over "
-    "the same months, and beat_house_prices compares the two. The index tracks sale prices of "
+    "house_prices compares the asset with TCMB's residential property price index (KFE) for "
+    "its area over its own window, from_month to to_month (the index is published about two "
+    "months late, so this window ends earlier than first_date..last_date and uses its own "
+    "asset figure, asset_return_same_months: do not mix it with nominal_return). "
+    "house_price_real_return deflates house prices by CPI over the same months. The index "
+    "tracks sale prices of "
     "comparable homes: it leaves out rent earned and the costs of buying, owning and selling a "
     "home (title-deed fees, taxes, maintenance). Only for TRY assets, from 2010."
 )
@@ -170,17 +172,12 @@ def _house_terms(
     area: str,
     currency: str,
     usable: Sequence[Bar],
+    cpi: CpiSeries,
     flags: list[QualityFlag],
     provenance: list[Provenance],
 ) -> dict[str, object]:
     """The same money in housing, by TCMB's house price index, over the months it covers."""
-    empty: dict[str, object] = {
-        "house_price_area": None,
-        "house_price_return": None,
-        "house_price_window_end": None,
-        "nominal_return_in_house_window": None,
-        "beat_house_prices": None,
-    }
+    empty: dict[str, object] = {"house_prices": None}
     if load_house is None or currency != "TRY":
         return empty
     first = usable[0]
@@ -222,12 +219,19 @@ def _house_terms(
     )
     house = growth - 1.0
     asset = analytics.total_return(_close(first), _close(end_bar))
+    inflation = cpi.factor(month_of(first.date), end_month)
     return {
-        "house_price_area": index.region,
-        "house_price_return": _round(house),
-        "house_price_window_end": month_str(end_month),
-        "nominal_return_in_house_window": _round(asset),
-        "beat_house_prices": asset > house,
+        "house_prices": {
+            "area": index.region,
+            "from_month": month_str(month_of(first.date)),
+            "to_month": month_str(end_month),
+            "house_price_return": _round(house),
+            "house_price_real_return": (
+                None if inflation is None else _round(analytics.real_return(house, inflation - 1))
+            ),
+            "asset_return_same_months": _round(asset),
+            "asset_beat_house_prices": asset > house,
+        }
     }
 
 
@@ -852,7 +856,7 @@ def compare_real_return(
                 None if deposit_net is None else (1.0 + nominal) > (1.0 + deposit_net)
             ),
             **_minimum_wage_terms(currency, nominal, first.date, last.date, flags, provenance),
-            **_house_terms(load_house, house_area, currency, usable, flags, provenance),
+            **_house_terms(load_house, house_area, currency, usable, cpi, flags, provenance),
         },
         provenance=tuple(provenance),
         quality_flags=tuple(flags),
