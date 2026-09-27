@@ -23,6 +23,7 @@ from realmarket_mcp.config import (
     load_cpi,
     load_deposit_rates,
     load_financials_provider,
+    load_house_prices,
     load_news_provider,
     load_price_provider,
 )
@@ -217,11 +218,17 @@ def build_server() -> MCPServer:
                 "for. Defaults from the asset's currency (TRY -> TR, USD -> US)."
             ),
         ] = None,
+        house_price_area: Annotated[
+            Literal["TR", "ISTANBUL", "ANKARA", "IZMIR"],
+            Field(description="House price index for the housing comparison (TL assets)."),
+        ] = "TR",
     ) -> CallToolResult:
         """Answer "did this asset beat inflation?": nominal return, cumulative consumer-price
         inflation, real (inflation-adjusted) return and its annualized rate, plus the same
-        holding measured in US dollars and in gold, and — for TL assets, with an EVDS key —
-        what the same money earned in a TL deposit account (deposit_return, beat_deposit).
+        holding measured in US dollars, in gold (and gold's own return; gram gold in TL) and,
+        for TL assets, in net minimum wages. With an EVDS key, TL assets are also compared with
+        a TL deposit account before and after withholding tax, and with house prices (TCMB
+        index for Türkiye or Istanbul, Ankara, Izmir; "had I bought a house instead?").
         Use it for any question about real, inflation-adjusted or purchasing-power returns,
         especially for high-inflation
         currencies. Works without API keys; if the inflation series ends before the period does,
@@ -242,6 +249,10 @@ def build_server() -> MCPServer:
                 load_deposit=lambda ccy, first, last: load_deposit_rates(
                     ccy, first, last, retrieved_at=stamp
                 ),
+                load_house=lambda area, first, last: load_house_prices(
+                    area, first, last, retrieved_at=stamp
+                ),
+                house_area=house_price_area,
             )
         )
 
@@ -348,15 +359,16 @@ def build_server() -> MCPServer:
             Field(
                 max_length=5,
                 description="Alternatives to replay the same payments into: 'USD', 'GOLD', "
-                "'DEPOSIT' (a TL deposit account; TRY only, needs an EVDS key) or any symbol "
-                "such as 'XU100.IS'.",
+                "'DEPOSIT' (a TL deposit account; TRY only, needs an EVDS key), 'HOUSE' (TCMB's "
+                "Türkiye house price index, excluding rent; TRY only, needs an EVDS key) or any "
+                "symbol such as 'XU100.IS'.",
             ),
         ] = ["USD", "GOLD"],  # noqa: B006 - pydantic copies defaults
     ) -> CallToolResult:
         """Evaluate a set of dated purchases as of today: total paid, current value, return,
         annualized money-weighted return, and the real return after restating every payment
         in today's purchasing power. Also shows where the same payments would stand had they
-        gone into US dollars, gold, a TL deposit account or an index. Use it for "did my
+        gone into US dollars, gold, a TL deposit account, housing or an index. Use it for "did my
         savings keep up with inflation" questions. Purchases only; sales and cash dividends
         are not modelled. Ratios are fractions (0.12 means 12%)."""
         now = _utc_now()
@@ -372,6 +384,9 @@ def build_server() -> MCPServer:
                 today=now.date(),
                 load_deposit=lambda ccy, first, last: load_deposit_rates(
                     ccy, first, last, retrieved_at=stamp
+                ),
+                load_house=lambda area, first, last: load_house_prices(
+                    area, first, last, retrieved_at=stamp
                 ),
             )
         )

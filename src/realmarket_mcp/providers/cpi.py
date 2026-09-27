@@ -124,21 +124,83 @@ def evds_tr_cpi(
     fetch: Fetch = http_fetch,
     retrieved_at: str,
 ) -> CpiSeries:
+    return evds_monthly_index(
+        EVDS_SERIES, "TR", "evds", start, end, env=env, fetch=fetch, retrieved_at=retrieved_at
+    )
+
+
+# TCMB's residential property price index (KFE, EVDS group bie_kfe, monthly from 2010,
+# verified 2026-09-27): Türkiye and the three largest cities.
+EVDS_HOUSE_SERIES = {
+    "TR": "TP.KFE.TR",
+    "ISTANBUL": "TP.KFE.TR10",
+    "ANKARA": "TP.KFE.TR51",
+    "IZMIR": "TP.KFE.TR31",
+}
+
+
+def evds_house_prices(
+    area: str,
+    start: dt.date,
+    end: dt.date,
+    *,
+    env: Mapping[str, str],
+    fetch: Fetch = http_fetch,
+    retrieved_at: str,
+) -> CpiSeries:
+    series = EVDS_HOUSE_SERIES.get(area.upper())
+    if series is None:
+        raise ToolError(
+            ErrorCode.INVALID_ARGUMENT,
+            f"No house price index for {area!r}.",
+            f"Use one of {', '.join(EVDS_HOUSE_SERIES)}.",
+        )
+    if not env.get(EVDS_KEY_ENV, "").strip():
+        raise ToolError(
+            ErrorCode.MISSING_API_KEY,
+            "The house price index needs a TCMB EVDS key.",
+            f"Set {EVDS_KEY_ENV} (free key: https://evds3.tcmb.gov.tr), the 'TCMB EVDS API key' "
+            "setting of the plugin or extension, then restart the app.",
+        )
+    return evds_monthly_index(
+        series,
+        area.upper(),
+        "evds_house_price",
+        start,
+        end,
+        env=env,
+        fetch=fetch,
+        retrieved_at=retrieved_at,
+    )
+
+
+def evds_monthly_index(
+    series: str,
+    region: str,
+    source: str,
+    start: dt.date,
+    end: dt.date,
+    *,
+    env: Mapping[str, str],
+    fetch: Fetch = http_fetch,
+    retrieved_at: str,
+) -> CpiSeries:
+    """A monthly index level series from TCMB EVDS (CPI, house prices)."""
     key = _require_key(env, EVDS_KEY_ENV, "TR", "https://evds3.tcmb.gov.tr")
     base = env.get(EVDS_URL_ENV, EVDS_URL)
     if not base.endswith("/"):
         base += "/"
     url = (
-        f"{base}series={EVDS_SERIES}&startDate=01-{start.month:02d}-{start.year}"
+        f"{base}series={series}&startDate=01-{start.month:02d}-{start.year}"
         f"&endDate=01-{end.month:02d}-{end.year}&type=json&frequency=5"
     )
     body = fetch(url, {"key": key})  # EVDS expects the key as a request header
-    column = EVDS_SERIES.replace(".", "_")
+    column = series.replace(".", "_")
     try:
         items: list[dict[str, Any]] = json.loads(body)["items"]
         rows = [(str(item["Tarih"]), str(item.get(column) or "")) for item in items]
         return series_from_rows(
-            rows, region="TR", source="evds", series_id=EVDS_SERIES, retrieved_at=retrieved_at
+            rows, region=region, source=source, series_id=series, retrieved_at=retrieved_at
         )
     except (KeyError, TypeError, ValueError) as exc:
         raise _bad_payload("EVDS", exc) from None

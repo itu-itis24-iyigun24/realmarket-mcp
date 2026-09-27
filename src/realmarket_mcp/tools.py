@@ -145,6 +145,83 @@ def _reference_flags(
     return flags
 
 
+HouseLoader = Callable[[str, dt.date, dt.date], CpiSeries]
+HOUSE_NOTE = (
+    "house_price_return is the change in TCMB's residential property price index (KFE) for "
+    "house_price_area between the month of first_date and house_price_window_end (the index "
+    "is published about two months late); nominal_return_in_house_window is the asset over "
+    "the same months, and beat_house_prices compares the two. The index tracks sale prices of "
+    "comparable homes: it leaves out rent earned and the costs of buying, owning and selling a "
+    "home (title-deed fees, taxes, maintenance). Only for TRY assets, from 2010."
+)
+
+
+def _house_terms(
+    load_house: HouseLoader | None,
+    area: str,
+    currency: str,
+    usable: Sequence[Bar],
+    flags: list[QualityFlag],
+    provenance: list[Provenance],
+) -> dict[str, object]:
+    """The same money in housing, by TCMB's house price index, over the months it covers."""
+    empty: dict[str, object] = {
+        "house_price_area": None,
+        "house_price_return": None,
+        "house_price_window_end": None,
+        "nominal_return_in_house_window": None,
+        "beat_house_prices": None,
+    }
+    if load_house is None or currency != "TRY":
+        return empty
+    first = usable[0]
+    try:
+        index = load_house(area, first.date, usable[-1].date)
+    except ToolError as error:
+        flags.append(
+            QualityFlag(
+                "house_prices_unavailable",
+                Severity.INFO,
+                f"No house price comparison: {error.message} {error.hint}",
+            )
+        )
+        return empty
+    end_month = min(month_of(usable[-1].date), index.last_month)
+    end_bar = _as_of(usable, last_day_of(end_month))
+    growth = index.factor(month_of(first.date), end_month)
+    if growth is None or end_bar is None or end_month <= month_of(first.date):
+        flags.append(
+            QualityFlag(
+                "house_prices_unavailable",
+                Severity.INFO,
+                f"No house price comparison: the index covers {month_str(index.first_month)} to "
+                f"{month_str(index.last_month)}, not this window.",
+            )
+        )
+        return empty
+    provenance.append(
+        Provenance(
+            provider=index.source,
+            dataset=f"house_price_index:{index.series_id}",
+            symbols=(index.region,),
+            period_start=month_str(month_of(first.date)),
+            period_end=month_str(end_month),
+            retrieved_at=index.retrieved_at,
+            data_version=index.data_version,
+            adjustment="none",
+        )
+    )
+    house = growth - 1.0
+    asset = analytics.total_return(_close(first), _close(end_bar))
+    return {
+        "house_price_area": index.region,
+        "house_price_return": _round(house),
+        "house_price_window_end": month_str(end_month),
+        "nominal_return_in_house_window": _round(asset),
+        "beat_house_prices": asset > house,
+    }
+
+
 def _minimum_wage_terms(
     currency: str,
     nominal: float,
@@ -180,6 +257,7 @@ def _minimum_wage_terms(
 
 
 RATIO_NOTE = "Ratios are fractions (0.12 = 12%)."
+TROY_OUNCE_GRAMS = 31.1034768
 
 
 def _round(value: float | None, digits: int = 6) -> float | None:
@@ -303,6 +381,8 @@ def get_price_summary(
 ) -> ToolResult:
     start_date, end_date = resolve(period, start, end, today=today)
     series, usable = _load_bars(provider, symbol, start_date, end_date)
+    provenance = [_provenance(series, usable[0].date, usable[-1].date)]
+    dividend_yield = _trailing_dividend_yield(provider, symbol, series, usable[-1], provenance)
     return ToolResult(
         tool="get_price_summary",
         data={
@@ -312,8 +392,9 @@ def get_price_summary(
             "requested_end": end_date.isoformat(),
             **_metrics(usable),
             **_income_split(series, usable),
+            "dividend_yield_trailing_12m": dividend_yield,
         },
-        provenance=(_provenance(series, usable[0].date, usable[-1].date),),
+        provenance=tuple(provenance),
         quality_flags=tuple(quality.check_series(series, requested_end=end_date)),
         notes=(
             f"{RATIO_NOTE} Returns are nominal, in the asset's own currency.",
@@ -321,10 +402,34 @@ def get_price_summary(
             "total_return includes dividends (reinvested on the ex-date). price_return is the "
             "share price alone; dividend_return = total_return - price_return is what the "
             "dividends added. dividends_per_share sums the cash dividends with ex-dates after "
-            "first_date, up to last_date. They are null when the source does not report "
-            "dividends separately.",
+            "first_date, up to last_date. dividend_yield_trailing_12m is the cash dividends of "
+            "the 12 months to last_date over the last price. They are null when the source "
+            "does not report dividends separately.",
         ),
     )
+
+
+def _trailing_dividend_yield(
+    provider: PriceProvider,
+    symbol: str,
+    series: PriceSeries,
+    last: Bar,
+    provenance: list[Provenance],
+) -> float | None:
+    """Cash dividends with ex-dates in the 12 months to ``last`` over its share price (both
+    split-adjusted), or None when the source does not report dividends. A year of data is
+    fetched, and cited, when the loaded window is shorter."""
+    if not last.price_close:
+        return None
+    since = last.date - dt.timedelta(days=365)
+    if not series.bars or series.bars[0].date > since:
+        try:
+            series = provider.daily_bars(symbol, since, last.date)
+        except ToolError:
+            return None
+        provenance.append(_provenance(series, since, last.date))
+    paid = sum(a for d, a in series.dividends if since < d <= last.date)
+    return _round(paid / last.price_close)
 
 
 def _income_split(series: PriceSeries, usable: Sequence[Bar]) -> dict[str, object]:
@@ -538,6 +643,8 @@ def compare_real_return(
     *,
     today: dt.date,
     load_deposit: DepositLoader | None = None,
+    load_house: HouseLoader | None = None,
+    house_area: str = "TR",
 ) -> ToolResult:
     start_date, end_date = resolve(period, start, end, today=today)
     series, usable = _load_bars(provider, symbol, start_date, end_date)
@@ -630,7 +737,8 @@ def compare_real_return(
             flags,
             provenance,
         )
-    usd_return = gold_return = None
+    usd_return = gold_return = gold_in_currency = None
+    gram_gold: tuple[float, float] | None = None
     if fx is not None:
         usd_return = (_close(last) / fx[1]) / (_close(first) / fx[0]) - 1.0
         gold = _reference(
@@ -645,6 +753,10 @@ def compare_real_return(
         )
         if gold is not None:
             gold_return = (1.0 + usd_return) * gold[0] / gold[1] - 1.0
+            # Gold itself in the asset's currency: what the same money in gold earned.
+            gold_in_currency = (gold[1] * fx[1]) / (gold[0] * fx[0]) - 1.0
+            if currency == "TRY":
+                gram_gold = (gold[0] * fx[0] / TROY_OUNCE_GRAMS, gold[1] * fx[1] / TROY_OUNCE_GRAMS)
 
     # The same money kept in a TL deposit account instead, gross and after withholding tax.
     deposit_return = deposit_real = deposit_net = deposit_net_real = None
@@ -695,6 +807,10 @@ def compare_real_return(
             "real_return_positive": None if real is None else real > 0,
             "usd_return": _round(usd_return),
             "gold_return": _round(gold_return),
+            "gold_return_in_currency": _round(gold_in_currency),
+            "beat_gold": None if gold_in_currency is None else nominal > gold_in_currency,
+            "gram_gold_try_start": None if gram_gold is None else round(gram_gold[0], 2),
+            "gram_gold_try_end": None if gram_gold is None else round(gram_gold[1], 2),
             "deposit_return": _round(deposit_return),
             "deposit_real_return": _round(deposit_real),
             "beat_deposit": (
@@ -706,6 +822,7 @@ def compare_real_return(
                 None if deposit_net is None else (1.0 + nominal) > (1.0 + deposit_net)
             ),
             **_minimum_wage_terms(currency, nominal, first.date, last.date, flags, provenance),
+            **_house_terms(load_house, house_area, currency, usable, flags, provenance),
         },
         provenance=tuple(provenance),
         quality_flags=tuple(flags),
@@ -714,11 +831,17 @@ def compare_real_return(
             *((DEPOSIT_NOTE,) if deposit_return is not None else ()),
             *((WITHHOLDING_NOTE,) if deposit_net is not None else ()),
             MINIMUM_WAGE_NOTE,
+            HOUSE_NOTE,
             "real_return = (1 + nominal) / (1 + cumulative_inflation) - 1, with inflation "
             "measured from the CPI of the first month to the CPI of the last month.",
             "usd_return values the holding in US dollars at each end; gold_return values it "
             "in ounces of gold, both over the full first_date to last_date window. Neither is "
             "adjusted for US inflation.",
+            "gold_return_in_currency is what the same money put into gold earned, in the "
+            "asset's currency; beat_gold compares the two. For TL assets gram_gold_try_start "
+            "and _end are the gram gold price derived from the international spot price (US "
+            "dollars per troy ounce x USDTRY / 31.1035); shop and bank gram gold prices add "
+            "a spread and, at times, a local premium.",
             "All figures describe the past period only (the real return up to "
             "inflation_window_end) and say nothing about future returns.",
         ),
@@ -1039,6 +1162,7 @@ def portfolio_real_return(
     *,
     today: dt.date,
     load_deposit: DepositLoader | None = None,
+    load_house: HouseLoader | None = None,
 ) -> ToolResult:
     if not 1 <= len(lots) <= MAX_LOTS:
         raise ToolError(
@@ -1173,7 +1297,42 @@ def portfolio_real_return(
         try:
             alt_value = 0.0
             alt_net: float | None = 0.0  # the deposit after withholding tax
+            alt_as_of = today
             deposit = None
+            if name == "HOUSE":
+                if report != "TRY" or load_house is None:
+                    raise ToolError(
+                        ErrorCode.UNSUPPORTED,
+                        "the house price comparison covers TRY only and needs an EVDS key",
+                        "Use a TRY report currency and set the EVDS key.",
+                    )
+                index = load_house("TR", first_day, today)
+                alt_as_of = last_day_of(index.last_month)  # the index is published late
+                for _, day, amount in parsed:
+                    factor = index.factor(month_of(day), index.last_month)
+                    if factor is None or month_of(day) > index.last_month:
+                        raise ToolError(
+                            ErrorCode.NO_DATA_IN_RANGE,
+                            f"the house price index covers {month_str(index.first_month)} to "
+                            f"{month_str(index.last_month)}, not a payment on {day}",
+                            "Use purchases inside the published index period.",
+                        )
+                    alt_value += amount * factor
+                prices.provenance.append(
+                    Provenance(
+                        provider=index.source,
+                        dataset=f"house_price_index:{index.series_id}",
+                        symbols=("TR",),
+                        period_start=month_str(month_of(first_day)),
+                        period_end=month_str(index.last_month),
+                        retrieved_at=index.retrieved_at,
+                        data_version=index.data_version,
+                        adjustment="none",
+                    )
+                )
+                parsed_for_alt: list[tuple[Any, dt.date, float]] = []
+            else:
+                parsed_for_alt = list(parsed)
             if name == "DEPOSIT":
                 if report != "TRY":
                     raise ToolError(
@@ -1186,7 +1345,7 @@ def portfolio_real_return(
                         ErrorCode.UNSUPPORTED, "no deposit rate source", "Set an EVDS key."
                     )
                 deposit = load_deposit(report, first_day, today)
-            for _, day, amount in parsed:
+            for _, day, amount in parsed_for_alt:
                 if deposit is not None:
                     growth = deposit.growth(day, today)
                     if growth is None:
@@ -1211,7 +1370,7 @@ def portfolio_real_return(
                 alt_value += _convert(
                     prices, provider, units * prices.close(symbol, today), ccy, report, today
                 )
-            alt_flows = [(d, cf) for d, cf in flows[:-1]] + [(today, alt_value)]
+            alt_flows = [(d, cf) for d, cf in flows[:-1]] + [(alt_as_of, alt_value)]
             if deposit is not None:
                 prices.provenance.append(
                     Provenance(
@@ -1227,6 +1386,7 @@ def portfolio_real_return(
                 )
             entry: dict[str, object] = {
                 "alternative": name,
+                "valued_as_of": alt_as_of.isoformat(),
                 "value_now": round(alt_value, 2),
                 "return": _round(alt_value / invested - 1.0),
                 "annualized_money_weighted": _round(xirr(alt_flows)),
@@ -1907,12 +2067,14 @@ def get_valuation(
             return None, f"{what} is zero or negative: the ratio is not meaningful"
         return _round(market_cap / (denominator * fx)), None
 
+    extra: list[Provenance] = []
+    dividend_yield = _trailing_dividend_yield(price_provider, quote, series, last, extra)
     pe, pe_reason = ratio(earnings, "earnings")
     pb, pb_reason = ratio(equity, "equity")
     ps, ps_reason = ratio(sales, "sales")
     if missing_ttm_reason:
         pe_reason = ps_reason = missing_ttm_reason
-    provenance = [*prices.provenance, *cpi_provenance]  # prices include any FX series used
+    provenance = [*prices.provenance, *extra, *cpi_provenance]  # prices include any FX used
     if shares_st is other and other is not None:
         as_of = (other.shares_as_of or dt.date.fromisoformat(other.retrieved_at[:10])).isoformat()
         provenance.append(
@@ -1963,6 +2125,7 @@ def get_valuation(
             "price_to_earnings": pe,
             "price_to_book": pb,
             "price_to_sales": ps,
+            "dividend_yield_trailing_12m": dividend_yield,
             "not_meaningful": reasons,
         },
         provenance=tuple(provenance),
@@ -1977,6 +2140,8 @@ def get_valuation(
             "trailing_twelve_months_reported, the figure the source states from the latest "
             "report; a source that does not state it gets no P/E or P/S. Under TMS 29 the "
             "figures are restated with CPI to the month in restated_to_money_of.",
+            "dividend_yield_trailing_12m = cash dividends with ex-dates in the 12 months to the "
+            "price date / the price, from the price source; null when it reports no dividends.",
             "A ratio is null when its denominator is missing, zero or negative (not_meaningful "
             "says which). Ratios describe today's price against past results; they are not a "
             "view on whether the share is cheap or expensive.",

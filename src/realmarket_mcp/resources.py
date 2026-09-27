@@ -22,6 +22,19 @@ All ratios are fractions: 0.12 means 12%.
   summary also gives `price_return` (split-adjusted close only), `dividend_return` =
   total - price, and the cash `dividends_per_share` and count paid in the period. Null when
   the source does not report dividends separately (the data adapter API has no dividends).
+- `dividend_yield_trailing_12m`: cash dividends with ex-dates in the 12 months to the last
+  date over the last price (price summary and valuation).
+
+## Gold and housing
+- `gold_return_in_currency`: what the same money in gold earned, in the asset's currency
+  (gold in US dollars x the exchange rate). For TL assets `gram_gold_try_start`/`_end` =
+  US dollars per troy ounce x USDTRY / 31.1035: the international spot price, without the
+  spread or local premium of shop and bank gram gold.
+- `house_price_return`: TCMB's residential property price index (KFE; Türkiye, Istanbul,
+  Ankara or Izmir) from the month of the first date to the last month it covers, about two
+  months behind; `nominal_return_in_house_window` is the asset over the same months. Sale
+  prices only: no rent, and no purchase, ownership or selling costs. The savings tool's HOUSE
+  alternative uses the Türkiye index.
 
 ## Inflation and real return
 - Cumulative inflation: `CPI(month of last date) / CPI(month of first date) - 1`, using index

@@ -192,5 +192,6 @@ def test_price_summary_splits_the_return_into_price_and_dividends() -> None:
     assert data["price_return"] == 0.0  # 100 -> 100 in price alone
     assert data["dividend_return"] == pytest.approx(100 / 90 - 1, abs=1e-6)
     assert (data["dividends_per_share"], data["dividend_payments"]) == (10.0, 1)
+    assert data["dividend_yield_trailing_12m"] == 0.1  # 10 TL over the last price of 100
     series = provider.daily_bars("TUPRS.IS", D(2024, 1, 1), D(2024, 1, 5))
     assert series.dividends == ((D(2024, 1, 4), 10.0),)

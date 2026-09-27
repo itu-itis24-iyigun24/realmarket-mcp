@@ -45,6 +45,15 @@ def test_real_usd_and_gold_returns_match_hand_computation(provider: FixtureProvi
     assert data["real_return_positive"] is True
     assert data["usd_return"] == approx(200 / 30 / (100 / 20) - 1)  # USDTRY 20 -> 30
     assert data["gold_return"] == approx((200 / 30 / 2000) / (100 / 20 / 1800) - 1)
+    # Gold itself in TL: 1800 USD/oz x 20 -> 2000 x 30, and per gram (31.1035 g/oz).
+    assert data["gold_return_in_currency"] == approx(2000 * 30 / (1800 * 20) - 1)
+    assert data["beat_gold"] is True  # +100% against +66.7%
+    assert data["gram_gold_try_start"] == round(1800 * 20 / 31.1034768, 2)
+    assert data["gram_gold_try_end"] == round(2000 * 30 / 31.1034768, 2)
+    # Measuring the holding in gold and measuring gold in TL are the same comparison.
+    assert (1 + data["nominal_return"]) / (1 + data["gold_return_in_currency"]) - 1 == approx(
+        data["gold_return"]
+    )
     assert data["inflation_region"] == "TR"  # defaulted from the TRY price currency
 
     datasets = {p.dataset for p in result.provenance}

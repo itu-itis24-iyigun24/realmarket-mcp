@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Gram gold.** `compare_real_return` gives gold's own return in the asset's currency
+  (`gold_return_in_currency`, `beat_gold`) and, for TL assets, the gram gold price in TL at
+  both ends, from the spot price: 1,662 TL to 6,801 TL over THYAO's last three years.
+- **Housing.** With an EVDS key, TL assets are compared with TCMB's house price index for
+  Türkiye, Istanbul, Ankara or Izmir (`house_price_return`, `beat_house_prices`), and the
+  savings tool can replay payments into housing (`HOUSE`). Sale prices only, no rent.
+- **Dividend yield.** `dividend_yield_trailing_12m` in the price summary and valuation.
 - **Deposit after withholding tax.** `compare_real_return` adds `deposit_return_after_tax`,
   `deposit_real_return_after_tax` and `beat_deposit_after_tax`, and the savings tool's DEPOSIT
   alternative its after-tax value: each 32-day term's interest is taxed at the stopaj rate in

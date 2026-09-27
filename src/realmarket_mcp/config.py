@@ -100,6 +100,7 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
             "csv_regions": csv_regions,
         },
         "deposit_rates": {"TRY": "evds" if evds else "unavailable (needs the EVDS key)"},
+        "house_prices": {"TR": "evds" if evds else "unavailable (needs the EVDS key)"},
         "news": news,
         "audit_log": {
             "enabled": audit.audit_path(env) is not None,
@@ -247,6 +248,22 @@ def _oecd(
     series = cpi.oecd_cpi(region, min(start, OECD_CACHE_FROM), retrieved_at=retrieved_at)
     _oecd_cache[region] = (time.monotonic(), series)
     return series
+
+
+def load_house_prices(
+    area: str,
+    start: dt.date,
+    end: dt.date,
+    *,
+    retrieved_at: str,
+    env: Mapping[str, str] | None = None,
+    fetch: cpi.Fetch | None = None,
+) -> inflation.CpiSeries:
+    """TCMB's monthly house price index for Türkiye or a large city (needs the EVDS key)."""
+    env = os.environ if env is None else env
+    return cpi.evds_house_prices(
+        area, start, end, env=env, fetch=fetch or cpi.http_fetch, retrieved_at=retrieved_at
+    )
 
 
 def load_deposit_rates(
