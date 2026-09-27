@@ -81,6 +81,12 @@ def test_tms29_uses_the_fiscal_year_in_todays_money(tmp_path: Path) -> None:
     assert data["earnings"] == approx(44.0)
     assert data["price_to_earnings"] == approx(220_000 / 44)
     assert data["price_to_book"] == approx(220_000 / 5500)
+    assert "newer_quarters_not_used" not in {
+        f.code for f in run(provider(tmp_path / "c", st), lambda *_: cpi).quality_flags
+    }
+    older_year = {**st, "annual": [{**year, "end": "2022-12-31"}]}
+    newer = run(provider(tmp_path / "d", older_year), lambda *_: cpi)
+    assert "newer_quarters_not_used" in {f.code for f in newer.quality_flags}
     old = CpiSeries("TR", "t", "C", "t", {(2023, 6): 90.0, (2023, 9): 100.0})
     late = run(provider(tmp_path / "b", st), lambda *_: old)
     assert "cpi_behind_price" in {f.code for f in late.quality_flags}

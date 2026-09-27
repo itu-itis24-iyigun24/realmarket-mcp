@@ -362,9 +362,10 @@ def build_server() -> MCPServer:
         outstanding), price-to-earnings, price-to-book and price-to-sales, from the latest four
         quarters (or the latest fiscal year) and the latest equity. Converts statement figures
         to the share's trading currency when they differ (e.g. a company reporting in USD whose
-        shares trade in TRY) and, under Turkish inflation accounting, uses the fiscal year restated to today's money. A ratio
-        is null, with the reason, when its denominator is missing or not positive. Describes
-        the past; not a view on value. Ratios are plain numbers (12.5 means 12.5x)."""
+        shares trade in TRY); under Turkish inflation accounting it uses the fiscal year,
+        restated to the latest CPI month. A ratio is null, with the reason, when its
+        denominator is missing or not positive. Describes the past;
+        not a view on value. Ratios are plain numbers (12.5 means 12.5x)."""
         now = _utc_now()
         stamp = _stamp(now)
 

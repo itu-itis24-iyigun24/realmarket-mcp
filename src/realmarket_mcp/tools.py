@@ -1629,6 +1629,23 @@ def get_valuation(
             "Four consecutive quarters or a fiscal year are needed"
             + (" (Turkish companies under TMS 29: a fiscal year)." if restating else "."),
         )
+    newer = [q for q in st.quarterly if q.end > period_end]
+    if basis == "latest_fiscal_year" and newer:
+        flags.append(
+            QualityFlag(
+                "newer_quarters_not_used",
+                Severity.WARNING,
+                f"Results through {newer[-1].end} are published but not in these ratios, which "
+                f"use the fiscal year ending {period_end}"
+                + (
+                    " (under TMS 29 the source's quarterly figures cannot be summed reliably)"
+                    if restating
+                    else ""
+                )
+                + ". A strong or weak recent quarter moves the multiples a lot; see "
+                "get_financials for the quarters.",
+            )
+        )
     stale_days = VALUATION_STALE_DAYS_FISCAL_YEAR if restating else VALUATION_STALE_DAYS
     if (today - period_end).days > stale_days:
         flags.append(

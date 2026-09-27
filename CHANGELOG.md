@@ -7,7 +7,8 @@
   quarters reconcile with the annual on neither basis), so summing four of them was unreliable.
   `get_valuation` now uses the latest fiscal year and restates it, and the latest equity, with
   CPI to the latest CPI month (`restated_to_money_of`); `cpi_behind_price` flags a CPI series
-  that ends months before the price date.
+  that ends months before the price date, and `newer_quarters_not_used` says when published
+  quarters after that fiscal year are left out (Tüpraş: one 2026 quarter out-earned all of 2025).
 
 ## 0.1.4 — 2026-09-27
 
