@@ -67,12 +67,19 @@ the same questions. Each answer is checked automatically:
 | `figure:<field>` | the key figure the tool returned (e.g. the real return) is not in the answer |
 | `no_unsupported_figures` | the answer contains a figure found in no tool result: invented, miscalculated, or a ratio the tool deliberately withheld (a P/E computed from other figures) |
 | `no_advice` | the answer recommends buying, selling or holding |
+| `no_reasoning_in_answer` | the answer text includes the model's reasoning block (`<think>…</think>`, `<thought>…</thought>`), which a customer would see; turn it off in the model server or strip it in the application. Figures are checked on the visible answer only |
 
 Numbers are read in Turkish and English style (`1.234,5` / `1,234.5`), percentages are matched
 to the tool's fractions, and amounts in thousands, millions or billions to the full figures.
-The checks are strict on purpose: treat a failure as an answer a person must read. The exit
-code is 0 when every case passes, 1 when any fails and 2 when the model server cannot be
-reached; `--output` writes every question, tool call and answer as JSON.
+The checks are strict on purpose: treat a failure as an answer a person must read. A rate
+limit, an overloaded server or a timeout is retried after a wait; a case the server keeps
+refusing is reported as NOT RUN, which says nothing about the model. `--interval 6` spaces
+requests for free tiers that allow a few per minute, and `--max-minutes` (default 15)
+bounds the whole run: cases not started by then are NOT RUN. Each result is printed as soon as
+it is known, and the `--output` report is rewritten after every case. The exit code is 0 when every case
+passes, 1 when any fails, 2 when the server cannot be used at all (wrong URL, key or model
+name) and 3 when some cases did not run; `--output` writes every question, tool call and
+answer as JSON.
 
 `--live --cases firm-cases.json` runs the firm's own questions against its configured sources
 (its adapter); the file is a JSON list of `{"id", "question", "expect_tools": [...],

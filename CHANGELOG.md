@@ -6,8 +6,11 @@
   checks the language model a firm puts in front of realmarket (a local model served by Ollama,
   vLLM or LM Studio, or a hosted one): Turkish questions about a synthetic company, with the
   real tools and server instructions, and automatic checks that the model called the tools,
-  reported their figures unchanged, invented none and gave no buy/sell advice. See
-  `docs/integration.md`.
+  reported their figures unchanged, invented none, gave no buy/sell advice and did not show
+  its reasoning block to the customer. Rate limits and timeouts are retried, a run is bounded
+  by `--max-minutes`, and results print as they arrive. First run against an open-weights
+  model (Gemma 4 26B via Google's API): every figure correct and the missing P/E explained,
+  but its reasoning text was in every answer. See `docs/integration.md`.
 - **Audit log.** `REALMARKET_AUDIT_LOG=<file>` appends one JSON line per tool call: tool,
   arguments, outcome, the provenance and exact data version of every figure, the quality
   flags, and a SHA-256 of the exact response the model received (`REALMARKET_AUDIT_FULL=1`

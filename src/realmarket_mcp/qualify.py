@@ -27,6 +27,7 @@ import argparse
 import contextlib
 import csv
 import datetime as dt
+import http.client
 import json
 import math
 import os
@@ -50,18 +51,56 @@ MAX_ROUNDS = 8
 
 
 class ChatError(Exception):
-    def __init__(self, message: str, *, unreachable: bool = False) -> None:
+    def __init__(
+        self,
+        message: str,
+        *,
+        unreachable: bool = False,
+        status: int | None = None,
+        retry_after: float | None = None,
+    ) -> None:
         super().__init__(message)
         self.unreachable = unreachable
+        self.status = status
+        self.retry_after = retry_after
+
+
+TRANSIENT_STATUS = frozenset({429, 500, 502, 503, 504})
+RETRY_WAITS = (10.0, 30.0, 60.0)  # seconds; a Retry-After header wins (capped at 120)
 
 
 def openai_chat(
-    base_url: str, model: str, *, api_key: str | None = None, timeout: float = 300
+    base_url: str,
+    model: str,
+    *,
+    api_key: str | None = None,
+    timeout: float = 120,
+    interval: float = 0.0,
+    sleep: Callable[[float], None] | None = None,
 ) -> Chat:
-    """A client for an OpenAI-compatible ``/chat/completions`` endpoint with tool calling."""
+    """A client for an OpenAI-compatible ``/chat/completions`` endpoint with tool calling.
+    ``interval`` spaces requests (free tiers allow a few per minute); a rate limit or an
+    overloaded server (429, 5xx) is retried after a wait before the case is given up."""
+    import time
+
     url = base_url.rstrip("/") + "/chat/completions"
+    pause = sleep or time.sleep
+    last = [0.0]
 
     def chat(messages: list[Message], tools: list[Message]) -> Message:
+        for wait in (*RETRY_WAITS, None):
+            if interval:
+                pause(max(0.0, last[0] + interval - time.monotonic()))
+            last[0] = time.monotonic()
+            try:
+                return once(messages, tools)
+            except ChatError as exc:
+                if exc.status not in TRANSIENT_STATUS or wait is None:
+                    raise
+                pause(min(exc.retry_after or wait, 120.0))
+        raise AssertionError("unreachable")
+
+    def once(messages: list[Message], tools: list[Message]) -> Message:
         body = json.dumps(
             {"model": model, "messages": messages, "tools": tools, "temperature": 0}
         ).encode()
@@ -74,8 +113,20 @@ def openai_chat(
                 payload = json.loads(response.read())
         except urllib.error.HTTPError as exc:
             detail = exc.read()[:300].decode("utf-8", "replace")
-            raise ChatError(f"HTTP {exc.code} from {url}: {detail}") from None
-        except (urllib.error.URLError, TimeoutError, ValueError) as exc:
+            # A wrong key, model name or URL fails every case the same way: stop at once.
+            fatal = exc.code in {401, 403, 404}
+            retry_after = exc.headers.get("Retry-After") if exc.headers else None
+            raise ChatError(
+                f"HTTP {exc.code} from {url}: {detail}",
+                unreachable=fatal,
+                status=exc.code,
+                retry_after=float(retry_after) if retry_after and retry_after.isdigit() else None,
+            ) from None
+        except TimeoutError:  # a slow or overloaded server: retried like a 504
+            raise ChatError(f"{url}: no response within {timeout:.0f}s", status=504) from None
+        except (http.client.HTTPException, ConnectionError) as exc:  # dropped mid-response
+            raise ChatError(f"{url}: {type(exc).__name__}", status=503) from None
+        except (urllib.error.URLError, ValueError) as exc:
             raise ChatError(f"{url}: {type(exc).__name__}: {exc}", unreachable=True) from None
         try:
             message: Message = payload["choices"][0]["message"]
@@ -406,9 +457,36 @@ class CaseResult:
     def passed(self) -> bool:
         return self.error is None and all(c.passed for c in self.checks)
 
+    @property
+    def status(self) -> str:
+        """PASS, FAIL (a check failed) or NOT RUN (the model server kept refusing, e.g. quota)."""
+        return "NOT RUN" if self.error else ("PASS" if self.passed else "FAIL")
+
+
+REASONING = re.compile(
+    r"<(think|thinking|thought|reasoning)>.*?(</\1>|\Z)", re.IGNORECASE | re.DOTALL
+)
+
+
+def visible_answer(answer: str) -> str:
+    """The answer without the model's reasoning block, which some open models put in the
+    message text (``<think>…</think>``, ``<thought>…</thought>``)."""
+    return REASONING.sub("", answer).strip()
+
 
 def check_answer(case: Case, answer: str, calls: Sequence[ToolCall]) -> list[Check]:
     checks: list[Check] = []
+    shown = visible_answer(answer)
+    if shown != answer.strip():
+        checks.append(
+            Check(
+                "no_reasoning_in_answer",
+                False,
+                "the answer text includes the model's reasoning block; a customer would see it. "
+                "Turn reasoning output off in the model server or strip it in the application.",
+            )
+        )
+    answer = shown
     called = [c.tool for c in calls]
     if case.expect_tools:
         missing = [t for t in case.expect_tools if t not in called]
@@ -534,31 +612,74 @@ def run_case(case: Case, chat: Chat, runner: ToolRunner) -> CaseResult:
     return result
 
 
-def qualify(chat: Chat, cases: Sequence[Case], *, synthetic: bool = True) -> list[CaseResult]:
+def qualify(
+    chat: Chat,
+    cases: Sequence[Case],
+    *,
+    synthetic: bool = True,
+    max_minutes: float | None = None,
+    progress: Callable[[CaseResult], None] | None = None,
+) -> list[CaseResult]:
+    """Run every case. Past ``max_minutes`` the remaining cases are NOT RUN rather than left
+    to wait on a slow server; ``progress`` sees each result as soon as it is known."""
+    import time
+
     today = dt.date.today()
+    deadline = time.monotonic() + max_minutes * 60 if max_minutes else None
     context = synthetic_environment(today) if synthetic else contextlib.nullcontext()
+    results: list[CaseResult] = []
     with context:
         runner = ToolRunner()
-        return [run_case(case, chat, runner) for case in cases]
+        for case in cases:
+            if deadline is not None and time.monotonic() > deadline:
+                result = CaseResult(case.id, case.question, case.purpose, answer="")
+                result.error = f"not started: the {max_minutes:g}-minute limit was reached"
+            else:
+                result = run_case(case, chat, runner)
+            results.append(result)
+            if progress:
+                progress(result)
+    return results
 
 
 def render(results: Sequence[CaseResult], model: str) -> str:
     lines = [f"realmarket model qualification — {model}", ""]
     for r in results:
-        lines.append(f"[{'PASS' if r.passed else 'FAIL'}] {r.id}: {r.question}")
+        lines.append(f"[{r.status}] {r.id}: {r.question}")
         if r.error:
             lines.append(f"    error: {r.error}")
         for c in r.checks:
             if not c.passed:
                 lines.append(f"    ✗ {c.name}: {c.detail}")
         lines.append(f"    tools: {', '.join(c.tool for c in r.calls) or '—'}")
-    passed = sum(r.passed for r in results)
-    lines += ["", f"{passed}/{len(results)} cases passed."]
-    if passed < len(results):
+    passed = sum(r.status == "PASS" for r in results)
+    failed = sum(r.status == "FAIL" for r in results)
+    not_run = len(results) - passed - failed
+    lines += ["", f"{passed}/{len(results)} cases passed, {failed} failed, {not_run} not run."]
+    if failed:
         lines.append(
             "Read the failed answers in the report before putting this model in front of customers."
         )
+    if not_run:
+        lines.append("Cases that did not run say nothing about the model: run them again later.")
     return "\n".join(lines)
+
+
+def write_report(
+    path: Path, results: Sequence[CaseResult], model: str, base_url: str, total: int
+) -> None:
+    report = {
+        "model": model,
+        "base_url": base_url,
+        "date": dt.date.today().isoformat(),
+        "passed": sum(r.status == "PASS" for r in results),
+        "failed": sum(r.status == "FAIL" for r in results),
+        "not_run": sum(r.status == "NOT RUN" for r in results),
+        "total": total,
+        "completed": len(results),
+        "cases": [{**asdict(r), "status": r.status} for r in results],
+    }
+    path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -580,29 +701,49 @@ def main(argv: list[str] | None = None) -> int:
         help="use the configured data sources instead of the synthetic company",
     )
     parser.add_argument("--output", type=Path, help="write the full JSON report here")
+    parser.add_argument(
+        "--max-minutes",
+        type=float,
+        default=15.0,
+        help="stop starting new cases after this long (default 15)",
+    )
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=0.0,
+        help="minimum seconds between requests, for rate-limited free tiers (e.g. 6)",
+    )
     args = parser.parse_args(argv)
     if args.live and not args.cases:
         parser.error("--live needs --cases: the built-in questions are about the synthetic ORNEK")
     api_key = os.environ.get(args.api_key_env, "") if args.api_key_env else None
-    chat = openai_chat(args.base_url, args.model, api_key=api_key or None)
+    chat = openai_chat(args.base_url, args.model, api_key=api_key or None, interval=args.interval)
     cases = load_cases(args.cases) if args.cases else CASES
     try:
-        results = qualify(chat, cases, synthetic=not args.live)
+        print(f"Testing {args.model}: {len(cases)} cases, at most {args.max_minutes:g} minutes.")
+
+        done: list[CaseResult] = []
+
+        def progress(result: CaseResult) -> None:
+            print(f"  [{result.status}] {result.id}", flush=True)
+            done.append(result)
+            if args.output:  # after every case, so an interrupted run keeps what it has
+                write_report(args.output, done, args.model, args.base_url, len(cases))
+
+        results = qualify(
+            chat,
+            cases,
+            synthetic=not args.live,
+            max_minutes=args.max_minutes,
+            progress=progress,
+        )
     except ChatError as exc:
-        print(f"The model server could not be reached: {exc}", file=sys.stderr)
+        print(f"The model server could not be used: {exc}", file=sys.stderr)
         return 2
     print(render(results, args.model))
-    if args.output:
-        report = {
-            "model": args.model,
-            "base_url": args.base_url,
-            "date": dt.date.today().isoformat(),
-            "passed": sum(r.passed for r in results),
-            "total": len(results),
-            "cases": [{**asdict(r), "passed": r.passed} for r in results],
-        }
-        args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    return 0 if all(r.passed for r in results) else 1
+    if any(r.status == "FAIL" for r in results):
+        return 1
+    return 3 if any(r.status == "NOT RUN" for r in results) else 0
 
 
 if __name__ == "__main__":

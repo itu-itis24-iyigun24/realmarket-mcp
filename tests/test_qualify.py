@@ -123,7 +123,7 @@ def test_cli_writes_a_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     out = tmp_path / "report.json"
     code = qualify.main(["--base-url", "http://x/v1", "--model", "m", "--output", str(out)])
     report = json.loads(out.read_text())
-    assert code == 0 and (report["passed"], report["total"]) == (5, 5)
+    assert code == 0 and (report["passed"], report["not_run"], report["total"]) == (5, 0, 5)
     assert report["cases"][0]["calls"][0]["tool"] == "get_price_summary"
 
 
@@ -137,3 +137,72 @@ def test_an_unreachable_model_server_stops_the_run(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(qualify, "openai_chat", lambda *_a, **_k: down)
     assert qualify.main(["--base-url", "http://x/v1", "--model", "m"]) == 2
     assert len(asked) == 1  # not retried once per case
+
+
+def test_reasoning_in_the_answer_is_reported_and_not_checked_as_figures() -> None:
+    case = Case(
+        "r",
+        "ORNEK ne kadar getiri sağladı?",
+        ("get_price_summary",),
+        (qualify.Figure("get_price_summary", "total_return", "getiri"),),
+    )
+    call = ToolCall("get_price_summary", {}, True, {"data": {"total_return": 2.550917}})
+    answer = "<thought>400.65 / 112.83 = 3.5509, minus one</thought>Getiri %255,09."
+    checks = {c.name: c for c in check_answer(case, answer, [call])}
+    assert not checks["no_reasoning_in_answer"].passed
+    assert checks["figure:total_return"].passed and checks["no_unsupported_figures"].passed
+
+
+def test_rate_limits_are_retried_then_reported_as_not_run(monkeypatch: pytest.MonkeyPatch) -> None:
+    import io
+    import urllib.error
+    import urllib.request
+
+    waits: list[float] = []
+    attempts = [0]
+
+    def busy(*_a: Any, **_k: Any) -> Any:
+        attempts[0] += 1
+        raise urllib.error.HTTPError("u", 429, "Too Many", {"Retry-After": "7"}, io.BytesIO(b"q"))
+
+    monkeypatch.setattr(urllib.request, "urlopen", busy)
+    chat = qualify.openai_chat("http://x/v1", "m", sleep=waits.append)
+    result = qualify.run_case(CASES[3], chat, qualify.ToolRunner())
+    assert attempts[0] == len(qualify.RETRY_WAITS) + 1 and waits == [7.0] * len(qualify.RETRY_WAITS)
+    assert result.status == "NOT RUN" and "429" in (result.error or "")
+    assert "0 failed, 1 not run" in qualify.render([result], "m")
+
+
+def test_a_dropped_connection_is_retried(monkeypatch: pytest.MonkeyPatch) -> None:
+    import http.client
+    import urllib.request
+
+    calls = [0]
+
+    class Reply:
+        def __enter__(self) -> Reply:
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return json.dumps({"choices": [{"message": {"content": "Tamam."}}]}).encode()
+
+    def flaky(*_a: Any, **_k: Any) -> Reply:
+        calls[0] += 1
+        if calls[0] == 1:
+            raise http.client.RemoteDisconnected("closed")
+        return Reply()
+
+    monkeypatch.setattr(urllib.request, "urlopen", flaky)
+    chat = qualify.openai_chat("http://x/v1", "m", sleep=lambda _s: None)
+    assert chat([], []) == {"content": "Tamam."} and calls[0] == 2
+
+
+def test_the_time_limit_marks_the_rest_not_run() -> None:
+    seen: list[str] = []
+    results = qualify.qualify(
+        careful_model, CASES, max_minutes=-1, progress=lambda r: seen.append(r.status)
+    )
+    assert seen == ["NOT RUN"] * len(CASES) and "limit" in (results[0].error or "")
