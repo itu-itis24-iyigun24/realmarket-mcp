@@ -30,10 +30,10 @@ compute these figures in code and return them with their sources:
 |---|---|
 | `search_assets` | "What is the symbol for Turkish Airlines?" |
 | `get_price_summary` | "How did it do over the last year?" — return, annualized return, volatility, max drawdown |
-| `compare_real_return` | "Did it beat inflation?" — nominal vs real return, plus the same holding in US dollars and in gold |
+| `compare_real_return` | "Did it beat inflation?" — nominal vs real return, plus the same holding in US dollars, in gold, and (TL assets) against a TL deposit account |
 | `compare_assets` | "How do these compare?" — 2 to 10 assets over one common window |
 | `check_data_quality` | "Can I trust this data?" — gaps, placeholder bars, suspicious jumps, stale data |
-| `portfolio_real_return` | "Did my savings keep up with inflation?" — dated purchases valued today, money-weighted return, real return, and the same payments replayed into USD, gold or an index |
+| `portfolio_real_return` | "Did my savings keep up with inflation?" — dated purchases valued today, money-weighted return, real return, and the same payments replayed into USD, gold, a TL deposit or an index |
 | `get_event_reaction` | "How did the stock react to that announcement?" — 1/5/20-session return vs the index, plus pre-event drift |
 | `get_financials` | "How did the last quarter go?" — revenue, profit, margins, leverage and growth in real terms; US companies from their official SEC filings, Turkish inflation accounting (TMS 29) handled, data errors flagged |
 | `find_official_filer` | "What is ASML's identifier for its official reports?" — European and UK companies in the ESEF annual-report index, with their LEI |
@@ -194,6 +194,13 @@ SEC asks automated clients to stay under 10 requests per second and to identify 
 The OECD's public API allows about 60 downloads per hour, so each series is fetched once and
 reused for six hours; results keep the original retrieval time.
 
+### TL deposit comparison
+
+With a TCMB EVDS key, TL results also show what the same money earned in a deposit account:
+a 32-day deposit renewed at each maturity at the weekly weighted average rate TCMB publishes for
+new TL deposits up to 3 months (EVDS `TP.TRY.MT02`). Figures are **gross of withholding tax
+(stopaj)**, and a real account earns its own bank's rate.
+
 ## Data sources, terms and privacy
 
 realmarket-mcp ships no data. It fetches from the services below on your behalf, and **by using
@@ -203,7 +210,7 @@ credit its source asks for.
 | Service | Used for | Terms (summary) | Privacy |
 |---|---|---|---|
 | SEC EDGAR | US financial statements | Public data; identify yourself (contact e-mail), max 10 requests/s | [policy](https://www.sec.gov/about/privacy-information); receives your e-mail |
-| TCMB EVDS | Turkish CPI (with key) | May be used and published with reference; not investment advice; users may not be charged for it | [policy](https://evds3.tcmb.gov.tr/igmevdsms-dis/documents/showDocument?docId=22) |
+| TCMB EVDS | Turkish CPI and TL deposit rates (with key) | May be used and published with reference; not investment advice; users may not be charged for it | [policy](https://evds3.tcmb.gov.tr/igmevdsms-dis/documents/showDocument?docId=22) |
 | FRED | US CPI (API with key; CSV fallback) | [FRED® API Terms of Use](https://fred.stlouisfed.org/docs/api/terms_of_use.html) (API); FRED website terms for the CSV (personal, non-commercial use) | [policy](https://www.stlouisfed.org/about-us/privacy-policy) |
 | OECD | CPI without a key | CC BY 4.0; cite the OECD | [policy](https://www.oecd.org/en/about/privacy.html) |
 | filings.xbrl.org (XBRL International) | Official EU/UK annual reports | Free; "no restrictions on the ways that the data can be used" | [policy](https://www.xbrl.org/the-consortium/about/legal/privacy-policy/); receives only company names and LEIs |

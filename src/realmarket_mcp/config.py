@@ -11,6 +11,7 @@ from typing import cast
 
 from realmarket_mcp import inflation
 from realmarket_mcp.contract import ErrorCode, ToolError
+from realmarket_mcp.deposits import DepositRates
 from realmarket_mcp.models import FinancialStatements
 from realmarket_mcp.providers import cpi, sec
 from realmarket_mcp.providers.base import FinancialsProvider, NewsProvider, PriceProvider
@@ -68,9 +69,9 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
         )
     if not evds and "TR" not in csv_regions:
         missing.append(
-            "Turkish inflation (only) comes from the OECD, which lags TÜİK by months; add a TCMB "
-            f"EVDS key ({cpi.EVDS_KEY_ENV}) for current data. US and other OECD members' "
-            "inflation from the OECD is current."
+            "Turkish inflation (only) comes from the OECD, which lags TÜİK by months, and TL "
+            f"deposit comparisons are off; add a TCMB EVDS key ({cpi.EVDS_KEY_ENV}) for both. "
+            "US and other OECD members' inflation from the OECD is current."
         )
     return {
         "price_data": {
@@ -91,6 +92,7 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
             "fred_key_set": fred,
             "csv_regions": csv_regions,
         },
+        "deposit_rates": {"TRY": "evds" if evds else "unavailable (needs the EVDS key)"},
         "news": news,
         # Optional settings the user left empty (the app passes them as empty or placeholder
         # values). This is normal and needs no action; listed only for troubleshooting.
@@ -222,6 +224,22 @@ def _oecd(
     series = cpi.oecd_cpi(region, min(start, OECD_CACHE_FROM), retrieved_at=retrieved_at)
     _oecd_cache[region] = (time.monotonic(), series)
     return series
+
+
+def load_deposit_rates(
+    currency: str,
+    start: dt.date,
+    end: dt.date,
+    *,
+    retrieved_at: str,
+    env: Mapping[str, str] | None = None,
+    fetch: cpi.Fetch | None = None,
+) -> DepositRates:
+    """Published deposit rates for ``currency`` (TRY, from TCMB EVDS; needs the EVDS key)."""
+    env = os.environ if env is None else env
+    return cpi.evds_deposit_rates(
+        currency, start, end, env=env, fetch=fetch or cpi.http_fetch, retrieved_at=retrieved_at
+    )
 
 
 def load_news_provider() -> NewsProvider:

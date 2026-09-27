@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **TL deposit comparison.** "Did it beat a deposit account?" is the question a Turkish saver
+  faces. With an EVDS key, `compare_real_return` for TL assets adds `deposit_return`,
+  `deposit_real_return` and `beat_deposit`, and `portfolio_real_return` accepts `DEPOSIT` as an
+  alternative: a 32-day deposit renewed at TCMB's weekly weighted average rate for new TL
+  deposits up to 3 months, gross of withholding tax.
+- Tests no longer see the developer's own `REALMARKET_*` settings.
+
 ## 0.1.3 — 2026-09-27
 
 From the Claude Desktop test round of v0.1.2:

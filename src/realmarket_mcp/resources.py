@@ -42,6 +42,14 @@ All ratios are fractions: 0.12 means 12%.
 - Gold return values the holding in ounces of gold (gold priced in USD).
 - Neither is adjusted for US inflation.
 
+## TL deposit comparison
+- A 32-day deposit opened at the rate TCMB most recently published (weighted average on new TL
+  deposits up to 3 months, EVDS `TP.TRY.MT02`), earning `rate x days / 365` for its term and
+  renewed at maturity — principal plus interest — at the rate then in force; a final partial
+  term earns pro rata. Gross of withholding tax (stopaj). Rates are carried forward at most 21
+  days after the last publication, never extrapolated.
+- `deposit_real_return` deflates the deposit over the same window as `real_return`.
+
 ## Savings (portfolio_real_return)
 - Each purchase buys `amount / price` units on its date (converted at that date's USD rates
   for foreign assets); the value is those units at the valuation date's price.

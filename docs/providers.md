@@ -13,7 +13,7 @@ Every provider module must have an entry here before it is merged (see the
 | SEC EDGAR XBRL API | `providers/sec.py` | US company financial statements (companyfacts), ticker→CIK list, SIC industry | `REALMARKET_SEC_CONTACT` (an e-mail, not a key) | no | SEC "Accessing EDGAR Data": declared User-Agent with contact, max 10 requests/s; data is public | cite "SEC EDGAR" |
 | filings.xbrl.org (XBRL International) | `providers/esef.py` | ESEF annual (and some quarterly) reports of EU/EEA/UK listed companies, xBRL-JSON, IFRS; entity search by name → LEI | default for LEI symbols | no | free API; "no restrictions on the ways that the data can be used"; may add rate limits | cite the company's ESEF report via filings.xbrl.org |
 | FRED (Federal Reserve Bank of St. Louis) | `providers/cpi.py` | US CPI `CPIAUCNS` (source: BLS) | `REALMARKET_FRED_API_KEY` | yes, free | FRED API terms of use | see notice below |
-| TCMB EVDS (Central Bank of the Republic of Türkiye) | `providers/cpi.py` | Turkish CPI `TP.GENENDEKS.T1` (2003=100) (source: TÜİK) | `REALMARKET_EVDS_API_KEY` | yes, free | EVDS terms of use | cite TCMB EVDS / TÜİK |
+| TCMB EVDS (Central Bank of the Republic of Türkiye) | `providers/cpi.py` | Turkish CPI `TP.GENENDEKS.T1` (2003=100) (source: TÜİK); weekly TL deposit rates `TP.TRY.MT02` | `REALMARKET_EVDS_API_KEY` | yes, free | EVDS terms of use | cite TCMB EVDS / TÜİK |
 | FRED public CSV | `providers/cpi.py` | US CPI `CPIAUCNS` without a key | fallback when the OECD is unavailable | no | FRED website terms (personal, non-commercial downloads) | "U.S. Bureau of Labor Statistics via FRED" |
 | OECD Data Explorer API | `providers/cpi.py` | national monthly CPI (2015=100) for OECD members, incl. US | default when no official key | no | OECD terms and conditions; CC BY 4.0; 60 downloads/hour | cite "OECD" and the dataset |
 | GDELT Project | `providers/gdelt.py` | news article listings (title, link, publisher, date) | default; `REALMARKET_NEWS_PROVIDER=none` disables | no | GDELT terms (open data; citation requested) | cite "The GDELT Project" |
@@ -123,6 +123,12 @@ normal connection.
       pages); OECD `https://www.oecd.org/en/about/privacy.html` and Yahoo
       `https://legal.yahoo.com/us/en/yahoo/privacy/index.html` (official-domain search results;
       not reachable here). GDELT: none found.
+- [x] EVDS deposit rates (2026-09-27): data group `bie_mt100h` "Mevduat Faiz Oranları (Akım)",
+      weekly (Friday) from 2002; `TP.TRY.MT02` is the weighted average annual rate on new TL
+      deposits up to 3 months. Response items: `Tarih` as `dd-mm-yyyy`, the value as a string
+      (`"44.02000000"` on 2026-09-18). Same EVDS terms as CPI (use with reference; not investment
+      advice). A 32-day rolling deposit at these rates returned +58.6% gross over the year to
+      2026-09-26, consistent with the published 44–49% rates.
 - [x] filings.xbrl.org (2026-09-26): API at `/api/filings` and `/api/entities` (JSON:API; filters as a
       JSON list, e.g. `[{"name":"entity","op":"has","val":{"name":"identifier","op":"eq","val":LEI}}]`,
       names with `ilike`); reports as xBRL-JSON at each filing's `json_url` (up to a few MB).

@@ -18,6 +18,7 @@ from realmarket_mcp import __version__, config, tools
 from realmarket_mcp.config import (
     drop_unset_values,
     load_cpi,
+    load_deposit_rates,
     load_financials_provider,
     load_news_provider,
     load_price_provider,
@@ -168,8 +169,10 @@ def build_server() -> MCPServer:
     ) -> CallToolResult:
         """Answer "did this asset beat inflation?": nominal return, cumulative consumer-price
         inflation, real (inflation-adjusted) return and its annualized rate, plus the same
-        holding measured in US dollars and in gold. Use it for any question about real,
-        inflation-adjusted or purchasing-power returns, especially for high-inflation
+        holding measured in US dollars and in gold, and — for TL assets, with an EVDS key —
+        what the same money earned in a TL deposit account (deposit_return, beat_deposit).
+        Use it for any question about real, inflation-adjusted or purchasing-power returns,
+        especially for high-inflation
         currencies. Works without API keys; if the inflation series ends before the period does,
         the result says how far it reaches.
         Ratios are fractions (0.12 means 12%)."""
@@ -185,6 +188,9 @@ def build_server() -> MCPServer:
                 end,
                 inflation_region,
                 today=now.date(),
+                load_deposit=lambda ccy, first, last: load_deposit_rates(
+                    ccy, first, last, retrieved_at=stamp
+                ),
             )
         )
 
@@ -286,17 +292,18 @@ def build_server() -> MCPServer:
             list[str],
             Field(
                 max_length=5,
-                description="Alternatives to replay the same payments into: 'USD', 'GOLD' or "
-                "any symbol such as 'XU100.IS'.",
+                description="Alternatives to replay the same payments into: 'USD', 'GOLD', "
+                "'DEPOSIT' (a TL deposit account; TRY only, needs an EVDS key) or any symbol "
+                "such as 'XU100.IS'.",
             ),
         ] = ["USD", "GOLD"],  # noqa: B006 - pydantic copies defaults
     ) -> CallToolResult:
         """Evaluate a set of dated purchases as of today: total paid, current value, return,
         annualized money-weighted return, and the real return after restating every payment
         in today's purchasing power. Also shows where the same payments would stand had they
-        gone into US dollars, gold or an index. Use it for "did my savings keep up with
-        inflation" questions. Purchases only; sales and cash dividends are not modelled.
-        Ratios are fractions (0.12 means 12%)."""
+        gone into US dollars, gold, a TL deposit account or an index. Use it for "did my
+        savings keep up with inflation" questions. Purchases only; sales and cash dividends
+        are not modelled. Ratios are fractions (0.12 means 12%)."""
         now = _utc_now()
         stamp = _stamp(now)
         return respond(
@@ -308,6 +315,9 @@ def build_server() -> MCPServer:
                 inflation_region,
                 compare_with,
                 today=now.date(),
+                load_deposit=lambda ccy, first, last: load_deposit_rates(
+                    ccy, first, last, retrieved_at=stamp
+                ),
             )
         )
 

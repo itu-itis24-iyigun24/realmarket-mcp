@@ -18,6 +18,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from realmarket_mcp.contract import ErrorCode, ToolError
+from realmarket_mcp.deposits import DepositRates, rates_from_rows
 from realmarket_mcp.inflation import CpiSeries, series_from_rows
 from realmarket_mcp.providers import http
 
@@ -138,6 +139,57 @@ def evds_tr_cpi(
         rows = [(str(item["Tarih"]), str(item.get(column) or "")) for item in items]
         return series_from_rows(
             rows, region="TR", source="evds", series_id=EVDS_SERIES, retrieved_at=retrieved_at
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise _bad_payload("EVDS", exc) from None
+
+
+# Weighted average annual rate on new TL deposits with maturity up to 3 months (weekly, flow),
+# which covers the common 32-day deposit (EVDS data group bie_mt100h, verified 2026-09-27).
+EVDS_DEPOSIT_SERIES = {"TRY": "TP.TRY.MT02"}
+
+
+def evds_deposit_rates(
+    currency: str,
+    start: dt.date,
+    end: dt.date,
+    *,
+    env: Mapping[str, str],
+    fetch: Fetch = http_fetch,
+    retrieved_at: str,
+) -> DepositRates:
+    series = EVDS_DEPOSIT_SERIES.get(currency.upper())
+    if series is None:
+        raise ToolError(
+            ErrorCode.UNSUPPORTED,
+            f"No deposit rate series for {currency}.",
+            "Deposit comparisons cover Turkish lira (TRY) only.",
+            {"currency": currency},
+        )
+    key = env.get(EVDS_KEY_ENV, "").strip()
+    if not key:
+        raise ToolError(
+            ErrorCode.MISSING_API_KEY,
+            "Deposit rates need a TCMB EVDS key.",
+            f"Set {EVDS_KEY_ENV} (free key: https://evds3.tcmb.gov.tr), the 'TCMB EVDS API key' "
+            "setting of the plugin or extension, then restart the app.",
+        )
+    base = env.get(EVDS_URL_ENV, EVDS_URL)
+    if not base.endswith("/"):
+        base += "/"
+    first = start - dt.timedelta(days=14)  # the rate in force on the start day
+    url = f"{base}series={series}&startDate={first:%d-%m-%Y}&endDate={end:%d-%m-%Y}&type=json"
+    body = fetch(url, {"key": key})
+    column = series.replace(".", "_")
+    try:
+        items: list[dict[str, Any]] = json.loads(body)["items"]
+        rows = [(str(item["Tarih"]), str(item.get(column) or "")) for item in items]
+        return rates_from_rows(
+            rows,
+            currency=currency.upper(),
+            source="evds_deposit",
+            series_id=series,
+            retrieved_at=retrieved_at,
         )
     except (KeyError, TypeError, ValueError) as exc:
         raise _bad_payload("EVDS", exc) from None

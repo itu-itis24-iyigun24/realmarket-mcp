@@ -70,6 +70,8 @@ ATTRIBUTIONS = {
     "fred_csv": "Source: U.S. Bureau of Labor Statistics via FRED®, Federal Reserve Bank of St. "
     "Louis.",
     "evds": "Source: TÜİK consumer price index via CBRT (TCMB) EVDS.",
+    "evds_deposit": "Source: CBRT (TCMB) EVDS, weighted average interest rates on new TL "
+    "deposits (up to 3 months).",
     "oecd": "Source: OECD, Prices (DF_PRICES_ALL), OECD Data Explorer, licensed CC BY 4.0.",
     "gdelt": "Source: The GDELT Project (https://www.gdeltproject.org/).",
     "esef": "Source: the company's ESEF annual financial report, via filings.xbrl.org (XBRL "

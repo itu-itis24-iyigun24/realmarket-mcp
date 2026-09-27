@@ -37,3 +37,12 @@ def _no_provider_pacing(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(gdelt, "MIN_INTERVAL_SECONDS", 0.0)
     monkeypatch.setattr(gdelt, "RETRY_WAIT_SECONDS", 0.0)
     monkeypatch.setattr(gdelt, "_last_request", 0.0)
+
+
+@pytest.fixture(autouse=True)
+def _no_user_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests never see the developer's own settings or keys (they would reach the network)."""
+    import os
+
+    for name in [n for n in os.environ if n.startswith("REALMARKET_")]:
+        monkeypatch.delenv(name)

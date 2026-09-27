@@ -23,6 +23,7 @@ from realmarket_mcp.contract import (
     ToolError,
     ToolResult,
 )
+from realmarket_mcp.deposits import DepositLoader, DepositRates
 from realmarket_mcp.inflation import CpiSeries, last_day_of, month_of, month_str
 from realmarket_mcp.models import Bar, FinancialPeriod, PriceSeries
 from realmarket_mcp.periods import Period, parse_date, resolve
@@ -37,6 +38,50 @@ AS_OF_TOLERANCE_DAYS = 5
 REGION_CURRENCY = {"TR": "TRY", "US": "USD"}
 
 CpiLoader = Callable[[str, dt.date, dt.date], CpiSeries]
+DEPOSIT_NOTE = (
+    "Deposit figures model a 32-day TL deposit renewed at each maturity at the weekly weighted "
+    "average rate TCMB publishes for new deposits up to 3 months (simple interest within a "
+    "term); they are gross of withholding tax (stopaj), and a real account earns its own "
+    "bank's rate."
+)
+
+
+def _deposit_rates(
+    load_deposit: DepositLoader | None,
+    currency: str,
+    start: dt.date,
+    end: dt.date,
+    flags: list[QualityFlag],
+    provenance: list[Provenance],
+) -> DepositRates | None:
+    """The deposit series for a comparison, or None with an explanatory flag."""
+    if load_deposit is None or currency != "TRY":
+        return None
+    try:
+        rates = load_deposit(currency, start, end)
+    except ToolError as error:
+        flags.append(
+            QualityFlag(
+                "deposit_unavailable",
+                Severity.INFO,
+                f"No deposit comparison: {error.message} {error.hint}",
+            )
+        )
+        return None
+    provenance.append(
+        Provenance(
+            provider=rates.source,
+            dataset=f"deposit_rates:{rates.series_id}",
+            symbols=(currency,),
+            period_start=max(start, rates.first_date).isoformat(),
+            period_end=rates.observations[-1][0].isoformat(),
+            retrieved_at=rates.retrieved_at,
+            data_version=rates.data_version,
+            adjustment="none",
+        )
+    )
+    return rates
+
 
 RATIO_NOTE = "Ratios are fractions (0.12 = 12%)."
 
@@ -368,6 +413,7 @@ def compare_real_return(
     inflation_region: str | None = None,
     *,
     today: dt.date,
+    load_deposit: DepositLoader | None = None,
 ) -> ToolResult:
     start_date, end_date = resolve(period, start, end, today=today)
     series, usable = _load_bars(provider, symbol, start_date, end_date)
@@ -476,6 +522,26 @@ def compare_real_return(
         if gold is not None:
             gold_return = (1.0 + usd_return) * gold[0] / gold[1] - 1.0
 
+    # The same money kept in a TL deposit account instead.
+    deposit_return = deposit_real = None
+    rates = _deposit_rates(load_deposit, currency, first.date, last.date, flags, provenance)
+    if rates is not None:
+        growth = rates.growth(first.date, last.date)
+        deposit_return = None if growth is None else growth - 1.0
+        if real_end is not None and inflation is not None:
+            in_window = rates.growth(first.date, real_end)
+            if in_window is not None:
+                deposit_real = analytics.real_return(in_window - 1.0, inflation)
+        if growth is None:
+            flags.append(
+                QualityFlag(
+                    "deposit_unavailable",
+                    Severity.INFO,
+                    f"Deposit rates cover {rates.first_date} to {rates.covered_until}, not the "
+                    "whole window; no deposit comparison.",
+                )
+            )
+
     return ToolResult(
         tool="compare_real_return",
         data={
@@ -493,11 +559,17 @@ def compare_real_return(
             "real_return_positive": None if real is None else real > 0,
             "usd_return": _round(usd_return),
             "gold_return": _round(gold_return),
+            "deposit_return": _round(deposit_return),
+            "deposit_real_return": _round(deposit_real),
+            "beat_deposit": (
+                None if deposit_return is None else (1.0 + nominal) > (1.0 + deposit_return)
+            ),
         },
         provenance=tuple(provenance),
         quality_flags=tuple(flags),
         notes=(
             RATIO_NOTE,
+            *((DEPOSIT_NOTE,) if deposit_return is not None else ()),
             "real_return = (1 + nominal) / (1 + cumulative_inflation) - 1, with inflation "
             "measured from the CPI of the first month to the CPI of the last month.",
             "usd_return values the holding in US dollars at each end; gold_return values it "
@@ -822,6 +894,7 @@ def portfolio_real_return(
     compare_with: Sequence[str] = ("USD", "GOLD"),
     *,
     today: dt.date,
+    load_deposit: DepositLoader | None = None,
 ) -> ToolResult:
     if not 1 <= len(lots) <= MAX_LOTS:
         raise ToolError(
@@ -955,7 +1028,30 @@ def portfolio_real_return(
     for name in dict.fromkeys(c.strip().upper() for c in compare_with if c.strip()):
         try:
             alt_value = 0.0
+            deposit = None
+            if name == "DEPOSIT":
+                if report != "TRY":
+                    raise ToolError(
+                        ErrorCode.UNSUPPORTED,
+                        "the deposit comparison covers TRY only",
+                        "Use a TRY report currency.",
+                    )
+                if load_deposit is None:
+                    raise ToolError(
+                        ErrorCode.UNSUPPORTED, "no deposit rate source", "Set an EVDS key."
+                    )
+                deposit = load_deposit(report, first_day, today)
             for _, day, amount in parsed:
+                if deposit is not None:
+                    growth = deposit.growth(day, today)
+                    if growth is None:
+                        raise ToolError(
+                            ErrorCode.NO_DATA_IN_RANGE,
+                            f"deposit rates do not cover {day} to {today}",
+                            "Use purchases inside the published deposit-rate period.",
+                        )
+                    alt_value += amount * growth
+                    continue
                 if name == "USD":
                     usd = _convert(prices, provider, amount, report, "USD", day)
                     alt_value += _convert(prices, provider, usd, "USD", report, today)
@@ -969,6 +1065,19 @@ def portfolio_real_return(
                     prices, provider, units * prices.close(symbol, today), ccy, report, today
                 )
             alt_flows = [(d, cf) for d, cf in flows[:-1]] + [(today, alt_value)]
+            if deposit is not None:
+                prices.provenance.append(
+                    Provenance(
+                        provider=deposit.source,
+                        dataset=f"deposit_rates:{deposit.series_id}",
+                        symbols=(report,),
+                        period_start=first_day.isoformat(),
+                        period_end=deposit.observations[-1][0].isoformat(),
+                        retrieved_at=deposit.retrieved_at,
+                        data_version=deposit.data_version,
+                        adjustment="none",
+                    )
+                )
             alternatives.append(
                 {
                     "alternative": name,
@@ -1022,6 +1131,7 @@ def portfolio_real_return(
             "(it accounts for when money went in).",
             "alternatives show where the same payments would stand in each alternative; they "
             "describe the past, not what to buy.",
+            *((DEPOSIT_NOTE,) if any(a["alternative"] == "DEPOSIT" for a in alternatives) else ()),
             "Purchases only: sales and dividends paid out in cash are not modelled.",
         ),
     )
