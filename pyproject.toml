@@ -26,6 +26,7 @@ dependencies = [
 
 [project.scripts]
 realmarket-mcp = "realmarket_mcp.server:main"
+realmarket-qualify = "realmarket_mcp.qualify:main"
 
 [project.optional-dependencies]
 yahoo = ["yfinance>=1.5"]
@@ -49,6 +50,11 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Turkish questions and advice wording: the dotless ı is the correct letter there.
+"src/realmarket_mcp/qualify.py" = ["RUF001", "RUF003"]
+"tests/test_qualify.py" = ["RUF001", "RUF003"]
 
 [tool.mypy]
 files = ["src/realmarket_mcp"]

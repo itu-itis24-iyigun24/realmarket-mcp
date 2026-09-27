@@ -208,8 +208,10 @@ new TL deposits up to 3 months (EVDS `TP.TRY.MT02`). Figures are **gross of with
 Firms with licensed market data can plug it in through a small HTTP **data adapter**
 ([`docs/adapter-api.md`](docs/adapter-api.md), with a runnable example in
 `examples/adapter/`), and run realmarket centrally with `realmarket-mcp --transport http` for
-their own AI assistant — any model with tool calling, not only Claude. See
-[`docs/integration.md`](docs/integration.md).
+their own AI assistant — any model with tool calling, not only Claude. An audit log records
+every tool call with the exact data behind it (`REALMARKET_AUDIT_LOG`), and
+`realmarket-qualify` checks that a model uses the tools correctly before it answers customers.
+See [`docs/integration.md`](docs/integration.md).
 
 ## Data sources, terms and privacy
 

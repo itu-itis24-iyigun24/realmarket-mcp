@@ -45,16 +45,40 @@ customer ─ firm's app ─ firm's LLM ─ MCP client ─ realmarket (MCP server
    connection time (cite provenance, lead with quality flags, no recommendations) and ships
    three report prompts; keep them in the model's context.
 
-## Choosing a local model
+## Qualifying a local model
 
-Tool use quality varies more between models than answer quality does. Before rolling out:
+realmarket guarantees its own figures, not what a model does with them, and tool use varies
+more between models than answer quality does. `realmarket-qualify` tests a model before it
+answers customers. It works with any server that offers an OpenAI-compatible
+`/chat/completions` endpoint with tool calling (Ollama, vLLM, LM Studio, a hosted API):
 
-- test with the same questions used for realmarket's own checks (real return of a stock over
-  three years, a monthly savings plan, a quarter's financial statements, "should I buy X?") and
-  compare every figure in the answer with the tool result — the figures must match exactly;
-- check that the model reports warning flags first and does not add figures of its own;
-- smaller models tend to skip the tool and answer from memory. Keep the server instructions in
-  the system prompt, and consider refusing to show an answer that cites no tool result.
+```bash
+realmarket-qualify --base-url http://localhost:11434/v1 --model qwen2.5:14b --output report.json
+```
+
+It asks the model a fixed set of Turkish questions with realmarket's own tools and server
+instructions, about a synthetic, fictional company (ORNEK) generated on the fly. No market
+data, API keys or network access other than the model server is needed, and every firm runs
+the same questions. Each answer is checked automatically:
+
+| Check | Fails when |
+|---|---|
+| `tools_used` | the model answered from memory instead of calling the tool the question needs |
+| `figure:<field>` | the key figure the tool returned (e.g. the real return) is not in the answer |
+| `no_unsupported_figures` | the answer contains a figure found in no tool result: invented, miscalculated, or a ratio the tool deliberately withheld (a P/E computed from other figures) |
+| `no_advice` | the answer recommends buying, selling or holding |
+
+Numbers are read in Turkish and English style (`1.234,5` / `1,234.5`), percentages are matched
+to the tool's fractions, and amounts in thousands, millions or billions to the full figures.
+The checks are strict on purpose: treat a failure as an answer a person must read. The exit
+code is 0 when every case passes, 1 when any fails and 2 when the model server cannot be
+reached; `--output` writes every question, tool call and answer as JSON.
+
+`--live --cases firm-cases.json` runs the firm's own questions against its configured sources
+(its adapter); the file is a JSON list of `{"id", "question", "expect_tools": [...],
+"expect_figures": [{"tool", "path", "label"}]}`. `--api-key-env NAME` reads the model
+server's key from that environment variable. Keep the server instructions in the model's
+system prompt in production too; the test uses them.
 
 ## Configuration summary
 
@@ -66,6 +90,8 @@ Tool use quality varies more between models than answer quality does. Before rol
 | `REALMARKET_NEWS_PROVIDER=none` | turn off GDELT news if the firm uses its own news source |
 | `REALMARKET_AUDIT_LOG=/var/log/realmarket/audit.jsonl` | audit log, one line per tool call (below) |
 | `REALMARKET_AUDIT_FULL=1` | also store each full response in the audit log |
+
+`realmarket-qualify` (below) tests the firm's model before rollout.
 
 `check_setup` reports what is configured, without showing values.
 

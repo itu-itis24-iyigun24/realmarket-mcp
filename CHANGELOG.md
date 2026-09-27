@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Model qualification.** `realmarket-qualify --base-url <OpenAI-compatible API> --model <name>`
+  checks the language model a firm puts in front of realmarket (a local model served by Ollama,
+  vLLM or LM Studio, or a hosted one): Turkish questions about a synthetic company, with the
+  real tools and server instructions, and automatic checks that the model called the tools,
+  reported their figures unchanged, invented none and gave no buy/sell advice. See
+  `docs/integration.md`.
 - **Audit log.** `REALMARKET_AUDIT_LOG=<file>` appends one JSON line per tool call: tool,
   arguments, outcome, the provenance and exact data version of every figure, the quality
   flags, and a SHA-256 of the exact response the model received (`REALMARKET_AUDIT_FULL=1`
