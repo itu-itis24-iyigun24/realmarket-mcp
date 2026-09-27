@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Valuation under TMS 29 uses the fiscal year.** Yahoo's quarterly figures for Turkish
+  companies mix quarters restated by later filings with first-reported ones (BIMAS 2025's
+  quarters reconcile with the annual on neither basis), so summing four of them was unreliable.
+  `get_valuation` now uses the latest fiscal year and restates it, and the latest equity, with
+  CPI to the latest CPI month (`restated_to_money_of`); `cpi_behind_price` flags a CPI series
+  that ends months before the price date.
+
 ## 0.1.4 — 2026-09-27
 
 - **TL deposit comparison.** "Did it beat a deposit account?" is the question a Turkish saver

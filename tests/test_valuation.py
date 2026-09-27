@@ -67,15 +67,37 @@ def test_multiples_from_four_quarters(tmp_path: Path) -> None:
     assert data["earnings_basis"] == "trailing_four_quarters"
 
 
-def test_tms29_quarters_are_restated_to_the_latest_quarter(tmp_path: Path) -> None:
+def test_tms29_uses_the_fiscal_year_in_todays_money(tmp_path: Path) -> None:
+    year = {"end": "2023-12-31", "values": {"net_income": 40, "revenue": 900}}
     st = {"currency": "TRY", "industry": "Retail", "shares_outstanding": 1000,
-          "quarterly": quarters((10, 10, 10, 10), total_equity=5000)}  # fmt: skip
-    cpi = CpiSeries("TR", "t", "C", "t", {(2023, 3): 100.0, (2023, 6): 125.0,
-                                          (2023, 9): 160.0, (2023, 12): 200.0})  # fmt: skip
+          "quarterly": quarters((10, 10, 10, 10), total_equity=5000), "annual": [year]}  # fmt: skip
+    cpi = CpiSeries("TR", "t", "C", "t", {(2023, 12): 100.0, (2024, 1): 110.0})
     data = run(provider(tmp_path, st), lambda *_: cpi).data
-    earnings = 10 * (2.0 + 1.6 + 1.25 + 1.0)  # each quarter in December 2023 money
-    assert data["earnings"] == approx(earnings)
-    assert data["price_to_earnings"] == approx(220_000 / earnings)
+    # Quarters are never summed under TMS 29; the year and equity move to January 2024 money.
+    assert (data["earnings_basis"], data["restated_to_money_of"]) == (
+        "latest_fiscal_year",
+        "2024-01",
+    )
+    assert data["earnings"] == approx(44.0)
+    assert data["price_to_earnings"] == approx(220_000 / 44)
+    assert data["price_to_book"] == approx(220_000 / 5500)
+    old = CpiSeries("TR", "t", "C", "t", {(2023, 6): 90.0, (2023, 9): 100.0})
+    late = run(provider(tmp_path / "b", st), lambda *_: old)
+    assert "cpi_behind_price" in {f.code for f in late.quality_flags}
+
+
+def test_tms29_without_cpi_or_a_fiscal_year(tmp_path: Path) -> None:
+    year = {"end": "2023-12-31", "values": {"net_income": 40, "revenue": 900}}
+    st = {"currency": "TRY", "industry": "Retail", "shares_outstanding": 1000,
+          "quarterly": quarters((10, 10, 10, 10)), "annual": [year]}  # fmt: skip
+    result = run(provider(tmp_path, st))
+    assert "inflation_unavailable" in {f.code for f in result.quality_flags}
+    assert result.data["restated_to_money_of"] is None
+    assert result.data["price_to_earnings"] == approx(220_000 / 40)
+    del st["annual"]
+    with pytest.raises(ToolError) as raised:
+        run(provider(tmp_path / "b", st))
+    assert "TMS 29" in raised.value.hint
 
 
 def test_losses_and_missing_quarters(tmp_path: Path) -> None:
@@ -137,14 +159,14 @@ def test_one_quarter_window_and_stale_price(tmp_path: Path) -> None:
     assert "stale_price" in {f.code for f in late.quality_flags}
 
 
-def test_cpi_gaps_fall_back_to_the_fiscal_year_with_flags(tmp_path: Path) -> None:
+def test_missing_quarter_falls_back_to_the_fiscal_year_with_a_flag(tmp_path: Path) -> None:
+    rows = quarters((10, 20, 30, 40))
+    del rows[1]
     year = {"end": "2023-12-31", "values": {"net_income": 50, "revenue": 900}}
-    st = {"currency": "TRY", "industry": "Retail", "shares_outstanding": 1000,
-          "quarterly": quarters((10, 10, 10, 10)), "annual": [year]}  # fmt: skip
-    cpi = CpiSeries("TR", "t", "C", "t", {(2023, 6): 125.0, (2023, 9): 160.0, (2023, 12): 200.0})
-    result = run(provider(tmp_path, st), lambda *_: cpi)
-    codes = {f.code for f in result.quality_flags}
-    assert {"inflation_unavailable", "fiscal_year_basis"} <= codes
+    st = {"currency": "USD", "industry": "Retail", "shares_outstanding": 1000,
+          "quarterly": rows, "annual": [year]}  # fmt: skip
+    result = run(provider(tmp_path, st))
+    assert "fiscal_year_basis" in {f.code for f in result.quality_flags}
     assert result.data["earnings_basis"] == "latest_fiscal_year"
 
 

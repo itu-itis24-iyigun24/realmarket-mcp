@@ -55,9 +55,10 @@ All ratios are fractions: 0.12 means 12%.
 - price_to_earnings = market_cap / earnings, price_to_book = market_cap / equity,
   price_to_sales = market_cap / sales, with statement figures converted to the share's trading
   currency at the price date when the company reports in another currency.
-- Earnings and sales: the latest four consecutive quarters (80-100 days apart); for Turkish
-  companies under TMS 29 each quarter is first restated to the latest quarter's purchasing
-  power with CPI. Otherwise the latest fiscal year. Equity: the latest period that has it.
+- Earnings and sales: the latest four consecutive quarters (80-100 days apart), otherwise the
+  latest fiscal year. Equity: the latest period that has it. Turkish companies under TMS 29
+  always use the fiscal year, since quarterly figures mix restated and first-reported values;
+  the year and the equity are restated with CPI to the latest CPI month.
 - A ratio is null, with the reason, when its denominator is missing, zero or negative.
 
 ## Savings (portfolio_real_return)

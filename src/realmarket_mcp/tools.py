@@ -1484,6 +1484,9 @@ def find_official_filer(
 
 
 VALUATION_STALE_DAYS = 200
+# Under TMS 29 the fiscal year is always used; it is stale only once the next year's annual
+# report is overdue (listed companies publish it within about 70 days of year end).
+VALUATION_STALE_DAYS_FISCAL_YEAR = 465
 SHARES_MISMATCH = 0.05  # two sources' share counts further apart than this are flagged
 SharesLookup = Callable[[str], FinancialStatements]
 
@@ -1593,43 +1596,16 @@ def get_valuation(
         )
     market_cap = price * shares
 
-    # Earnings and sales: the latest four quarters, else the latest fiscal year.
+    # Earnings and sales: the latest four quarters, else the latest fiscal year. Under TMS 29
+    # (Turkish reporters other than banks) quarterly figures are not summed: the sources mix
+    # quarters restated by later filings with first-reported ones, so no restatement of a sum
+    # of four is reliable (BIMAS 2025: the quarters reconcile with the year on neither basis).
+    # The fiscal year is one figure in year-end money; it and the latest equity are brought to
+    # the latest CPI month.
     restating = st.currency == "TRY" and not st.is_bank
-    factors: dict[dt.date, float] | None = None
-    cpi_provenance: list[Provenance] = []
-    if restating and st.quarterly:
-        latest_q = st.quarterly[-1].end
-        try:
-            cpi = load_cpi("TR", st.quarterly[0].end, latest_q)
-            got = {p.end: cpi.factor(month_of(p.end), month_of(latest_q)) for p in st.quarterly}
-            if all(v is not None for v in got.values()):
-                factors = {k: v for k, v in got.items() if v is not None}
-                cpi_provenance.append(
-                    _cpi_provenance(cpi, month_of(st.quarterly[0].end), month_of(latest_q))
-                )
-            else:
-                flags.append(
-                    QualityFlag(
-                        "inflation_unavailable",
-                        Severity.WARNING,
-                        "The CPI series does not cover every quarter, so quarters could not be "
-                        "restated under TMS 29.",
-                    )
-                )
-        except ToolError as error:
-            flags.append(QualityFlag("inflation_unavailable", Severity.WARNING, f"{error.message}"))
-    used = _trailing_window([] if restating and factors is None else st.quarterly)
-    earnings = _window_sum(used, "net_income", factors)
-    sales = _window_sum(used, "revenue", factors)
-    if not used and st.quarterly and st.annual:
-        flags.append(
-            QualityFlag(
-                "fiscal_year_basis",
-                Severity.INFO,
-                "Four consecutive, comparable quarters were not available; earnings and sales "
-                f"are from the fiscal year ending {st.annual[-1].end}.",
-            )
-        )
+    used = [] if restating else _trailing_window(st.quarterly)
+    earnings = _window_sum(used, "net_income", None)
+    sales = _window_sum(used, "revenue", None)
     if used:
         basis, period_end = "trailing_four_quarters", used[-1].end
         periods_used = [p.end.isoformat() for p in used]
@@ -1637,18 +1613,29 @@ def get_valuation(
         year = st.annual[-1]
         earnings, sales = year.values.get("net_income"), year.values.get("revenue")
         basis, period_end, periods_used = "latest_fiscal_year", year.end, [year.end.isoformat()]
+        if st.quarterly and not restating:
+            flags.append(
+                QualityFlag(
+                    "fiscal_year_basis",
+                    Severity.INFO,
+                    "Four consecutive quarters with earnings were not available; earnings and "
+                    f"sales are from the fiscal year ending {year.end}.",
+                )
+            )
     else:
         raise ToolError(
             ErrorCode.NO_DATA_IN_RANGE,
             f"No complete earnings period for {symbol}.",
-            "Four consecutive quarters or a fiscal year are needed.",
+            "Four consecutive quarters or a fiscal year are needed"
+            + (" (Turkish companies under TMS 29: a fiscal year)." if restating else "."),
         )
-    if (today - period_end).days > VALUATION_STALE_DAYS:
+    stale_days = VALUATION_STALE_DAYS_FISCAL_YEAR if restating else VALUATION_STALE_DAYS
+    if (today - period_end).days > stale_days:
         flags.append(
             QualityFlag(
                 "stale_statements",
                 Severity.WARNING,
-                f"The latest earnings period ends {period_end}, over {VALUATION_STALE_DAYS} days "
+                f"The latest earnings period ends {period_end}, over {stale_days} days "
                 "ago; the ratios compare today's price with old results.",
             )
         )
@@ -1657,6 +1644,52 @@ def get_valuation(
         (p for p in reversed(periods_all) if p.values.get("total_equity") is not None), None
     )
     equity = equity_period.values.get("total_equity") if equity_period else None
+
+    cpi_provenance: list[Provenance] = []
+    restated_to: str | None = None
+    if restating:
+        first = min(period_end, equity_period.end) if equity_period else period_end
+        try:
+            cpi = load_cpi("TR", first, today)
+            target = cpi.last_month
+
+            # A figure dated after the last CPI month is already in money at least that recent.
+            def to_target(day: dt.date) -> float | None:
+                return cpi.factor(month_of(day), target) if month_of(day) < target else 1.0
+
+            f_year = to_target(period_end)
+            f_equity = to_target(equity_period.end) if equity_period else 1.0
+            if f_year is None or f_equity is None:
+                raise ToolError(
+                    ErrorCode.NO_DATA_IN_RANGE,
+                    "The CPI series does not cover the statement dates.",
+                    "Supply a longer CPI series.",
+                )
+            earnings = None if earnings is None else earnings * f_year
+            sales = None if sales is None else sales * f_year
+            equity = None if equity is None else equity * f_equity
+            restated_to = month_str(target)
+            cpi_provenance.append(_cpi_provenance(cpi, month_of(first), target))
+            price_month = month_of(last.date)
+            if (price_month[0] - target[0]) * 12 + price_month[1] - target[1] > 2:
+                flags.append(
+                    QualityFlag(
+                        "cpi_behind_price",
+                        Severity.WARNING,
+                        f"CPI is available through {restated_to} only; statement figures are in "
+                        f"that month's money while the price is from {last.date}, so the ratios "
+                        "are too high by the inflation in between.",
+                    )
+                )
+        except ToolError as error:
+            flags.append(
+                QualityFlag(
+                    "inflation_unavailable",
+                    Severity.WARNING,
+                    f"{error.message} Figures are in the money of their own dates, so against "
+                    "today's price the ratios are too high.",
+                )
+            )
 
     # Statement currency -> the share's trading currency, at the price date.
     fx = 1.0
@@ -1724,6 +1757,7 @@ def get_valuation(
             "reporting_currency": st.currency,
             "fx_to_trading_currency": None if fx == 1.0 else _round(fx),
             "earnings_basis": basis,
+            "restated_to_money_of": restated_to,
             "periods_used": periods_used,
             "earnings": _amount(earnings),
             "sales": _amount(sales),
@@ -1741,9 +1775,10 @@ def get_valuation(
             "price_to_book = market_cap / equity, price_to_sales = market_cap / sales; "
             "market_cap = latest close x shares outstanding. Figures in the reporting currency "
             "are converted to the trading currency first.",
-            "earnings_basis trailing_four_quarters sums the latest four consecutive quarters; "
-            "for Turkish companies under TMS 29 each quarter is first restated to the latest "
-            "quarter's purchasing power with CPI. Otherwise the latest fiscal year is used.",
+            "earnings_basis trailing_four_quarters sums the latest four consecutive quarters, "
+            "else the latest fiscal year is used. Turkish companies under TMS 29 always use the "
+            "fiscal year (quarterly figures mix restated and first-reported values); it and the "
+            "equity are restated with CPI to the month in restated_to_money_of.",
             "A ratio is null when its denominator is missing, zero or negative (not_meaningful "
             "says which). Ratios describe today's price against past results; they are not a "
             "view on whether the share is cheap or expensive.",
