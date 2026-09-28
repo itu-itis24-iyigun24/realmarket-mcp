@@ -241,3 +241,27 @@ def test_adapter_check_reports_each_endpoint() -> None:
     )
     assert [(r.name, r.status) for r in bad_meta] == [("/meta", "FAIL")]
     assert "failed" in adapter_check.render(bad_meta)
+
+
+def test_a_fund_served_by_the_adapter_works_like_any_asset() -> None:
+    from realmarket_mcp import tools
+
+    fund = {
+        "symbol": "AFT",
+        "name": "Ak Portföy Yeni Teknolojiler Fonu",
+        "asset_class": "fund",
+        "currency": "TRY",
+        "exchange": "TEFAS",
+    }
+    bars = {
+        "symbol": "AFT",
+        "currency": "TRY",
+        "adjustment": "none",
+        "bars": [{"date": "2026-01-02", "close": 0.20}, {"date": "2026-09-25", "close": 0.25}],
+    }
+    fake = FakeAdapter(**{"/search": {"assets": [fund]}, "/bars": bars})
+    p = provider(fake)
+    (found,) = p.search("Teknoloji", 10)
+    assert found.asset_class.value == "fund"
+    data = tools.get_price_summary(p, "AFT", start="2026-01-01", today=dt.date(2026, 9, 27)).data
+    assert data["total_return"] == pytest.approx(0.25)  # unit price 0.20 -> 0.25
