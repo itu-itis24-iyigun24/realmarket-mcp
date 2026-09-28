@@ -61,6 +61,10 @@
   not match the split the source reports later that month, so it was applied twice (400
   shares instead of 200). A month-only bonus now matches a split in the same month. Found by
   the model check.
+- `get_financials`' description now opens with its coverage (Borsa Istanbul shares as well as
+  US and European ones) and the questions it answers. It had opened with SEC and LEI sources,
+  and Haiku answered four Turkish companies' results questions with "no financial data"
+  without calling it.
 - `scripts/call_tool.py` lists and calls the tools from a shell exactly as an MCP client sees
   them (`--synthetic` for the fictional ORNEK), and the `model-check` skill uses it to have
   Haiku subagents answer standard customer questions, without packaging an extension.

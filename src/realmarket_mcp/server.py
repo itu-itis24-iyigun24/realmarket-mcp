@@ -533,8 +533,11 @@ def build_server() -> MCPServer:
     @server.tool(annotations=READ_ONLY)
     @audited
     def get_financials(symbol: Symbol) -> CallToolResult:
-        """Summarize a company's recent financial statements: latest-quarter revenue, gross,
-        operating and net profit with margins and debt-to-equity; quarter-on-quarter,
+        """A listed company's financial statements, for Borsa Istanbul shares (e.g. BIMAS.IS,
+        KCHOL.IS) as for US and European ones. Use it for "how were the latest quarter's
+        results", "what was the net profit", "did sales grow", "is it making a loss", "how
+        indebted is it". It returns latest-quarter revenue, gross, operating and net profit
+        with margins and debt-to-equity; quarter-on-quarter,
         year-on-year and annual growth, each both as reported and in constant purchasing power
         (real); up to eight quarters and four years of figures. Handles Turkish inflation
         accounting (TMS 29) and flags missing quarters, quarters that do not reconcile with the
