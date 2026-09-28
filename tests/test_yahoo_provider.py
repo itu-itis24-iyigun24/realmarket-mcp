@@ -209,3 +209,44 @@ def test_dividend_adjustment_is_computed_not_taken_from_yahoo() -> None:
     factors = _dividend_factors([570.0, 568.0, 560.0, 565.0], [0.0, 0.0, 8.32, 0.0])
     assert factors == pytest.approx([1 - 8.32 / 568, 1 - 8.32 / 568, 1.0, 1.0])
     assert _dividend_factors([None, 100.0], [0.0, 5.0]) == [1.0, 1.0]  # no previous close
+
+
+class PeersBackend(FakeBackend):
+    def __init__(self, raw: Any) -> None:
+        super().__init__()
+        self._raw = raw
+
+    def peers(self, symbol: str, level: str = "industry") -> Any:
+        return self._raw
+
+
+def test_industry_peers_map_screener_rows() -> None:
+    from realmarket_mcp.providers.yahoo import RawPeers
+
+    raw = RawPeers(
+        "Steel",
+        "tr",
+        [
+            {"symbol": "EREGL.IS", "shortName": "EREGLI", "priceToBook": 0.79, "marketCap": 9.0},
+            {"symbol": "KRDMD.IS", "shortName": "KARDEMIR (D)", "priceToBook": float("nan")},
+            {"shortName": "no symbol, skipped"},
+        ],
+    )
+    group = YahooProvider(PeersBackend(raw), retrieved_at="2024-02-01T00:00:00Z").industry_peers(
+        "EREGL.IS"
+    )
+    assert (group.industry, group.market) == ("Steel", "tr")
+    assert [(p.symbol, p.price_to_book, p.market_cap) for p in group.peers] == [
+        ("EREGL.IS", 0.79, 9.0),
+        ("KRDMD.IS", None, None),
+    ]
+    assert group.data_version.startswith("sha256:")
+
+
+def test_industry_peers_need_an_industry() -> None:
+    from realmarket_mcp.providers.yahoo import RawPeers
+
+    yahoo = YahooProvider(PeersBackend(RawPeers(None, None, ())), retrieved_at="2024-02-01T00:00Z")
+    with pytest.raises(ToolError) as info:
+        yahoo.industry_peers("FUND")
+    assert info.value.code is ErrorCode.NO_DATA_IN_RANGE

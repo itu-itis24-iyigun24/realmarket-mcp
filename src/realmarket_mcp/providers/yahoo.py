@@ -24,9 +24,15 @@ from realmarket_mcp.models import (
     Bar,
     FinancialPeriod,
     FinancialStatements,
+    IndustryPeers,
+    PeerMultiple,
     PriceSeries,
     major_currency,
 )
+
+# Over-the-counter venues: not listed on an exchange, so not an industry's listed companies.
+OVER_THE_COUNTER = frozenset({"PNK", "OQB", "OQX", "OEM", "OGM", "NCM"})
+PEER_SCREEN_SIZE = 250  # the screener's page limit; an industry on one exchange is smaller
 
 INSTALL_HINT = 'Install the optional dependency: pip install "realmarket-mcp[yahoo]".'
 
@@ -91,6 +97,17 @@ class YahooBackend(Protocol):
     def history(self, symbol: str, start: dt.date, end_inclusive: dt.date) -> RawHistory: ...
 
     def financials(self, symbol: str) -> RawFinancials: ...
+
+    def peers(self, symbol: str, level: str = "industry") -> RawPeers: ...
+
+
+@dataclass(frozen=True)
+class RawPeers:
+    industry: str | None
+    market: str | None  # the screener's region code: "tr", "us", ...
+    quotes: Sequence[Mapping[str, Any]]  # screener rows: symbol, shortName, priceToBook, marketCap
+    sector: str | None = None
+    level: str = "industry"  # the group screened: the company's industry, or its sector
 
 
 def _clean(value: Any) -> float | None:
@@ -200,6 +217,46 @@ class YfinanceBackend:
             implied_shares=_clean(info.get("impliedSharesOutstanding")),
         )
 
+    def peers(self, symbol: str, level: str = "industry") -> RawPeers:
+        from yfinance.const import EQUITY_SCREENER_EQ_MAP as allowed
+
+        query = self._yf.EquityQuery
+        try:
+            info = self._yf.Ticker(symbol).info or {}
+            industry, sector = info.get("industry"), info.get("sector")
+            exchange = info.get("exchange")
+            # The screener spells industries with an em dash ("Banks—Regional") where the
+            # quote says "Banks - Regional", and filters by region, not by one exchange.
+            if level == "sector":
+                screened = sector if sector in allowed["sector"] else None
+            else:
+                screened = next(
+                    (
+                        name
+                        for names in allowed["industry"].values()
+                        for name in names
+                        if name.replace("—", " - ") == industry
+                    ),
+                    None,
+                )
+            region = next(
+                (r for r, codes in allowed["exchange"].items() if exchange in codes), None
+            )
+            if not industry or not screened or not region:
+                return RawPeers(industry, region, (), sector, level)
+            found = self._yf.screen(
+                query("and", [query("eq", ["region", region]), query("eq", [level, screened])]),
+                size=PEER_SCREEN_SIZE,
+            )
+        except Exception as exc:
+            raise _translate(exc) from exc
+        quotes = [
+            q
+            for q in (found or {}).get("quotes") or ()
+            if q.get("exchange") not in OVER_THE_COUNTER
+        ]
+        return RawPeers(industry, region, quotes, sector, level)
+
 
 def _frame_rows(*frames: Any) -> Rows:
     """Merge statement frames (columns are period ends) into {period end: normalized values}."""
@@ -233,6 +290,21 @@ def _all_share_classes(raw: RawFinancials) -> tuple[float | None, str | None]:
     if raw.shares and raw.shares > 0:
         return raw.shares, "yahoo sharesOutstanding (may cover only the quoted share class)"
     return None, None
+
+
+def _peer(quote: Mapping[str, Any]) -> PeerMultiple:
+    currency, unit = major_currency(quote.get("currency"))  # pence -> pounds, etc.
+    price = _clean(quote.get("regularMarketPrice"))
+    return PeerMultiple(
+        symbol=str(quote["symbol"]),
+        name=str(quote.get("shortName") or quote.get("longName") or quote["symbol"]),
+        price_to_book=_clean(quote.get("priceToBook")),
+        market_cap=_clean(quote.get("marketCap")),
+        price=None if price is None else price / unit,
+        book_value=_clean(quote.get("bookValue")),
+        currency=None if currency == "unknown" else currency,
+        financial_currency=quote.get("financialCurrency"),
+    )
 
 
 def _translate(exc: Exception) -> Exception:
@@ -338,6 +410,28 @@ class YahooProvider:
             annual=major(raw.annual),
             shares_outstanding=shares,
             shares_source=source,
+        )
+
+    def industry_peers(self, symbol: str, *, broader: bool = False) -> IndustryPeers:
+        level = "sector" if broader else "industry"
+        raw: RawPeers = self._call(lambda: self._backend.peers(symbol, level), symbol=symbol)
+        if not raw.industry or not raw.market or (broader and not raw.sector):
+            raise ToolError(
+                ErrorCode.NO_DATA_IN_RANGE,
+                f"Yahoo Finance gives no industry for {symbol}.",
+                "Funds, indices and some small companies have none.",
+                {"symbol": symbol},
+            )
+        return IndustryPeers(
+            symbol=symbol,
+            industry=raw.industry,
+            group=str(raw.sector) if broader else raw.industry,
+            level=level,
+            market=raw.market,
+            provider=self.name,
+            retrieved_at=self._retrieved_at,
+            definition="Yahoo Finance priceToBook (latest price / book value per share)",
+            peers=tuple(_peer(q) for q in raw.quotes if q.get("symbol")),
         )
 
     def _call(self, fetch: Any, *, symbol: str | None) -> Any:

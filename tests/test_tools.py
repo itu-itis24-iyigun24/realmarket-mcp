@@ -47,6 +47,21 @@ def test_price_summary_figures(provider: FixtureProvider) -> None:
     assert result.quality_flags == ()
 
 
+def test_price_summary_places_the_last_price_between_the_low_and_high(
+    provider: FixtureProvider,
+) -> None:
+    result = tools.get_price_summary(provider, "AAA", "1m", today=TODAY)
+    data = result.data  # closes 100, 110, 99, 105, 120
+    assert (data["low_price"], data["low_date"]) == (99, "2024-01-04")
+    assert (data["high_price"], data["high_date"]) == (120, "2024-01-08")
+    assert data["last_vs_low"] == pytest.approx(120 / 99 - 1, abs=1e-6)
+    assert data["last_vs_high"] == 0
+    assert any(
+        f.startswith("Dönemin en düşük kapanışı 99,00 TL (4 Ocak 2024") for f in result.facts
+    )
+    assert not any("dibine" in f for f in result.facts)
+
+
 def test_price_summary_explicit_start_overrides_period(provider: FixtureProvider) -> None:
     result = tools.get_price_summary(provider, "AAA", "max", start="2024-01-04", today=TODAY)
     assert result.data["first_close"] == 99.0

@@ -58,6 +58,28 @@
   figures the model computed from tool results and three tool choices. After the second
   round of fixes those nine were re-run: 7 are correct, bringing the run to about 112 (94%);
   the two left are a ratio and a label the model added to facts that already had the figures.
+- **"Is it cheap?" answered with a comparison.** A ratio alone cannot say cheap or dear, and
+  models filled the gap with rules of thumb ("under 1 usually means undervalued").
+  `get_valuation` now sets the company's price-to-book among the other companies its price
+  source lists in the same industry and market, on the same day and computed the same way
+  (median, how many are lower and higher; each company once, not once per share class). With
+  Yahoo this uses its screener; a source with no peer list says so. An industry with fewer
+  than five other companies widens to the source's sector, and the facts say so (Turkish
+  Airlines is nearly alone in "Airlines"). Yahoo's ratio is wrong for companies whose price
+  and statements are in different currencies (Turkish Airlines: 18 for a true 0.37), and
+  nothing tells the wrong ones from the right ones, so such peers are left out and counted,
+  and the company itself then takes the ratio computed here. No comparison is made when the
+  source's ratio for the company differs from the computed one by more than 25%. A P/B below or above 1
+  gets a sentence saying what that means and what it does not, and the facts say the
+  comparison ranks one ratio only. The company's own history is not offered: Yahoo's past
+  equity mixes restated and first-reported figures under TMS 29, which would give wrong
+  ratios.
+- **"Is it at the bottom?" answered with the period's range.** `get_price_summary` gives the
+  period's lowest and highest traded close with their dates and where the last close stands
+  between them, and says that this does not show where the price goes next. The drawdown
+  fact no longer calls the trough "the bottom", which a model had read as the period low.
+- The server instructions count judgments of a share or company (cheap, strong, healthy,
+  reasonable) that no fact states as advice, alongside buy, sell and hold.
 - Valuation facts state each ratio with both its sides ("PD/DD 0,77: piyasa değeri,
   özsermayenin (330,30 milyar TL, 30 Haziran 2026 tarihli) 0,77 katı"), and
   `get_valuation`'s description opens with the questions it answers, dividend yield

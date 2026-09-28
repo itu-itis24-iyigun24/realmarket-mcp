@@ -278,3 +278,45 @@ def _shares(value: object) -> float | None:
     if value <= 0:
         raise ValueError("shares_outstanding must be positive")
     return float(value)
+
+
+@dataclass(frozen=True)
+class PeerMultiple:
+    symbol: str
+    name: str
+    price_to_book: float | None  # as the source computes it
+    market_cap: float | None = None
+    # What the ratio is made of, to recompute it when the source mixes currencies: a share
+    # priced in TRY whose book value per share is in USD (Turkish Airlines) gets a ratio
+    # ~50 times too high from Yahoo.
+    price: float | None = None
+    book_value: float | None = None  # per share, in financial_currency
+    currency: str | None = None  # the price's
+    financial_currency: str | None = None  # the statements'
+
+
+@dataclass(frozen=True)
+class IndustryPeers:
+    """Companies the source classes in the same industry in the same market, each with the
+    source's own price-to-book, so every company is measured the same way on the same day."""
+
+    symbol: str
+    industry: str  # the company's own industry
+    group: str  # the group compared: the industry, or the wider sector when that is too small
+    level: str  # "industry" or "sector"
+    market: str  # the listing market as the source codes it ("tr", "us")
+    provider: str
+    retrieved_at: str
+    definition: str  # how the source computes the ratio
+    peers: tuple[PeerMultiple, ...]  # includes the company itself when the source lists it
+
+    @property
+    def data_version(self) -> str:
+        payload = [
+            self.group,
+            self.level,
+            self.market,
+            [[p.symbol, p.price_to_book] for p in self.peers],
+        ]
+        blob = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+        return "sha256:" + hashlib.sha256(blob).hexdigest()

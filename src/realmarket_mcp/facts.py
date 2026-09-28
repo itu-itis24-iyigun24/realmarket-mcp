@@ -32,6 +32,9 @@ MONTHS = (
 WEEKDAYS = ("Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar")
 
 
+MARKETS = {"tr": "Borsa İstanbul", "us": "ABD borsaları"}
+
+
 def number(value: float, digits: int = 2) -> str:
     """1234567.891 -> '1.234.567,89'."""
     text = f"{abs(value):,.{digits}f}".replace(",", "_").replace(".", ",").replace("_", ".")
@@ -417,8 +420,8 @@ def _performance(symbol: str, m: Mapping[str, Any]) -> list[str]:
     if m.get("max_drawdown"):
         facts.append(
             f"{symbol} bu dönemdeki en büyük düşüşünü {date(m['max_drawdown_peak_date'])} "
-            f"zirvesinden {date(m['max_drawdown_trough_date'])} dibine yaşadı: "
-            f"{pct(m['max_drawdown'])}."
+            f"tarihindeki zirveden {date(m['max_drawdown_trough_date'])} tarihine kadar "
+            f"yaşadı: {pct(m['max_drawdown'])}."
         )
     return facts
 
@@ -436,6 +439,18 @@ def price_summary(data: Mapping[str, Any]) -> list[str]:
             f"{date(data['first_date'])} tarihinde başlıyor; rakamlar bu tarihten itibarendir."
         )
     facts += _performance(symbol, data)
+    if data.get("low_price") is not None:
+        low, high = date(data["low_date"]), date(data["high_date"])
+        facts.append(
+            f"Dönemin en düşük kapanışı {money(data['low_price'], cur)} ({low}), en yüksek "
+            f"kapanışı {money(data['high_price'], cur)} ({high}). Son kapanış en düşüğün "
+            f"{pct(data['last_vs_low'], signed=False)} üstünde, en yükseğin "
+            f"{pct(-data['last_vs_high'], signed=False)} altında."
+        )
+        facts.append(
+            "Fiyatın dönemin en düşüğüne yakın ya da uzak olması, bundan sonra düşüp "
+            "yükseleceğini göstermez."
+        )
     if data.get("dividend_payments"):
         facts.append(
             f"Bu dönemde hisse başına toplam {money(data['dividends_per_share'], cur)} temettü "
@@ -491,9 +506,14 @@ def comparison(data: Mapping[str, Any]) -> list[str]:
 
 def valuation(data: Mapping[str, Any]) -> list[str]:
     symbol, cur = data["symbol"], str(data["trading_currency"])
+    # First, because a model that drops later sentences keeps the first: the answer to "is it
+    # cheap?" these figures can give. Low or high, a ratio is not a verdict.
     facts = [
+        f"Bu sonuç {symbol} hissesinin ucuz ya da pahalı olduğunu söylemez; oranları ve "
+        "kıyasları verir. Bir oranın düşük ya da yüksek olması tek başına ucuzluk ya da "
+        "pahalılık anlamına gelmez.",
         f"{symbol}, {date(data['price_date'])} kapanışı {money(data['price'], cur)}; piyasa "
-        f"değeri {amount(data['market_cap'], cur)}."
+        f"değeri {amount(data['market_cap'], cur)}.",
     ]
     basis = {
         "trailing_four_quarters": "son dört çeyreğin toplamı",
@@ -515,6 +535,15 @@ def valuation(data: Mapping[str, Any]) -> list[str]:
         facts.append(
             f"PD/DD {r}: piyasa değeri, özsermayenin ({amount(data['equity'], rc)}{on}) {r} katı."
         )
+        # 1 is the one level a ratio has a plain meaning at; say it and what it does not show.
+        pb = float(data["price_to_book"])
+        if pb != 1:
+            side = "altında" if pb < 1 else "üstünde"
+            lower = "düşük" if pb < 1 else "yüksek"
+            facts.append(
+                f"PD/DD 1'in {side}: piyasa değeri özsermayeden {lower}. Oran bunun nedenini "
+                "söylemez; hissenin ucuz ya da pahalı olduğunu göstermez."
+            )
     if data["price_to_sales"] is not None:
         r = number(data["price_to_sales"])
         facts.append(f"F/S {r}: piyasa değeri, satışların ({amount(data['sales'], rc)}) {r} katı.")
@@ -548,10 +577,55 @@ def valuation(data: Mapping[str, Any]) -> list[str]:
             "Son 12 ayda ödenen temettülerin son fiyata oranı (temettü verimi) "
             f"{pct(data['dividend_yield_trailing_12m'], signed=False)}."
         )
-    facts.append(
-        "Oranlar bugünkü fiyatı geçmiş sonuçlarla karşılaştırır; ucuz ya da pahalı "
-        "olduğu anlamına gelmez."
-    )
+    peers = data.get("industry_comparison")
+    if peers:
+        market = MARKETS.get(str(peers["market"]), str(peers["market"]).upper())
+
+        if peers.get("level") == "sector":
+            group = (
+                f'kaynağın "{peers["industry"]}" sektöründe yeterli şirket olmadığı için daha '
+                f'geniş "{peers["group"]}" grubu'
+            )
+        else:
+            group = f'kaynağın "{peers["group"]}" sektörü'
+        if peers.get("price_to_book_basis") == "computed":
+            basis = (
+                "Diğer şirketler kaynağın kendi PD/DD hesabıyla; hisse için yukarıdaki hesap "
+                "kullanıldı, çünkü kaynağın bu hisse için verdiği oran fiyatı ve özsermayeyi "
+                "farklı para birimlerinde bölüyor"
+            )
+        else:
+            basis = (
+                "Her şirket kaynağın kendi PD/DD hesabıyla, bu yüzden hissenin değeri "
+                "yukarıdakinden biraz farklı olabilir"
+            )
+        # Counted from the company's side, so which way "lower" points is not left to read.
+        facts.append(
+            f"Sektör kıyası ({market}, {group}, aynı gün). "
+            f"{basis}: {symbol} {number(peers['price_to_book'])}; "
+            f"sektörde {symbol} dışındaki {peers['peer_count']} şirketin ortancası (sıralamada "
+            f"ortadaki değer) {number(peers['peer_median_price_to_book'])}. Bu "
+            f"{peers['peer_count']} şirketten PD/DD'si {symbol} hissesine göre daha düşük olan "
+            f"{peers['peers_lower']}, daha yüksek olan {peers['peers_higher']} şirket var."
+            + (
+                f" Fiyatı ve finansalları farklı para birimlerinde olan "
+                f"{peers['excluded_mixed_currency']} şirket, kaynağın oranı bu durumda "
+                "güvenilir olmadığı için kıyasa alınmadı."
+                if peers.get("excluded_mixed_currency")
+                else ""
+            )
+        )
+        facts.append(
+            "Sektör kıyası yalnızca PD/DD'yi sıralar; şirketler arasındaki kârlılık, borç ve "
+            "büyüme farklarını hesaba katmaz. Şirketin kendi geçmişiyle kıyas bu sonuçta yok."
+        )
+    else:
+        facts.append(
+            "Oranlar bugünkü fiyatı geçmiş sonuçlarla karşılaştırır; ucuz ya da pahalı "
+            "olduğu anlamına gelmez. Ucuz ya da pahalı demek bir kıyas gerektirir (şirketin "
+            "kendi geçmişi ya da benzer şirketler); bu hisse için böyle bir kıyas bu araçlarda "
+            "yok."
+        )
     return facts
 
 

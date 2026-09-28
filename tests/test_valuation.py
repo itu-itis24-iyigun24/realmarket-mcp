@@ -6,6 +6,7 @@ from 2024-01-02. Statements are written per test into a temporary fixture direct
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import json
 import shutil
@@ -17,7 +18,7 @@ import pytest
 from realmarket_mcp import tools
 from realmarket_mcp.contract import ErrorCode, ToolError
 from realmarket_mcp.inflation import CpiSeries
-from realmarket_mcp.models import FinancialStatements
+from realmarket_mcp.models import FinancialStatements, IndustryPeers, PeerMultiple
 from realmarket_mcp.providers.fixture import FixtureProvider
 
 FIXTURES = Path(__file__).parent / "fixtures" / "basic"
@@ -69,6 +70,9 @@ def test_multiples_from_four_quarters(tmp_path: Path) -> None:
     assert "F/K 73,33: piyasa değeri, net kârın (100,00 USD) 73,33 katı." in facts
     assert any(f.startswith("PD/DD 3,67: piyasa değeri, özsermayenin (2.000,00 USD") for f in facts)
     assert "F/S 7,33: piyasa değeri, satışların (1.000,00 USD) 7,33 katı." in facts
+    above = "PD/DD 1'in üstünde: piyasa değeri özsermayeden yüksek."
+    assert any(f.startswith(above) for f in facts)
+    assert any("bu hisse için böyle bir kıyas bu araçlarda yok" in f for f in facts)
     assert any("30,0000 kuruyla TRY cinsine" in f for f in facts)
 
 
@@ -197,3 +201,141 @@ def test_stale_statements_and_lei_symbols(tmp_path: Path) -> None:
             "724500Y6DUVHQD6OXN27", today=TODAY,
         )  # fmt: skip
     assert "price_symbol" in raised.value.hint
+
+
+class PeersProvider(FixtureProvider):
+    """The fixture prices plus an industry list, as a source with a screener gives it."""
+
+    def __init__(
+        self,
+        root: Path,
+        peers: list[tuple[str, str, float | None, float]],
+        sector: list[tuple[str, str, float | None, float]] | None = None,
+    ) -> None:
+        super().__init__(root)
+        self._peers, self._sector = peers, sector
+
+    def industry_peers(self, symbol: str, *, broader: bool = False) -> IndustryPeers:
+        if broader and self._sector is None:
+            raise ToolError(ErrorCode.NO_DATA_IN_RANGE, "no sector", "none")
+        return IndustryPeers(
+            symbol=symbol,
+            industry="Steel",
+            group="Basic Materials" if broader else "Steel",
+            level="sector" if broader else "industry",
+            market="tr",
+            provider="fixture",
+            retrieved_at="2024-01-10T00:00:00Z",
+            definition="fixture price-to-book",
+            peers=tuple(
+                PeerMultiple(s, n, pb, cap)
+                for s, n, pb, cap in (self._sector if broader and self._sector else self._peers)
+            ),
+        )
+
+
+STATEMENTS = {"currency": "TRY", "industry": "Steel", "shares_outstanding": 1000,
+              "quarterly": quarters((10, 20, 30, 40), total_equity=200_000)}  # fmt: skip
+# Market value 220 x 1000 = 220,000 over equity 200,000: P/B 1.1, as the peer lists give it.
+
+
+def _peers_provider(
+    tmp_path: Path,
+    peers: list[tuple[str, str, float | None, float]],
+    sector: list[tuple[str, str, float | None, float]] | None = None,
+) -> Any:
+    root = provider(tmp_path, STATEMENTS)._root
+    return PeersProvider(root, peers, sector)
+
+
+def test_price_to_book_is_ranked_within_its_industry(tmp_path: Path) -> None:
+    peers = [
+        ("TTT", "TTT CELIK", 1.1, 50.0),
+        ("AAA", "AAA", 0.5, 1.0),
+        ("BBB", "BBB", 0.9, 1.0),
+        ("CCC", "CCC", 1.5, 1.0),
+        ("DDD", "DDD", 2.0, 1.0),
+        ("KRDMA", "KARDEMIR (A)", 0.4, 1.0),  # one company in three share classes counts once,
+        ("KRDMB", "KARDEMIR (B)", 0.8, 3.0),  # by its largest class
+        ("KRDMD", "KARDEMIR (D)", 0.6, 2.0),
+        ("EEE", "EEE", None, 1.0),  # no ratio: left out
+        ("FFF", "FFF", -0.3, 1.0),  # negative book value: left out
+    ]
+    p = _peers_provider(tmp_path, peers)
+    result = tools.get_valuation(p, p, _no_cpi, "TTT", today=TODAY)
+    comparison = result.data["industry_comparison"]
+    # Others: 0.5, 0.8 (Kardemir), 0.9, 1.5, 2.0; the company itself is not its own peer.
+    assert comparison["peer_symbols"] == ["AAA", "BBB", "CCC", "DDD", "KRDMB"]
+    assert comparison["peer_median_price_to_book"] == approx(0.9)
+    assert (comparison["peers_lower"], comparison["peers_higher"]) == (3, 2)
+    assert comparison["price_to_book"] == approx(1.1)
+    fact = next(f for f in result.facts if f.startswith("Sektör kıyası ("))
+    assert (
+        "TTT 1,10; sektörde TTT dışındaki 5 şirketin ortancası (sıralamada ortadaki değer) 0,90"
+        in fact
+    )
+    counts = "PD/DD'si TTT hissesine göre daha düşük olan 3, daha yüksek olan 2 şirket var."
+    assert f"Bu 5 şirketten {counts}" in fact
+    assert any(f.startswith("Sektör kıyası yalnızca PD/DD'yi sıralar") for f in result.facts)
+    assert any(p.dataset == "industry_peers" for p in result.provenance)
+    assert result.facts[0].startswith("Bu sonuç TTT hissesinin ucuz ya da pahalı olduğunu")
+
+
+def test_no_industry_comparison_is_flagged_not_invented(tmp_path: Path) -> None:
+    plain = provider(tmp_path / "a", STATEMENTS)  # a source with no peer list
+    result = tools.get_valuation(plain, plain, _no_cpi, "TTT", today=TODAY)
+    assert result.data["industry_comparison"] is None
+    assert "no_industry_comparison" in {f.code for f in result.quality_flags}
+    assert any("bu hisse için böyle bir kıyas bu araçlarda yok" in f for f in result.facts)
+    few = [("TTT", "TTT", 1.1, 1.0), ("AAA", "AAA", 0.5, 1.0), ("BBB", "BBB", 0.9, 1.0)]
+    p = _peers_provider(tmp_path / "b", few)
+    result = tools.get_valuation(p, p, _no_cpi, "TTT", today=TODAY)
+    assert result.data["industry_comparison"] is None
+    assert any("Only 2 other companies" in f.message for f in result.quality_flags)
+
+
+def test_a_small_industry_widens_to_the_sector(tmp_path: Path) -> None:
+    few = [("TTT", "TTT", 1.1, 1.0), ("AAA", "AAA", 0.5, 1.0)]
+    sector = [("TTT", "TTT", 1.1, 1.0), *[(f"S{i}", f"S{i}", 0.2 * i, 1.0) for i in range(1, 7)]]
+    p = _peers_provider(tmp_path, few, sector)
+    result = tools.get_valuation(p, p, _no_cpi, "TTT", today=TODAY)
+    comparison = result.data["industry_comparison"]
+    assert (comparison["level"], comparison["group"]) == ("sector", "Basic Materials")
+    assert comparison["peer_count"] == 6
+    fact = next(f for f in result.facts if f.startswith("Sektör kıyası ("))
+    assert 'kaynağın "Steel" sektöründe yeterli şirket olmadığı için daha geniş' in fact
+
+
+def test_a_ratio_the_source_measures_differently_is_not_compared(tmp_path: Path) -> None:
+    peers = [("TTT", "TTT", 5.0, 1.0), *[(f"P{i}", f"P{i}", 1.0, 1.0) for i in range(6)]]
+    p = _peers_provider(tmp_path, peers)
+    result = tools.get_valuation(p, p, _no_cpi, "TTT", today=TODAY)
+    assert result.data["industry_comparison"] is None
+    assert any("differs from the one computed here" in f.message for f in result.quality_flags)
+
+
+def test_mixed_currency_ratios_are_not_trusted(tmp_path: Path) -> None:
+    """Yahoo divides a TRY price by a USD book value for some companies (Turkish Airlines: 18
+    for a true 0.37) and converts for others (Sony), with nothing to tell them apart. Such
+    peers are left out; a company of that kind takes the ratio computed here."""
+    root = provider(tmp_path, STATEMENTS)._root
+
+    class Mixed(PeersProvider):
+        def industry_peers(self, symbol: str, *, broader: bool = False) -> IndustryPeers:
+            group = super().industry_peers(symbol, broader=broader)
+            usd = PeerMultiple("USDCO", "USDCO", 99.0, 1.0, 60.0, 1.0, "TRY", "USD")
+            own = PeerMultiple("TTT", "TTT", 40.0, 1.0, 220.0, 5.5, "TRY", "USD")
+            return dataclasses.replace(group, peers=(own, *group.peers[1:], usd))
+
+    peers = [("TTT", "TTT", 1.1, 1.0), *[(f"P{i}", f"P{i}", 1.0, 1.0) for i in range(5)]]
+    p = Mixed(root, peers)
+    result = tools.get_valuation(p, p, _no_cpi, "TTT", today=TODAY)
+    comparison = result.data["industry_comparison"]
+    assert "USDCO" not in comparison["peer_symbols"]
+    assert comparison["excluded_mixed_currency"] == 1
+    assert comparison["price_to_book_basis"] == "computed"
+    assert comparison["price_to_book"] == approx(1.1)  # this tool's figure, not the source's 40
+    assert (comparison["peers_lower"], comparison["peers_higher"]) == (5, 0)
+    fact = next(f for f in result.facts if f.startswith("Sektör kıyası ("))
+    assert "hisse için yukarıdaki hesap kullanıldı" in fact
+    assert "1 şirket, kaynağın oranı bu durumda güvenilir olmadığı için kıyasa alınmadı" in fact

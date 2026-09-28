@@ -65,6 +65,7 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 "tests/test_financials.py" = ["RUF001", "RUF003"]
 "tests/test_price_move.py" = ["RUF001", "RUF003"]
 "tests/test_house_prices.py" = ["RUF001", "RUF003"]
+"tests/test_tools.py" = ["RUF001", "RUF003"]
 "tests/test_portfolio_analysis.py" = ["RUF001", "RUF003"]
 
 [tool.mypy]

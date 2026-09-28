@@ -30,7 +30,14 @@ from realmarket_mcp.contract import (
 )
 from realmarket_mcp.deposits import DepositLoader, DepositRates
 from realmarket_mcp.inflation import CpiSeries, last_day_of, month_of, month_str
-from realmarket_mcp.models import Bar, FinancialPeriod, FinancialStatements, PriceSeries
+from realmarket_mcp.models import (
+    Bar,
+    FinancialPeriod,
+    FinancialStatements,
+    IndustryPeers,
+    PeerMultiple,
+    PriceSeries,
+)
 from realmarket_mcp.periods import Period, parse_date, resolve
 from realmarket_mcp.providers.base import FinancialsProvider, NewsProvider, PriceProvider
 
@@ -418,6 +425,7 @@ def get_price_summary(
             "requested_end": end_date.isoformat(),
             **_metrics(usable),
             **_income_split(series, usable),
+            **_price_range(usable),
             "dividend_yield_trailing_12m": dividend_yield,
         },
         provenance=tuple(provenance),
@@ -433,6 +441,9 @@ def get_price_summary(
             "first_date, up to last_date. dividend_yield_trailing_12m is the cash dividends of the "
             "12 months to last_date over the last price (0 when none was paid). They are null when "
             "the source does not report dividends separately.",
+            "low_price and high_price are the period's lowest and highest traded close (split-"
+            "adjusted only) with their dates; last_vs_low and last_vs_high compare the last "
+            "traded close with them.",
         ),
     )
     return dataclasses.replace(result, facts=tuple(fact_text.price_summary(result.data)))
@@ -467,6 +478,24 @@ def _trailing_dividend_yield(
         provenance.append(_provenance(series, since, last.date))
     paid = sum(a for d, a in series.dividends if since < d <= last.date)
     return _round(paid / last.price_close)
+
+
+def _price_range(usable: Sequence[Bar]) -> dict[str, object]:
+    """Where the last price stands between the period's lowest and highest close, in traded
+    prices (split-adjusted only, where the source gives them): "is it at the bottom?" asks
+    this, and the model otherwise reads it off a drawdown."""
+    traded = [(b.date, b.price_close if b.price_close else _close(b)) for b in usable]
+    low_date, low = min(traded, key=lambda p: (p[1], p[0]))
+    high_date, high = max(traded, key=lambda p: (p[1], p[0]))
+    last = traded[-1][1]
+    return {
+        "low_price": _round(low),
+        "low_date": low_date.isoformat(),
+        "high_price": _round(high),
+        "high_date": high_date.isoformat(),
+        "last_vs_low": _round(last / low - 1),
+        "last_vs_high": _round(last / high - 1),
+    }
 
 
 def _income_split(series: PriceSeries, usable: Sequence[Bar]) -> dict[str, object]:
@@ -1905,6 +1934,140 @@ def find_official_filer(
 
 VALUATION_STALE_DAYS = 200
 SHARES_MISMATCH = 0.05  # two sources' share counts further apart than this are flagged
+SHARE_CLASS = re.compile(r"\s*\([A-Z]\)$")  # "KARDEMIR (D)": one share class of a company
+PEER_RATIO_TOLERANCE = 0.25  # the source's ratio for the company vs the one computed here
+MIN_INDUSTRY_PEERS = 5  # fewer other companies with a ratio and no industry comparison is made
+
+
+def _industry_comparison(
+    provider: PriceProvider,
+    symbol: str,
+    today: dt.date,
+    flags: list[QualityFlag],
+    provenance: list[Provenance],
+    *,
+    computed: float | None,
+) -> dict[str, Any] | None:
+    """The company's price-to-book set among the other companies of its industry in its
+    market, every one as the source computes it on the same day: the comparison "is it
+    cheap?" needs, which the company's own ratio cannot give. When the industry has too few
+    companies (Turkish Airlines is nearly alone in "Airlines"), the source's wider sector is
+    used and the result says so. Names no other company's ratio, so the result ranks the
+    company, not its peers."""
+
+    def unavailable(reason: str) -> None:
+        flags.append(
+            QualityFlag(
+                "no_industry_comparison",
+                Severity.INFO,
+                f"{reason} The ratios are not compared with other companies.",
+            )
+        )
+
+    lookup = getattr(provider, "industry_peers", None)
+    if lookup is None:
+        unavailable(f"The price source ({provider.name}) gives no industry peer list.")
+        return None
+
+    def company(p: PeerMultiple) -> str:
+        return SHARE_CLASS.sub("", p.name).strip().casefold()
+
+    mixed: set[str] = set()
+
+    def ranked(group: IndustryPeers) -> tuple[PeerMultiple | None, list[PeerMultiple]]:
+        """The company and its peers. A company whose price and statements are in different
+        currencies gets no ratio from the source: Yahoo gives its book value per share
+        sometimes in the statements' currency (Turkish Airlines: a TRY price over a USD book
+        value, 18 for a true 0.37) and sometimes already converted (Sony), and nothing tells
+        the two apart. The company itself then takes the ratio computed here."""
+        mixed.clear()
+        kept = []
+        for p in group.peers:
+            if p.currency and p.financial_currency and p.currency != p.financial_currency:
+                mixed.add(p.symbol)
+                ratio = computed if p.symbol == symbol else None
+                kept.append(dataclasses.replace(p, price_to_book=ratio))
+            else:
+                kept.append(p)
+        group = dataclasses.replace(group, peers=tuple(kept))
+        own = next((p for p in group.peers if p.symbol == symbol), None)
+        # A company listed in several share classes ("KARDEMIR (A)", "(B)", "(D)") counts
+        # once, by its class with the largest market value; its own classes are not peers.
+        largest: dict[str, PeerMultiple] = {}
+        for p in group.peers:
+            if p.price_to_book and p.price_to_book > 0:
+                held = largest.get(company(p))
+                if held is None or (p.market_cap or 0) > (held.market_cap or 0):
+                    largest[company(p)] = p
+        return own, [p for key, p in largest.items() if own is None or key != company(own)]
+
+    try:
+        group = lookup(symbol)
+        own, others = ranked(group)
+        if len(others) < MIN_INDUSTRY_PEERS:
+            narrow = group
+            try:
+                group = lookup(symbol, broader=True)
+            except ToolError:
+                group = narrow
+            else:
+                own, others = ranked(group)
+    except ToolError as error:
+        unavailable(error.message)
+        return None
+    if own is None or not own.price_to_book or own.price_to_book <= 0:
+        unavailable(f"The source gives no price-to-book for {symbol} in its industry list.")
+        return None
+    # The comparison stands only if the source measures this company as it is measured here.
+    if (
+        symbol not in mixed
+        and computed
+        and abs(own.price_to_book / computed - 1) > PEER_RATIO_TOLERANCE
+    ):
+        unavailable(
+            f"The source's price-to-book for {symbol} ({own.price_to_book:.2f}) differs from "
+            f"the one computed here ({computed:.2f}) by more than "
+            f"{PEER_RATIO_TOLERANCE:.0%}, so its figures for other companies are not used."
+        )
+        return None
+    if len(others) < MIN_INDUSTRY_PEERS:
+        unavailable(
+            f"Only {len(others)} other companies in {group.group} ({group.market}) have a "
+            f"price-to-book; at least {MIN_INDUSTRY_PEERS} are needed."
+        )
+        return None
+    values = sorted(float(p.price_to_book or 0) for p in others)
+    mid = len(values) // 2
+    median = values[mid] if len(values) % 2 else (values[mid - 1] + values[mid]) / 2
+    provenance.append(
+        Provenance(
+            provider=group.provider,
+            dataset="industry_peers",
+            symbols=(symbol,),
+            period_start=today.isoformat(),
+            period_end=today.isoformat(),
+            retrieved_at=group.retrieved_at,
+            data_version=group.data_version,
+            adjustment="as_reported",
+        )
+    )
+    return {
+        "industry": group.industry,
+        "group": group.group,
+        "level": group.level,
+        "market": group.market,
+        "definition": group.definition,
+        "price_to_book": _round(own.price_to_book),
+        "peer_count": len(values),
+        "peer_median_price_to_book": _round(median),
+        "peers_lower": sum(v < own.price_to_book for v in values),
+        "peers_higher": sum(v > own.price_to_book for v in values),
+        "peer_symbols": sorted(p.symbol for p in others),
+        "price_to_book_basis": "computed" if symbol in mixed else "source",
+        "excluded_mixed_currency": len(mixed - {symbol}),
+    }
+
+
 SharesLookup = Callable[[str], FinancialStatements]
 
 
@@ -2176,6 +2339,14 @@ def get_valuation(
     pe, pe_reason = ratio(earnings, "earnings")
     pb, pb_reason = ratio(equity, "equity")
     ps, ps_reason = ratio(sales, "sales")
+    industry = _industry_comparison(
+        price_provider,
+        quote,
+        today,
+        flags,
+        extra,
+        computed=pb,
+    )
     if missing_ttm_reason:
         pe_reason = ps_reason = missing_ttm_reason
     provenance = [*prices.provenance, *extra, *cpi_provenance]  # prices include any FX used
@@ -2231,6 +2402,7 @@ def get_valuation(
             "price_to_sales": ps,
             "dividend_yield_trailing_12m": dividend_yield,
             "not_meaningful": reasons,
+            "industry_comparison": industry,
         },
         provenance=tuple(provenance),
         quality_flags=tuple(prices.flags + flags),
@@ -2249,6 +2421,15 @@ def get_valuation(
             "A ratio is null when its denominator is missing, zero or negative (not_meaningful "
             "says which). Ratios describe today's price against past results; they are not a "
             "view on whether the share is cheap or expensive.",
+            "industry_comparison sets the company's price-to-book among the other companies "
+            "the price source classes in the same industry in the same market, every one "
+            "computed by the source the same day (its definition, which can differ slightly "
+            "from price_to_book above); peer_median_price_to_book excludes the company. Where "
+            "a company's price and statements are in different currencies the source's ratio is "
+            "unreliable: such peers are left out (excluded_mixed_currency counts them) and the "
+            "company itself takes price_to_book (price_to_book_basis 'computed'). "
+            "No comparison is made when the source's ratio for the company differs from "
+            "price_to_book by more than 25%.",
             *st.source_notes[:1],
         ),
     )
