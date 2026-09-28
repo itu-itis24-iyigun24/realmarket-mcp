@@ -714,9 +714,7 @@ def compare_real_return(
                 "inflation_window_truncated",
                 Severity.WARNING,
                 f"{region} CPI is published through {month_str(cpi.last_month)}; the real return "
-                "is measured up to the end of that month, not the full price window. Report it "
-                "with nominal_return_in_inflation_window and cumulative_inflation, which cover "
-                "the same months; nominal_return covers the full price window.",
+                "is measured up to the end of that month, not the full price window.",
                 (month_str(cpi.last_month),),
             )
         )
@@ -2238,9 +2236,7 @@ PORTFOLIO_NOTES = (
     "transaction's date: a sale realizes proceeds minus average cost of the shares sold. "
     "Fees are added to purchases and deducted from sales. total_pnl = realized + unrealized "
     "+ dividends received. A holding's total_pnl and total_return_on_purchases include shares "
-    "already sold; unrealized_pnl and unrealized_return cover only the shares still held. A "
-    "holding's result is its total_pnl and total_return_on_purchases, and the account's is "
-    "totals.total_pnl and totals.total_return_on_purchases; do not compute other percentages.",
+    "already sold; unrealized_pnl and unrealized_return cover only the shares still held.",
     "Quantities and prices are as traded at the time. Splits and bonus issues (bedelsiz) the "
     "source reports are applied to the shares held, and flagged, unless a 'bonus' "
     "transaction records them. Holdings are valued at traded prices, not dividend-adjusted "
@@ -2543,7 +2539,6 @@ def analyze_portfolio(
                 "price": None if price_now is None else _round(price_now),
                 "market_value": round(value, 2),
                 "weight": _round(value / value_total) if value_total > 0 else None,
-                # The holding's result first: small models take the first return they see.
                 "total_pnl": round(total, 2),
                 "total_return_on_purchases": _round(total / h.bought) if h.bought > 0 else None,
                 "realized_pnl": round(h.realized, 2),
@@ -2825,13 +2820,6 @@ MOVE_NOTES = (
 )
 
 
-# A field, not only a note: small models read data fields more reliably than notes.
-MOVE_CAUSE = (
-    "Not determined. These figures show what happened, not why; do not name possible reasons "
-    "(market rally, sector, tourism, technical buying...)."
-)
-
-
 def _daily_returns(closes: Sequence[float]) -> list[float]:
     return [b / a - 1.0 for a, b in itertools.pairwise(closes) if a > 0]
 
@@ -2964,7 +2952,6 @@ def explain_price_move(
         data={
             "symbol": symbol,
             "currency": series.currency,
-            "cause": MOVE_CAUSE,
             "session": target.date.isoformat(),
             "previous_session": previous.date.isoformat(),
             "price": _round(traded(target)),

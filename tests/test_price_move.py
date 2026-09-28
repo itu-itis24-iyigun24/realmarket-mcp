@@ -83,7 +83,7 @@ def test_the_move_is_described_next_to_the_market_without_attribution() -> None:
     assert data["news"][0]["title"] == "Stock Company guidance cut"
     assert news.queries == ["Stock Company"]  # legal suffix removed from the listed name
     assert any("do not apportion" in n.lower() for n in result.notes)
-    assert data["cause"].startswith("Not determined")
+    assert "cause" not in data  # said by the facts, not a data field
     assert result.facts[-1] == "Bu veriler hareketin nedenini göstermez."
     assert any("önceki seansa" in f and "değişti" in f for f in result.facts)
 

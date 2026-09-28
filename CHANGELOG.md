@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Removed** `explain_price_move`'s `cause` data field (added in 0.1.7): its facts now say
+  that the figures do not show why the price moved. Also removed are two instructions aimed at
+  single mistakes, in the `inflation_window_truncated` message and the portfolio notes, which
+  the facts now cover.
 - **Facts in Turkish.** `analyze_portfolio`, `explain_price_move` and `compare_real_return`
   return `facts`: Turkish sentences, each carrying its figures (Turkish number style) with
   their meaning, dates and sign, and the instructions tell the model to build the answer from
