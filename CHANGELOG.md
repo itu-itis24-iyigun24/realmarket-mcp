@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **`explain_price_move`: "why did it move today?"** The session's move in traded prices,
+  split into a market part (the benchmark's move times the stock's sensitivity to it over
+  the previous 60 sessions) and a stock-specific part; how unusual the move and the volume
+  were; whether it was an ex-dividend day; and news or disclosures from the day before to the
+  day after, from GDELT or the firm's own feed. A statistical description, not a cause.
 - **`analyze_portfolio`: the account itself.** From the transactions a brokerage already
   holds (buy, sell, cash dividend, bonus issue), each holding's quantity, average cost,
   market value and weight, unrealized and realized profit, dividends and total result; account

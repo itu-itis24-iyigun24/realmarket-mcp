@@ -368,6 +368,33 @@ def build_server() -> MCPServer:
 
     @server.tool(annotations=READ_ONLY)
     @audited
+    def explain_price_move(
+        symbol: Symbol,
+        date: Annotated[
+            str | None,
+            Field(description="ISO date of the session; defaults to the latest session."),
+        ] = None,
+    ) -> CallToolResult:
+        """Answer "why did it rise or fall today?": the session's move, how much of it matches
+        the market (the benchmark index's move times the stock's sensitivity to it) and how
+        much is stock-specific, how unusual the move and the volume were, whether it was an
+        ex-dividend day, and news or disclosures from the day before to the day after. A
+        statistical description with the day's headlines, not a proof of cause."""
+        now = _utc_now()
+        stamp = _stamp(now)
+        return respond(
+            lambda: tools.explain_price_move(
+                load_price_provider(retrieved_at=stamp),
+                symbol,
+                date,
+                today=now.date(),
+                load_news=lambda: load_news_provider(stamp),
+                retrieved_at=stamp,
+            )
+        )
+
+    @server.tool(annotations=READ_ONLY)
+    @audited
     def analyze_portfolio(
         transactions: Annotated[
             list[Transaction],
