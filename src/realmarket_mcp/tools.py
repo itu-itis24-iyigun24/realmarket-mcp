@@ -2209,16 +2209,19 @@ def get_valuation(
 # --- analyze_portfolio: an account's actual transactions --------------------------------------
 
 MAX_TRANSACTIONS = 500
-TRANSACTION_ORDER = {"buy": 0, "bonus": 1, "sell": 2, "dividend": 3}  # within one day
+# Within one day: a split applies to the shares held before that session.
+TRANSACTION_ORDER = {"split": -1, "buy": 0, "bonus": 1, "sell": 2, "dividend": 3}
+SPLIT_MATCH_DAYS = (7, 45)  # a bonus entered this close to a reported split is that split
 PORTFOLIO_NOTES = (
     "Costs use the weighted average cost of each holding, in the report currency at each "
     "transaction's date: a sale realizes proceeds minus average cost of the shares sold. "
     "Fees are added to purchases and deducted from sales. total_pnl = realized + unrealized "
     "+ dividends received.",
-    "Prices are the prices actually traded (adjusted for splits only), not dividend-adjusted "
-    "closes, so dividends are counted once: as the cash entered. A missing price is taken "
-    "from that day's close and flagged. Quantities are in today's share units: record a "
-    "bonus issue (bedelsiz) or split as a 'bonus' transaction with the shares received.",
+    "Quantities and prices are as traded at the time. Splits and bonus issues (bedelsiz) the "
+    "source reports are applied to the shares held, and flagged, unless a 'bonus' "
+    "transaction records them. Holdings are valued at traded prices, not dividend-adjusted "
+    "closes, so dividends are counted once: as the cash entered. A missing price is that "
+    "day's close as traded then, and is flagged.",
     "money_weighted_return_annualized is the internal rate of return of all cash flows "
     "(purchases out; sales and dividends in; today's value in). The risk figures describe "
     "the current holdings, at current quantities, over the last year.",
@@ -2241,14 +2244,25 @@ class _Holding:
     )  # quantity after each
 
 
+def _split_factor(series: PriceSeries, after: dt.date) -> float:
+    """Shares today per share held on ``after``: the product of later splits."""
+    factor = 1.0
+    for day, ratio in series.splits:
+        if day > after:
+            factor *= ratio
+    return factor
+
+
 def _traded(prices: _Prices, symbol: str, day: dt.date) -> float:
-    """The price actually traded on ``day`` (split-adjusted only), where the source says."""
-    _, usable = prices.series(symbol)
+    """The price actually traded on ``day``, in that day's share units: the source's
+    split-adjusted close times the splits since."""
+    series, usable = prices.series(symbol)
     bar = _as_of(usable, day)
     if bar is None:
         prices.close(symbol, day)  # raises the standard error
         raise AssertionError("unreachable")
-    return bar.price_close if bar.price_close else _close(bar)
+    price = bar.price_close if bar.price_close else _close(bar)
+    return price * _split_factor(series, bar.date)
 
 
 def _parse_transactions(
@@ -2329,7 +2343,39 @@ def analyze_portfolio(
     flags: list[QualityFlag] = []
     assumed: list[str] = []
 
-    for tx in parsed:
+    # Splits and bonus issues the source reports after the first trade of each symbol, unless
+    # the transactions already record them as a bonus.
+    applied: list[str] = []
+    events = list(parsed)
+    for symbol in dict.fromkeys(t["symbol"] for t in parsed):
+        first = min(t["date"] for t in parsed if t["symbol"] == symbol)
+        before, after = SPLIT_MATCH_DAYS
+        for day, ratio in prices.series(symbol)[0].splits:
+            recorded = any(
+                t["symbol"] == symbol
+                and t["type"] == "bonus"
+                and day - dt.timedelta(days=before) <= t["date"] <= day + dt.timedelta(days=after)
+                for t in parsed
+            )
+            if first < day <= today and not recorded:
+                events.append(
+                    {"index": -1, "type": "split", "symbol": symbol, "date": day, "ratio": ratio}
+                )
+                applied.append(f"{symbol} {day} ({ratio:g} for 1)")
+    events.sort(key=lambda t: (t["date"], TRANSACTION_ORDER[t["type"]], t["index"]))
+    if applied:
+        flags.append(
+            QualityFlag(
+                "split_applied",
+                Severity.INFO,
+                "The source reports these splits or bonus issues, which the transactions did "
+                "not record; the shares held were multiplied accordingly: "
+                + ", ".join(applied)
+                + ".",
+            )
+        )
+
+    for tx in events:
         symbol, day = tx["symbol"], tx["date"]
         h = holdings.setdefault(symbol, _Holding(symbol, prices.currency(symbol)))
 
@@ -2349,6 +2395,8 @@ def analyze_portfolio(
             flows.append((day, -cost))
         elif tx["type"] == "bonus":
             h.quantity += tx["quantity"]
+        elif tx["type"] == "split":
+            h.quantity *= tx["ratio"]
         elif tx["type"] == "sell":
             if tx["quantity"] > h.quantity * (1 + 1e-9):
                 raise ToolError(
@@ -2400,10 +2448,9 @@ def analyze_portfolio(
             estimate = 0.0
             for ex_date, per_share in series.dividends:
                 held = next((q for d, q in reversed(h.timeline) if d < ex_date), 0.0)
-                if held > 0:
-                    estimate += _convert(
-                        prices, provider, held * per_share, h.currency, report, ex_date
-                    )
+                if held > 0:  # the source's per-share amount is in today's share units
+                    paid = held * per_share * _split_factor(series, ex_date)
+                    estimate += _convert(prices, provider, paid, h.currency, report, ex_date)
             if estimate > 0:
                 flags.append(
                     QualityFlag(

@@ -6,6 +6,7 @@ Fixture TTT (TRY) closes: 100 on 2023-01-02, 150 on 2023-06-30, 200 on 2024-01-0
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 from pathlib import Path
 from typing import Any
@@ -105,3 +106,33 @@ def test_malformed_transactions_are_refused(bad: dict[str, Any]) -> None:
     with pytest.raises(ToolError) as raised:
         run([bad])
     assert raised.value.code is ErrorCode.INVALID_ARGUMENT
+
+
+class SplitProvider(FixtureProvider):
+    """TTT with a 1:1 bonus issue on 2023-06-30: the fixture closes are split-adjusted, so the
+    price actually traded before that day was twice the listed close."""
+
+    def daily_bars(self, symbol: str, start: dt.date, end: dt.date) -> Any:
+        series = super().daily_bars(symbol, start, end)
+        return dataclasses.replace(series, splits=((dt.date(2023, 6, 30), 2.0),))
+
+
+def test_a_reported_bonus_issue_is_applied_when_not_recorded() -> None:
+    provider = SplitProvider(FIXTURES)
+    result = tools.analyze_portfolio(provider, [tx("buy", "2023-01-02", quantity=10)], today=TODAY)
+    (holding,) = result.data["holdings"]
+    # Bought 10 at 200 (100 x 2, as traded then); 20 shares after the bonus, worth 220 each.
+    assert (holding["cost_basis"], holding["quantity"]) == (2000, 20)
+    assert holding["market_value"] == 4400
+    assert "split_applied" in {f.code for f in result.quality_flags}
+
+
+def test_a_recorded_bonus_is_not_applied_twice() -> None:
+    provider = SplitProvider(FIXTURES)
+    result = tools.analyze_portfolio(
+        provider,
+        [tx("buy", "2023-01-02", quantity=10, price=200), tx("bonus", "2023-07-03", quantity=10)],
+        today=TODAY,
+    )
+    assert result.data["holdings"][0]["quantity"] == 20
+    assert "split_applied" not in {f.code for f in result.quality_flags}

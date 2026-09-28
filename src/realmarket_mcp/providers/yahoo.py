@@ -57,6 +57,7 @@ class RawHistory:
     ]  # prices adjusted for splits and dividends
     price_closes: Mapping[dt.date, float | None] | None = None  # split-adjusted only
     dividends: Sequence[tuple[dt.date, float]] = ()
+    splits: Sequence[tuple[dt.date, float]] = ()
 
 
 # Yahoo row labels for each normalized field, first match wins.
@@ -174,7 +175,12 @@ class YfinanceBackend:
         ]
         price_closes = {r[0]: r[4] for r in raw}
         dividends = [(r[0], r[6]) for r in raw if r[6]]
-        return RawHistory(currency, rows, price_closes, dividends)
+        splits = [
+            (index.date(), ratio)
+            for index, row in frame.iterrows()
+            if (ratio := _clean(row.get("Stock Splits"))) and ratio > 0 and ratio != 1.0
+        ]
+        return RawHistory(currency, rows, price_closes, dividends, splits)
 
     def financials(self, symbol: str) -> RawFinancials:
         ticker = self._yf.Ticker(symbol)
@@ -300,6 +306,7 @@ class YahooProvider:
             dividends=tuple(
                 (d, a / unit) for d, a in raw.dividends if start <= d <= cutoff and d in by_date
             ),
+            splits=tuple((d, r) for d, r in raw.splits if start <= d <= cutoff),
         )
 
     def financials(self, symbol: str) -> FinancialStatements:

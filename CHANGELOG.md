@@ -16,6 +16,9 @@
   split; best and worst holding; and the current holdings' volatility and drawdown over the
   last year. It values holdings at traded prices (not dividend-adjusted closes), so dividends
   count once, and warns when the source reports dividends the transactions leave out.
+  Splits and bonus issues the source reports are applied automatically (a purchase before
+  BIMAS's 2-for-1 bonus issue on 2026-05-14 would otherwise show as a false loss), unless the
+  transactions already record the bonus; the result says so with a `split_applied` flag.
 - **News from the firm's own feed.** The adapter API gains an optional `/news` endpoint, so a
   firm can plug in KAP disclosures, Foreks or any licensed news feed
   (`REALMARKET_NEWS_PROVIDER=http`). The example adapter serves a `news.json` file.

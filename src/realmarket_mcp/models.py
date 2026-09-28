@@ -88,6 +88,8 @@ class PriceSeries:
     bars: tuple[Bar, ...]
     # Cash dividends per share (split-adjusted), by ex-date, where the provider reports them.
     dividends: tuple[tuple[dt.date, float], ...] = ()
+    # Splits and bonus issues (shares after / before, e.g. 2.0 for 1:1 bedelsiz), by date.
+    splits: tuple[tuple[dt.date, float], ...] = ()
 
     def __post_init__(self) -> None:
         dates = [bar.date for bar in self.bars]
@@ -97,6 +99,7 @@ class PriceSeries:
     def between(self, start: dt.date, end: dt.date) -> PriceSeries:
         kept = tuple(bar for bar in self.bars if start <= bar.date <= end)
         paid = tuple(d for d in self.dividends if start <= d[0] <= end)
+        split = tuple(d for d in self.splits if start <= d[0] <= end)
         return PriceSeries(
             self.symbol,
             self.currency,
@@ -105,6 +108,7 @@ class PriceSeries:
             self.retrieved_at,
             kept,
             paid,
+            split,
         )
 
     @property
@@ -121,6 +125,8 @@ class PriceSeries:
             # Only when present, so versions of series without them are unchanged.
             content["price_closes"] = [b.price_close for b in self.bars]
             content["dividends"] = [[d.isoformat(), a] for d, a in self.dividends]
+        if self.splits:
+            content["splits"] = [[d.isoformat(), r] for d, r in self.splits]
         canonical = json.dumps(
             content,
             separators=(",", ":"),
