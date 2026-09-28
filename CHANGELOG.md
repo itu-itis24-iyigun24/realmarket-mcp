@@ -5,6 +5,9 @@
 - `scripts/call_tool.py` lists and calls the tools from a shell exactly as an MCP client sees
   them (`--synthetic` for the fictional ORNEK), and the `model-check` skill uses it to have
   Haiku subagents answer standard customer questions, without packaging an extension.
+- Found by its first run: the instructions say returns are fractions (Haiku had written a
+  0.313 after-tax deposit return as "%313"), and the `inflation_window_truncated` warning says
+  which figures cover the same months as the real return.
 
 ## 0.1.7 — 2026-09-28
 

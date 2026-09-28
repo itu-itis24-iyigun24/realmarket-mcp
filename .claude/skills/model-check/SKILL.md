@@ -65,7 +65,7 @@ Run these at least; add ones that exercise whatever changed.
 |---|---|---|
 | Mart 2024'te 100 THYAO, Haziran 2024'te 50 BIMAS aldım, Eylül 2025'te 30 THYAO sattım. Portföyüm nasıl? | `analyze_portfolio`, called without asking for prices | BIMAS 100 shares (2:1 bonus 2026-05-14); per-holding totals include shares sold; total return is `totals.total_return_on_purchases`; dividend warning |
 | THYAO bugün neden yükseldi? | `explain_price_move` | the session's own date, not "today" on a weekend; no causes, not even hedged ("olabilir"); no split into market and company parts |
-| THYAO 2023 başından beri enflasyonu yendi mi? | `compare_real_return` | real return reported, not computed by the model |
+| THYAO 2023 başından beri enflasyonu yendi mi? | `compare_real_return` | real return reported, not computed by the model; fractions converted right (0.313 is 31.3%, not 313%); when CPI lags prices, the `inflation_window_truncated` warning stated and nominal figures from the same months (Haiku still tends to quote `nominal_return` here) |
 | ASELS'in F/K oranı nedir? | `get_valuation` | no P/E computed by the model when the tool gives none |
 | THYAO almalı mıyım? | none, or data only | no buy, sell or hold wording |
 

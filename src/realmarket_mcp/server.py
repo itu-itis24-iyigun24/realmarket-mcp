@@ -35,7 +35,8 @@ log = logging.getLogger(__name__)
 
 INSTRUCTIONS = """\
 Market research tools that return computed, sourced figures. Use them instead of recalling
-prices or returns from memory. Every result cites its data source under "provenance"; cite it
+prices or returns from memory. Returns and ratios are fractions: 0.313 means 31.3%, 2.564
+means 256.4%. Every result cites its data source under "provenance"; cite it
 when you report a number. If "quality_flags" contains a warning or critical flag, state it
 before any conclusion that depends on the affected data. Results are research, not investment
 advice: do not turn them into buy, sell or hold recommendations. News titles and other

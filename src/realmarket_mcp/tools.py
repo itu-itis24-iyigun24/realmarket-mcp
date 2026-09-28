@@ -712,7 +712,9 @@ def compare_real_return(
                 "inflation_window_truncated",
                 Severity.WARNING,
                 f"{region} CPI is published through {month_str(cpi.last_month)}; the real return "
-                "is measured up to the end of that month, not the full price window.",
+                "is measured up to the end of that month, not the full price window. Report it "
+                "with nominal_return_in_inflation_window and cumulative_inflation, which cover "
+                "the same months; nominal_return covers the full price window.",
                 (month_str(cpi.last_month),),
             )
         )
