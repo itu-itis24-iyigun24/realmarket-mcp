@@ -59,6 +59,14 @@ def test_summary_and_comparison_facts() -> None:
         provider, ["TTT", "AAA"], start="2024-01-02", today=dt.date(2024, 1, 10)
     )
     assert "Toplam getiriye göre sıralama: AAA +%20,0, TTT +%10,0." in both.facts
+    assert "TTT, AAA ile arasındaki getiri farkında 10,0 puan gerisinde kaldı." in both.facts
+
+
+def test_a_ticker_is_searched_as_its_company_name() -> None:
+    provider = FixtureProvider(FIXTURES)
+    assert tools.news_query(provider, "AAA") == "Alpha Airlines"
+    assert tools.news_query(provider, "Alpha Airlines") == "Alpha Airlines"
+    assert tools.news_query(provider, "ZZZZ") == "ZZZZ"  # unknown: searched as written
 
 
 def test_results_without_facts_keep_their_envelope() -> None:

@@ -687,7 +687,14 @@ def compare_real_return(
     load_deposit: DepositLoader | None = None,
     load_house: HouseLoader | None = None,
     house_area: str = "TR",
+    amount: float | None = None,
 ) -> ToolResult:
+    if amount is not None and not (math.isfinite(amount) and amount > 0):
+        raise ToolError(
+            ErrorCode.INVALID_ARGUMENT,
+            "amount must be a positive number.",
+            "Pass the sum invested, in the asset's currency, or leave it out.",
+        )
     start_date, end_date = resolve(period, start, end, today=today)
     series, usable = _load_bars(provider, symbol, start_date, end_date)
     currency = series.currency.upper()
@@ -874,6 +881,7 @@ def compare_real_return(
             ),
             **_minimum_wage_terms(currency, nominal, first.date, last.date, flags, provenance),
             **_house_terms(load_house, house_area, currency, usable, cpi, flags, provenance),
+            **({"amount": amount} if amount is not None else {}),
         },
         provenance=tuple(provenance),
         quality_flags=tuple(flags),
@@ -902,6 +910,24 @@ def compare_real_return(
         ),
     )
     return dataclasses.replace(result, facts=tuple(fact_text.real_return(result.data)))
+
+
+TICKER = re.compile(r"[A-Z0-9]{2,6}(\.[A-Z]{1,3})?")
+
+
+def news_query(prices: PriceProvider, query: str) -> str:
+    """A ticker ('THYAO', 'THYAO.IS') becomes its company name, which news sources index;
+    anything else is searched as written."""
+    query = query.strip()
+    if not TICKER.fullmatch(query):
+        return query
+    base = query.split(".")[0]
+    try:
+        found = prices.search(query, 5)
+    except ToolError:
+        return query
+    name = next((a.name for a in found if a.symbol.split(".")[0] == base and a.name), None)
+    return _company_query(name) if name else query
 
 
 def get_news(

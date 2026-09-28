@@ -71,6 +71,15 @@ def month(value: str) -> str:
     return f"{MONTHS[int(number_) - 1]} {year}"
 
 
+def _ahead_by(value: float) -> str:
+    """'48,8 puan önünde kaldı', after a genitive; the gap is between two returns."""
+    if not value:
+        return "ile aynı kaldı"
+    digits = 2 if abs(value) < 0.1 else 1
+    size = number(abs(value) * 100, digits) + " puan"
+    return f"{size} önünde kaldı" if value > 0 else f"{size} gerisinde kaldı"
+
+
 def _ahead_noun(value: float) -> str:
     """'önünde kaldı' / 'gerisinde kaldı', after a genitive: 'altının önünde kaldı'."""
     return "önünde kaldı" if value > 0 else "gerisinde kaldı" if value < 0 else "ile aynı kaldı"
@@ -302,6 +311,20 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
             "Bu dönem için enflasyon karşılaştırması yapılamadı."
         )
     nominal = pct(data["nominal_return"])
+    if data.get("amount"):
+        # "I put 20,000 TL in": the same figures, in money.
+        paid = float(data["amount"])
+        line = (
+            f"Yatırılan {money(paid, cur)} {last} itibarıyla "
+            f"{money(paid * (1 + data['nominal_return']), cur)} değerinde."
+        )
+        if data["real_return"] is not None and window_end:
+            line += (
+                f" Aynı tutarın {date(window_end)} itibarıyla enflasyona göre karşılığı "
+                f"{money(paid * (1 + data['cumulative_inflation']), cur)}; o tarihte hissedeki "
+                f"değer {money(paid * (1 + data['nominal_return_in_inflation_window']), cur)}."
+            )
+        facts.append(line)
     if data["usd_return"] is not None:
         facts.append(f"{first} – {last} arasında dolar cinsinden getiri {pct(data['usd_return'])}.")
     if data["gold_return_in_currency"] is not None:
@@ -309,7 +332,7 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
             f"Aynı para {first} tarihinde altına yatırılsaydı {last} tarihine kadar "
             f"{cur if cur != 'TRY' else 'TL'} olarak {pct(data['gold_return_in_currency'])} "
             f"getirirdi; hisse aynı dönemde {nominal}: hisse altının "
-            f"{_ahead_noun(data['nominal_return'] - data['gold_return_in_currency'])}."
+            f"{_ahead_by(data['nominal_return'] - data['gold_return_in_currency'])}."
         )
         if data["gram_gold_try_start"] is not None:
             line += (
@@ -323,7 +346,7 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
             f"{pct(data['deposit_return_after_tax'])} getirirdi (stopaj öncesi "
             f"{pct(data['deposit_return'])}); hisse aynı dönemde {nominal}: hisse stopaj "
             f"sonrası mevduatın "
-            f"{_ahead_noun(data['nominal_return'] - data['deposit_return_after_tax'])}."
+            f"{_ahead_by(data['nominal_return'] - data['deposit_return_after_tax'])}."
         )
     if data["deposit_real_return_after_tax"] is not None and window_end:
         facts.append(
@@ -339,8 +362,9 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
         )
         facts.append(
             f"Net asgari ücret {first} – {last} arasında {pct(data['minimum_wage_growth'])} "
-            f"arttı; hisse aynı dönemde {nominal}. Asgari ücret cinsinden hisse "
-            f"{pct(wages)}: {verdict}."
+            f"arttı; hisse aynı dönemde {nominal}, yani asgari ücret artışının "
+            f"{_ahead_by(data['nominal_return'] - data['minimum_wage_growth'])}. Asgari ücret "
+            f"cinsinden hisse {pct(wages)}: {verdict}."
         )
     house = data.get("house_prices")
     if house:
@@ -354,7 +378,7 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
             gap = house["asset_return_same_months"] - house["house_price_return"]
             line += (
                 f"; hisse aynı aylarda {pct(house['asset_return_same_months'])}: hisse konut "
-                f"fiyatlarının {_ahead_noun(gap)}"
+                f"fiyatlarının {_ahead_by(gap)}"
             )
         facts.append(line + ".")
     return facts
@@ -445,6 +469,13 @@ def comparison(data: Mapping[str, Any]) -> list[str]:
             + ", ".join(f"{a['symbol']} {pct(a['metrics']['total_return'])}" for a in ranked)
             + "."
         )
+        leader = ranked[0]
+        for a in ranked[1:]:
+            gap = float(leader["metrics"]["total_return"]) - float(a["metrics"]["total_return"])
+            facts.append(
+                f"{a['symbol']}, {leader['symbol']} ile arasındaki getiri farkında "
+                f"{_ahead_by(-gap)}."
+            )
     currencies = sorted({str(a["currency"]) for a in assets})
     if len(currencies) > 1:
         facts.append(
@@ -531,7 +562,8 @@ def event_reaction(data: Mapping[str, Any]) -> list[str]:
     ]
 
     def line(r: Mapping[str, Any]) -> str:
-        text = f"{symbol} {pct(r['return'])}"
+        close = float(data["base_close"]) * (1 + float(r["return"]))
+        text = f"{symbol} {pct(r['return'])} (kapanış {number(close)})"
         if bench and r.get("benchmark_return") is not None:
             text += (
                 f"; aynı sürede {bench} {pct(r['benchmark_return'])}, {symbol} için endekse göre "
@@ -629,7 +661,15 @@ def portfolio_real(data: Mapping[str, Any]) -> list[str]:
                 f"{pct(alt['return_after_tax'])})"
             )
         compared = alt.get("value_now_after_tax") or alt["value_now"]
-        if alt["valued_as_of"] == data["as_of"]:
+        at_cpi_date = data.get("value_at_real_return_date")
+        if alt["valued_as_of"] == data.get("real_return_as_of") and at_cpi_date is not None:
+            gap = at_cpi_date - compared
+            side = "önde" if gap > 0 else "geride" if gap < 0 else "eşit"
+            line += (
+                f". Birikim {when} itibarıyla {money(at_cpi_date, cur)}: bu alternatife göre "
+                f"{money(abs(gap), cur)} {side}"
+            )
+        elif alt["valued_as_of"] == data["as_of"]:
             gap = data["value_now"] - compared
             side = "önde" if gap > 0 else "geride" if gap < 0 else "eşit"
             line += (

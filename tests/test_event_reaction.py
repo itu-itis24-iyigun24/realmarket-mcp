@@ -8,6 +8,7 @@ import pytest
 
 from realmarket_mcp import tools
 from realmarket_mcp.contract import ErrorCode, ToolError
+from realmarket_mcp.facts import number
 from realmarket_mcp.providers.fixture import FixtureProvider
 
 TODAY = dt.date(2024, 3, 20)
@@ -80,10 +81,14 @@ def test_reaction_windows_and_excess_returns(provider: FixtureProvider) -> None:
 
     assert twenty["return"] is None  # not enough sessions yet
     assert "window_incomplete" in {f.code for f in result.quality_flags}
-    assert (
-        "Olaydan sonraki 1. seans (11 Mart 2024) sonunda: EVT +%10,0; aynı sürede IDX +%1,00, "
-        "EVT için endekse göre göreli getiri +%8,91." in result.facts
+    one_fact = next(f for f in result.facts if f.startswith("Olaydan sonraki 1. seans"))
+    base = number(data["base_close"])
+    close = number(data["base_close"] * 1.10)
+    assert one_fact == (
+        f"Olaydan sonraki 1. seans (11 Mart 2024) sonunda: EVT +%10,0 (kapanış {close}); aynı "
+        f"sürede IDX +%1,00, EVT için endekse göre göreli getiri +%8,91."
     )
+    assert f"({'8 Mart 2024'}, {base})" in result.facts[0]
     assert "Olaydan sonraki 20. seans henüz tamamlanmadı." in result.facts
 
 

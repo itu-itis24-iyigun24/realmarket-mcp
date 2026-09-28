@@ -44,6 +44,14 @@
 - A tool called with an argument it does not have now refuses with `invalid_argument` and the
   list of valid arguments. The SDK used to drop it silently: Haiku passed a made-up
   `benchmark` to `analyze_portfolio` and believed it had been applied.
+- From the model check's remaining failures, each a comparison or a sum the question asked for:
+  real-return facts give the gap in points against gold, the deposit, house prices and the
+  minimum wage; `compare_assets` facts give each asset's gap to the leader;
+  event-reaction facts give each window's close; `portfolio_real_return` compares the
+  account with house prices at the date the index covers; and `compare_real_return` takes
+  an optional `amount`, so "I put 20,000 TL in" is answered in money. `get_news` accepts a
+  ticker, and `analyze_portfolio` (share counts) and `portfolio_real_return` (sums of
+  money) say in their descriptions which question is theirs.
 - `evals/reports/2026-09-28-haiku.md`: the first full run, Haiku on all 119 questions. 94
   passed the automatic checks; with test artefacts set aside and the fixes below re-run, 105
   (88%) are correct. No answer gave advice or a reason for a move; the remaining failures are
