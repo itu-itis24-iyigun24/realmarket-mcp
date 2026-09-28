@@ -409,7 +409,7 @@ def get_price_summary(
     dividend_yield = _trailing_dividend_yield(
         provider, symbol, series, usable[-1], provenance, yield_flags
     )
-    return ToolResult(
+    result = ToolResult(
         tool="get_price_summary",
         data={
             "symbol": symbol,
@@ -435,6 +435,7 @@ def get_price_summary(
             "the source does not report dividends separately.",
         ),
     )
+    return dataclasses.replace(result, facts=tuple(fact_text.price_summary(result.data)))
 
 
 def _trailing_dividend_yield(
@@ -592,7 +593,7 @@ def compare_assets(
                 "comparable. Use compare_real_return to measure each in US dollars.",
             )
         )
-    return ToolResult(
+    result = ToolResult(
         tool="compare_assets",
         data={
             "window_start": window_start.isoformat(),
@@ -603,6 +604,7 @@ def compare_assets(
         quality_flags=tuple(flags),
         notes=tuple(notes),
     )
+    return dataclasses.replace(result, facts=tuple(fact_text.comparison(result.data)))
 
 
 def _as_of(usable: Sequence[Bar], day: dt.date) -> Bar | None:
@@ -2174,7 +2176,7 @@ def get_valuation(
         )
     )
     reasons = {k: v for k, v in (("pe", pe_reason), ("pb", pb_reason), ("ps", ps_reason)) if v}
-    return ToolResult(
+    result = ToolResult(
         tool="get_valuation",
         data={
             "symbol": quote,
@@ -2220,6 +2222,7 @@ def get_valuation(
             *st.source_notes[:1],
         ),
     )
+    return dataclasses.replace(result, facts=tuple(fact_text.valuation(result.data)))
 
 
 # --- analyze_portfolio: an account's actual transactions --------------------------------------

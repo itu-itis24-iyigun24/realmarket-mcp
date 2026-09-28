@@ -302,9 +302,16 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
             f"{pct(data['deposit_real_return_after_tax'])}."
         )
     if data.get("minimum_wage_growth") is not None:
+        wages = data["return_in_minimum_wages"]
+        verdict = (
+            "hisse asgari ücretin önünde kaldı"
+            if wages > 0
+            else "hisse asgari ücretin gerisinde kaldı"
+        )
         facts.append(
             f"Net asgari ücret {first} – {last} arasında {pct(data['minimum_wage_growth'])} "
-            f"arttı; hisse asgari ücret cinsinden {pct(data['return_in_minimum_wages'])}."
+            f"arttı; hisse aynı dönemde {nominal}. Asgari ücret cinsinden hisse "
+            f"{pct(wages)}: {verdict}."
         )
     house = data.get("house_prices")
     if house:
@@ -317,4 +324,164 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
         if house.get("asset_return_same_months") is not None:
             line += f"; hisse aynı aylarda {pct(house['asset_return_same_months'])}"
         facts.append(line + ".")
+    return facts
+
+
+def amount(value: float, currency: str) -> str:
+    """Large amounts in words: 398991384885 TL -> '398,99 milyar TL'."""
+    for size, word in ((1e12, "trilyon"), (1e9, "milyar"), (1e6, "milyon")):
+        if abs(value) >= size:
+            unit = "TL" if currency.upper() in {"TRY", "TL"} else currency.upper()
+            return f"{number(value / size)} {word} {unit}"
+    return money(value, currency)
+
+
+def _years(first: str, last: str) -> float:
+    return (dt.date.fromisoformat(last) - dt.date.fromisoformat(first)).days / 365.25
+
+
+def _performance(symbol: str, m: Mapping[str, Any]) -> list[str]:
+    """Return, volatility and drawdown of one asset over its own window."""
+    first, last = date(m["first_date"]), date(m["last_date"])
+    # Closes without a unit: an index's level is in points, not in its currency.
+    line = (
+        f"{symbol}, {first} – {last} arasında ({m['sessions']} seans): ilk kapanış "
+        f"{number(m['first_close'])}, son kapanış {number(m['last_close'])}; toplam getiri "
+        f"{pct(m['total_return'])}"
+    )
+    if m.get("annualized_return") is not None and _years(m["first_date"], m["last_date"]) >= 1:
+        line += f", yıllık ortalama {pct(m['annualized_return'])}"
+    facts = [line + "."]
+    if m.get("annualized_volatility") is not None:
+        facts.append(
+            f"{symbol} fiyatının yıllık oynaklığı (fiyatın ne kadar dalgalandığının ölçüsü) bu "
+            f"dönemde {pct(m['annualized_volatility'], signed=False)}."
+        )
+    if m.get("max_drawdown"):
+        facts.append(
+            f"{symbol} bu dönemdeki en büyük düşüşünü {date(m['max_drawdown_peak_date'])} "
+            f"zirvesinden {date(m['max_drawdown_trough_date'])} dibine yaşadı: "
+            f"{pct(m['max_drawdown'])}."
+        )
+    return facts
+
+
+# --- get_price_summary ------------------------------------------------------------------------
+
+
+def price_summary(data: Mapping[str, Any]) -> list[str]:
+    symbol, cur = data["symbol"], str(data["currency"])
+    facts: list[str] = []
+    requested = dt.date.fromisoformat(data["requested_start"])
+    if (dt.date.fromisoformat(data["first_date"]) - requested).days > 7:
+        facts.append(
+            f"İstenen başlangıç {date(requested)}, ancak {symbol} verileri "
+            f"{date(data['first_date'])} tarihinde başlıyor; rakamlar bu tarihten itibarendir."
+        )
+    facts += _performance(symbol, data)
+    if data.get("dividend_payments"):
+        facts.append(
+            f"Bu dönemde hisse başına toplam {money(data['dividends_per_share'], cur)} temettü "
+            f"ödendi ({data['dividend_payments']} ödeme). Fiyat değişimi "
+            f"{pct(data['price_return'])}, temettülerin getiriye katkısı "
+            f"{pct(data['dividend_return'])}."
+        )
+    if data.get("dividend_yield_trailing_12m"):
+        facts.append(
+            "Son 12 ayda ödenen temettülerin son fiyata oranı (temettü verimi) "
+            f"{pct(data['dividend_yield_trailing_12m'], signed=False)}."
+        )
+    return facts
+
+
+# --- compare_assets ---------------------------------------------------------------------------
+
+
+def comparison(data: Mapping[str, Any]) -> list[str]:
+    assets = [a for a in data["assets"] if a.get("metrics")]
+    facts = [
+        f"Karşılaştırma {date(data['window_start'])} – {date(data['window_end'])} dönemini "
+        "kapsıyor; her varlık aynı dönemle ölçüldü."
+    ]
+    for a in assets:
+        facts += _performance(a["symbol"], a["metrics"])
+    ranked = sorted(assets, key=lambda a: -float(a["metrics"]["total_return"]))
+    if len(ranked) > 1:
+        facts.append(
+            "Toplam getiriye göre sıralama: "
+            + ", ".join(f"{a['symbol']} {pct(a['metrics']['total_return'])}" for a in ranked)
+            + "."
+        )
+    currencies = sorted({str(a["currency"]) for a in assets})
+    if len(currencies) > 1:
+        facts.append(
+            "Varlıklar farklı para birimlerinde ("
+            + ", ".join(currencies)
+            + "); her getiri kendi para birimindedir, doğrudan karşılaştırılamaz."
+        )
+    return facts
+
+
+# --- get_valuation ----------------------------------------------------------------------------
+
+
+def valuation(data: Mapping[str, Any]) -> list[str]:
+    symbol, cur = data["symbol"], str(data["trading_currency"])
+    facts = [
+        f"{symbol}, {date(data['price_date'])} kapanışı {money(data['price'], cur)}; piyasa "
+        f"değeri {amount(data['market_cap'], cur)}."
+    ]
+    basis = {
+        "trailing_four_quarters": "son dört çeyreğin toplamı",
+        "trailing_twelve_months_reported": "şirketin son raporunda verdiği son 12 aylık rakam",
+        "latest_fiscal_year": "son tam mali yıl",
+    }.get(str(data.get("earnings_basis")), "")
+    periods = data.get("periods_used") or []
+    when = f" ({date(periods[0])} – {date(periods[-1])} dönem sonları)" if len(periods) > 1 else ""
+    ratios = []
+    if data["price_to_earnings"] is not None:
+        ratios.append(f"F/K {number(data['price_to_earnings'])}")
+    if data["price_to_book"] is not None:
+        ratios.append(f"PD/DD {number(data['price_to_book'])}")
+    if data["price_to_sales"] is not None:
+        ratios.append(f"F/S {number(data['price_to_sales'])}")
+    if ratios:
+        line = ", ".join(ratios) + "."
+        if basis and (data["price_to_earnings"] is not None or data["price_to_sales"] is not None):
+            line += f" Kâr ve satışlar {basis}{when}."
+        if data.get("equity_as_of") and data["price_to_book"] is not None:
+            line += f" Özsermaye {date(data['equity_as_of'])} tarihli."
+        facts.append(line)
+    for key, name, figure in (
+        ("pe", "F/K", "earnings"),
+        ("pb", "PD/DD", "equity"),
+        ("ps", "F/S", "sales"),
+    ):
+        if key not in data.get("not_meaningful", {}):
+            continue
+        value = data.get(figure)
+        if value is not None and value <= 0:
+            reason = "ilgili rakam sıfır ya da negatif (örneğin zarar)"
+        else:
+            reason = "kaynak gereken rakamı vermiyor"
+        facts.append(f"{name} bu veriyle hesaplanamıyor: {reason}.")
+    if data.get("restated_to_money_of"):
+        facts.append(
+            "Finansallar enflasyon muhasebesine (TMS 29) göre "
+            f"{month(str(data['restated_to_money_of']))} parasıyla düzeltilmiş rakamlardır."
+        )
+    if data.get("reporting_currency") and data["reporting_currency"] != cur:
+        facts.append(
+            f"Şirket finansallarını {data['reporting_currency']} olarak raporluyor; oranlar için "
+            f"{number(data['fx_to_trading_currency'], 4)} kuruyla {cur} cinsine çevrildi."
+        )
+    if data.get("dividend_yield_trailing_12m"):
+        facts.append(
+            "Son 12 ayda ödenen temettülerin son fiyata oranı (temettü verimi) "
+            f"{pct(data['dividend_yield_trailing_12m'], signed=False)}."
+        )
+    facts.append(
+        "Oranlar bugünkü fiyatı geçmiş sonuçlarla karşılaştırır; ucuz ya da pahalı "
+        "olduğu anlamına gelmez."
+    )
     return facts

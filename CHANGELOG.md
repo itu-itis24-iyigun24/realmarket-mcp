@@ -11,7 +11,9 @@
   their meaning, dates and sign, and the instructions tell the model to build the answer from
   them rather than compose figures from `data`. Small models had turned 0.313 into "%313",
   paired figures from different windows and labelled a portfolio's own return as its lead over
-  an index; with facts they relay sentences instead. `data` is unchanged.
+  an index; with facts they relay sentences instead. `data` is unchanged. `get_price_summary`,
+  `compare_assets` (with a ranking by total return) and `get_valuation` (ratios, their basis,
+  and why a ratio is missing) have facts too.
 - **`analyze_portfolio` `compare_with`**: only when the user asks, each holding gets another
   symbol's move (BIST 100, BIST 30, gold, any asset) over the holding's own period, from its
   first purchase to the last session or the day it was sold out, beside its own price move.

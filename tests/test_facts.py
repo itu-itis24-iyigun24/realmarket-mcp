@@ -44,8 +44,24 @@ def test_portfolio_facts_bind_each_figure_to_its_meaning() -> None:
     assert result.to_dict()["facts"] == list(result.facts)
 
 
+def test_summary_and_comparison_facts() -> None:
+    provider = FixtureProvider(FIXTURES)
+    summary = tools.get_price_summary(
+        provider, "TTT", start="2024-01-01", today=dt.date(2024, 1, 10)
+    )
+    # TTT 200 on 2024-01-02 -> 220 on 2024-01-08.
+    assert summary.facts[0].startswith(
+        "TTT, 2 Ocak 2024 – 8 Ocak 2024 arasında (3 seans): ilk kapanış 200,00, son kapanış "
+        "220,00; toplam getiri +%10,0."
+    )
+    both = tools.compare_assets(
+        provider, ["TTT", "AAA"], start="2024-01-02", today=dt.date(2024, 1, 10)
+    )
+    assert "Toplam getiriye göre sıralama: AAA +%20,0, TTT +%10,0." in both.facts
+
+
 def test_results_without_facts_keep_their_envelope() -> None:
-    result = tools.get_price_summary(
-        FixtureProvider(FIXTURES), "TTT", start="2024-01-01", today=dt.date(2024, 1, 10)
+    result = tools.search_assets(
+        FixtureProvider(FIXTURES), "Alpha", 5, today=dt.date(2024, 1, 10), retrieved_at="x"
     )
     assert "facts" not in result.to_dict()

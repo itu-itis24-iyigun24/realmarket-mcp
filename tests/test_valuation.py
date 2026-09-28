@@ -65,6 +65,9 @@ def test_multiples_from_four_quarters(tmp_path: Path) -> None:
     assert data["price_to_book"] == approx(220_000 / (2000 * 30))
     assert data["price_to_sales"] == approx(220_000 / (1000 * 30))
     assert data["earnings_basis"] == "trailing_four_quarters"
+    facts = run(provider(tmp_path / "f", st)).facts
+    assert any(f.startswith("F/K 73,33, PD/DD 3,67, F/S 7,33.") for f in facts)
+    assert any("30,0000 kuruyla TRY cinsine" in f for f in facts)
 
 
 def test_tms29_uses_the_reported_trailing_twelve_months(tmp_path: Path) -> None:
@@ -77,6 +80,10 @@ def test_tms29_uses_the_reported_trailing_twelve_months(tmp_path: Path) -> None:
     # The source's trailing figure, never a sum of its quarters; brought to January 2024 money.
     assert data["earnings_basis"] == "trailing_twelve_months_reported"
     assert data["restated_to_money_of"] == "2024-01"
+    assert any(
+        "TMS 29) göre Ocak 2024 parasıyla" in f
+        for f in run(provider(tmp_path / "f", st), lambda *_: cpi).facts
+    )
     assert data["earnings"] == approx(55.0)
     assert data["price_to_earnings"] == approx(220_000 / 55)
     assert data["price_to_sales"] == approx(220_000 / 1100)
@@ -99,6 +106,7 @@ def test_tms29_without_a_reported_trailing_figure_gives_no_pe(tmp_path: Path) ->
         None,
     )
     assert "TMS 29" in data["not_meaningful"]["pe"]
+    assert "F/K bu veriyle hesaplanamıyor: kaynak gereken rakamı vermiyor." in result.facts
     assert data["price_to_book"] == approx(220_000 / 5500)  # P/B is still given
     assert "no_tms29_trailing_earnings" in {f.code for f in result.quality_flags}
     no_cpi = run(provider(tmp_path / "b", st))
