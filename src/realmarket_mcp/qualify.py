@@ -360,6 +360,8 @@ _DATES = re.compile(
     # a day range before a month name: "16-23 Temmuz"
     r"|\b\d{1,2}\s?[-–]\s?\d{1,2}(?=\s+(Ocak|Şubat|Mart|Nisan|Mayıs|Haziran|Temmuz|Ağustos|"
     r"Eylül|Ekim|Kasım|Aralık))"
+    # an index's name: "BIST 100", "BIST 30"
+    r"|\bBIST\s?\d+"
 )
 _NUMBER = re.compile(r"-?\d[\d.,]*\d|-?\d")
 
@@ -383,7 +385,9 @@ ADVICE_PATTERNS = tuple(
 CAUSAL_PATTERNS = tuple(
     re.compile(p, re.IGNORECASE)
     for p in (
-        r"\b(kaynakl[ıi]|kaynaklan[a-zçğıöşü]*|y[üu]z[üu]nden|sebebiyle|neden oldu|yol a[çc]t[ıi])",
+        # "piyasa kaynaklı bir düşüş" names a cause; "kaynaklı bir veri" (sourced data) does not.
+        r"\bkaynakl[ıi](?!\s+(bir\s+)?(veri|bilgi|rakam))",
+        r"\b(kaynaklan[a-zçğıöşü]*|y[üu]z[üu]nden|sebebiyle|neden oldu|yol a[çc]t[ıi])",
         r"\b(hisseye|[şs]irkete|piyasaya)\s+(ba[ğg]l[ıi]|[öo]zg[üu])\b",
         r"%\s?\d+[,.]?\d*\s*['’]?\w*\s+(piyasa|hisse|[şs]irket)\w*\s+(etkisi|kaynakl|pay)",
         r"\b(due to|caused by|driven by|because of)\b",
@@ -560,6 +564,14 @@ def check_answer(case: Case, answer: str, calls: Sequence[ToolCall]) -> list[Che
         for c in calls
         for fact in c.response.get("facts", [])
         for _, values in answer_numbers(str(fact))
+        for v in values
+    ]
+    # So do quality flags, which the instructions tell the model to state.
+    pool += [
+        v
+        for c in calls
+        for flag in c.response.get("quality_flags", [])
+        for _, values in answer_numbers(str(flag.get("message", "")))
         for v in values
     ]
     found = answer_numbers(answer, ignore=case.question)

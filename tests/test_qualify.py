@@ -272,3 +272,11 @@ def test_numbers_in_result_text_and_refusals_without_a_verb() -> None:
     checks = check_answer(case, "Haber: 300 yeni uçak siparişi.", [call])
     assert next(c for c in checks if c.name == "no_unsupported_figures").passed
     assert qualify.advice_wording("Hedef fiyat bilgisine erişilemedi.") == []
+
+
+def test_sourced_data_and_index_names_are_not_flagged() -> None:
+    case = Case("c", "Eurobond getirileri ne durumda?", (), no_causal_claims=True)
+    answer = "Eurobond getirileri hakkında güvenilir, kaynaklı bir veriye erişemiyorum; BIST 100."
+    checks = {c.name: c for c in check_answer(case, answer, [])}
+    assert checks["no_causal_claims"].passed
+    assert checks["no_unsupported_figures"].passed

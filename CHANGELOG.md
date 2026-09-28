@@ -58,6 +58,16 @@
   figures the model computed from tool results and three tool choices. After the second
   round of fixes those nine were re-run: 7 are correct, bringing the run to about 112 (94%);
   the two left are a ratio and a label the model added to facts that already had the figures.
+- `evals/reports/2026-09-28-full-run-2.md`: the second full run. Haiku 114 / 119 on the
+  automatic checks (first run: 94), Sonnet 119 / 119; neither gave advice, a reason for a
+  move or a cheap/dear verdict. Fixes from it: Yahoo's `GOLD` (Barrick Gold's share, whose
+  return had been reported as gold's) is refused with `GC=F` named; `check_setup` facts name
+  the tool for each kind of question; `portfolio_real_return` buys a weekend or holiday
+  purchase at the next session (it had used the previous close, disagreeing with
+  `compare_real_return`) and accepts a month alone; with an amount, every alternative is
+  also given in money; `analyze_portfolio` states the result with dividends the user did not
+  enter. The scorer counts figures in quality flags, ignores index names and reads
+  "kaynaklı bir veri" as "sourced data".
 - **"Is it cheap?" answered with a comparison.** A ratio alone cannot say cheap or dear, and
   models filled the gap with rules of thumb ("under 1 usually means undervalued").
   `get_valuation` now sets the company's price-to-book among the other companies its price
