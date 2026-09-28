@@ -359,7 +359,11 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
             )
         facts.append(line)
     if data["usd_return"] is not None:
-        facts.append(f"{first} – {last} arasında dolar cinsinden getiri {pct(data['usd_return'])}.")
+        # Named, so it cannot be read as the dollar's own return against the lira.
+        facts.append(
+            f"{symbol}, dolar cinsinden ölçüldüğünde {first} – {last} arasında "
+            f"{pct(data['usd_return'])} getirdi."
+        )
     if data["gold_return_in_currency"] is not None:
         line = (
             f"Aynı para {first} tarihinde altına yatırılsaydı {last} tarihine kadar "
