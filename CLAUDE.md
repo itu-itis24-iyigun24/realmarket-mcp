@@ -57,6 +57,11 @@ Workflows in `.claude/skills/` chain them together:
 - `model-check` — Haiku subagents answer customer questions through `scripts/call_tool.py`;
   run it after changing tool descriptions, result fields, notes or instructions.
 
+After each major piece of work (a full model check, a new data path, a release), give the
+maintainer an updated adoption assessment, in Turkish: would a Turkish brokerage put this in
+its app today, seen from product, compliance, IT/security and data; what changed since the
+last one; what still blocks a sale; and the next priorities.
+
 ## Layout
 
 ```
