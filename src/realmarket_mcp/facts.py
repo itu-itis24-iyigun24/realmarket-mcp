@@ -924,6 +924,7 @@ def _source(value: str) -> str:
         "csv": "kullanıcının CSV dosyası",
         "gdelt": "GDELT",
         "none": "kapalı",
+        "off": "kapalı (yurt dışı kaynaklar kapalı)",
     }
     return names.get(value, "yok" if value.startswith("unavailable") else value)
 
@@ -955,6 +956,12 @@ def setup(data: Mapping[str, Any]) -> list[str]:
         f"{_source(data['house_prices']['TR'])}.",
         f"Haberler: {_source(str(data['news']))}; get_news.",
     ]
+    if not data.get("foreign_sources", True):
+        facts.append(
+            "Yurt dışı kaynaklar kapalı: sunucu yalnızca kurumun veri adaptörüne ve kurumun "
+            "ayarladığı kaynaklara bağlanır; OECD enflasyonu, AB şirket raporları (ESEF) ve "
+            "GDELT haberleri kullanılmaz."
+        )
     if data["missing"]:
         facts.append(
             f"Eksik {len(data['missing'])} ayar var; bunlar olmadan ilgili araçlar çalışmaz "

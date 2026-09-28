@@ -18,9 +18,11 @@ rakamlardan kurar:
 - Türkçe olgu cümleleri: her rakam anlamı ve tarihiyle gelir, model onu aktarır.
 
 Araçlar al, sat, tut önerisi, hedef fiyat, fiyat hareketine neden ya da "ucuz/pahalı" hükmü
-üretmez. 119 gerçek müşteri sorusunda en küçük model (Claude Haiku) %96, Claude Sonnet %100
-doğru cevap verdi; hiçbir cevapta tavsiye ya da neden uydurma yoktu
-(`evals/reports/2026-09-28-full-run-2.md`).
+üretmez. Müşterilerin sorabileceği biçimde yazılmış 119 soruluk test setinde (28 Eylül 2026,
+canlı veri) Claude Haiku 119 sorunun 115'ini, Claude Sonnet 119'unun tamamını doğru cevapladı;
+hiçbir cevapta tavsiye, fiyat hareketine neden gösterme ya da ucuz/pahalı hükmü yoktu
+(`evals/reports/2026-09-28-full-run-2.md`). Sonuç kurumun modeline ve verisine göre değişir;
+kurum kendi modelini 4. adımdaki araçla sınamalıdır.
 
 ## Mimari
 
@@ -33,7 +35,12 @@ Müşteri → kurumun uygulaması → kurumun yapay zekâ modeli → realmarket 
                  finansallar, sektör listesi             konut fiyatları      ya da GDELT
 ```
 
-- Veri kurumun ağından çıkmaz: realmarket veriyi saklamaz, her soruda adaptörden okur.
+- Fiyat verisi kurumun ağından çıkmaz: realmarket veriyi saklamaz, her soruda adaptörden okur.
+- Müşterinin sorusu ve araçların sonuçları (portföyü dahil) kurumun seçtiği yapay zekâ
+  modeline gider. Modelin nerede çalıştığı ve kişisel verinin, gerekiyorsa yurt dışına,
+  aktarılmasının hukuki dayanağı kurumun kararıdır.
+- Adaptörle çalışırken realmarket kendiliğinden yurt dışındaki bir kaynağa bağlanmaz: yalnızca
+  adaptöre ve kurumun ayarladığı kaynaklara (TCMB EVDS gibi) gider. Ayrıntı 3. adımda.
 - Model kurumun seçimidir; tool calling destekleyen her model MCP ile bağlanabilir.
 
 ## Adım adım
@@ -50,7 +57,7 @@ Elinizde bir veri API'si varsa iş büyük ölçüde bir biçim çevirisidir.
 | `/bars` | Evet | Günlük fiyatlar |
 | `/bars` içinde `dividends`, `splits`, `price_close` | Hayır | Temettü verimi, getirinin temettü payı, bedelsizlerin portföye otomatik uygulanması |
 | `/financials` | Hayır | Finansal tablolar, F/K, PD/DD |
-| `/peers` | Hayır | "Ucuz mu?" sorusunun cevabı olan sektör kıyası |
+| `/peers` | Hayır | Sektör kıyası: "ucuz mu?" diye soran müşteriye hüküm yerine şirketin PD/DD'sini benzerleriyle yan yana verir |
 | `/news` | Hayır | KAP bildirimleri ve haberler |
 
 Başlangıç noktası: `examples/adapter/serve_files.py` (yalnızca standart kütüphane; dosyadan
@@ -76,8 +83,17 @@ REALMARKET_EVDS_API_KEY=... \
 realmarket-mcp --transport http --host 127.0.0.1 --port 8000
 ```
 
-- `REALMARKET_EVDS_API_KEY`: TCMB EVDS anahtarı (enflasyon, mevduat, konut); ücretsiz alınır.
-- `REALMARKET_NEWS_PROVIDER=http`: haberleri kendi adaptörünüzden almak için.
+- `REALMARKET_EVDS_API_KEY`: TCMB EVDS anahtarı (enflasyon, mevduat, konut). Anahtar ücretsiz
+  alınır; ancak EVDS'nin kullanım koşulları, verinin kaynak gösterilerek kullanılabileceğini
+  ve kullanıcılardan bu veri için ücret istenemeyeceğini söyler. Ücretli bir hizmette
+  kullanımın bu koşula uygunluğu kurumun değerlendirmesidir. Yalnızca enflasyon için
+  alternatif: TÜİK'in TÜFE serisini aylık bir CSV dosyası olarak verin
+  (`REALMARKET_CPI_CSV_TR`, sütunlar `month,cpi_index`).
+- Haberler adaptörün `/news` ucundan gelir (adaptörle çalışırken varsayılan).
+- `REALMARKET_FOREIGN_SOURCES`: adaptörle çalışırken varsayılan olarak kapalıdır. Kapalıyken
+  realmarket OECD enflasyonuna, AB şirket raporlarına (ESEF) ve GDELT haberlerine bağlanmaz;
+  bir bölgenin enflasyonu için kaynak ayarlanmamışsa (ör. ABD hisseleri için ABD enflasyonu)
+  ilgili araç bunu söyleyerek durur. `on` bu kaynakları açar.
 - `REALMARKET_AUDIT_LOG`: her araç çağrısının denetim kaydı (bkz. `integration.md`).
 - Anahtarlar yalnızca ortam ayarlarında durur; hiçbir cevapta ya da kayıtta yazılmaz.
 
@@ -114,7 +130,13 @@ Süreler kaba tahmindir; kurumun veri kaynağının hazırlığına göre deği�
 
 ## Kurumda kalan sorumluluklar
 
-- Verinin lisansı ve doğruluğu (realmarket veriyi denetler ama kaynağın yerine geçmez).
+- Verinin lisansı ve doğruluğu (realmarket veriyi denetler ama kaynağın yerine geçmez). Borsa
+  verisi lisansının, verinin hesaplamalarda ve yapay zekâ cevaplarında kullanımını (türetilmiş
+  veri) kapsayıp kapsamadığı da buna dahildir.
+- Müşteri ekranında asistanın bir yapay zekâ olduğunun ve cevabın yatırım danışmanlığı
+  olmadığının belirtilmesi; cevaplardaki kaynakların gösterilmesi.
+- Kişisel verilerin (müşterinin portföyü ve soruları) işlenmesi, denetim kaydının saklama
+  süresi ve erişim yetkisi, modele aktarımın KVKK açısından dayanağı.
 - Modelin seçimi ve sınanması; müşteriye gösterilen metin ve uyarılar.
 - SPK mevzuatı açısından değerlendirme: araçlar tavsiye üretmez, ancak ürünün mevzuata
   uygunluğu kurumun hukuk ve uyum birimlerinin kararıdır.

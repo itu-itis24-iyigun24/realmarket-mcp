@@ -96,7 +96,8 @@ system prompt in production too; the test uses them.
 | `REALMARKET_PRICE_PROVIDER=http`, `REALMARKET_HTTP_URL`, `REALMARKET_HTTP_TOKEN` | the firm's data adapter |
 | `REALMARKET_EVDS_API_KEY` | Turkish CPI (current) and TL deposit rates |
 | `REALMARKET_SEC_CONTACT` | official US company statements (the firm's contact e-mail) |
-| `REALMARKET_NEWS_PROVIDER=http` | news from the adapter's `/news` endpoint (KAP, Foreks or another licensed feed); `none` turns news off |
+| `REALMARKET_NEWS_PROVIDER=http` | news from the adapter's `/news` endpoint (KAP, Foreks or another licensed feed; the default with the adapter); `none` turns news off |
+| `REALMARKET_FOREIGN_SOURCES=on` | allow keyless sources abroad (OECD and FRED's public CSV for inflation, ESEF, GDELT). Off by default with the adapter: the server then reaches only the adapter and the sources set here, and a tool that needs an unconfigured source (US inflation for a US share, say) stops and names the setting |
 | `REALMARKET_AUDIT_LOG=/var/log/realmarket/audit.jsonl` | audit log, one line per tool call (below) |
 | `REALMARKET_AUDIT_FULL=1` | also store each full response in the audit log |
 

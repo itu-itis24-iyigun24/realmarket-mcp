@@ -655,14 +655,17 @@ def build_server() -> MCPServer:
         from realmarket_mcp.providers.esef import EsefProvider
 
         stamp = _stamp(now)
-        return respond(
-            lambda: tools.find_official_filer(
+
+        def run() -> ToolResult:
+            config.require_foreign_sources("ESEF (filings.xbrl.org)")
+            return tools.find_official_filer(
                 EsefProvider(retrieved_at=stamp).find_filer,
                 name,
                 retrieved_at=stamp,
                 today=now.date(),
             )
-        )
+
+        return respond(run)
 
     @server.tool(annotations=READ_ONLY)
     @audited

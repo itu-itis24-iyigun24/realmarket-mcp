@@ -25,6 +25,11 @@ NEWS_PROVIDER_ENV = "REALMARKET_NEWS_PROVIDER"
 # The plugin and extension checkbox; REALMARKET_PRICE_PROVIDER, when set, takes precedence.
 USE_YAHOO_ENV = "REALMARKET_USE_YAHOO"
 TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+FALSE_VALUES = frozenset({"0", "false", "no", "off"})
+# Keyless sources abroad that realmarket would reach on its own: the OECD and FRED's public
+# CSV (inflation), ESEF (European reports) and GDELT (news). With the data adapter they are off
+# unless this is set, so a firm's deployment contacts only the sources it configured.
+FOREIGN_SOURCES_ENV = "REALMARKET_FOREIGN_SOURCES"
 
 
 def price_provider_choice(env: Mapping[str, str] | None = None) -> str:
@@ -33,6 +38,38 @@ def price_provider_choice(env: Mapping[str, str] | None = None) -> str:
     if explicit:
         return explicit
     return "yahoo" if env.get(USE_YAHOO_ENV, "").strip().lower() in TRUE_VALUES else "fixture"
+
+
+def foreign_sources_allowed(env: Mapping[str, str] | None = None) -> bool:
+    """Whether realmarket may reach keyless sources abroad by itself: off by default with the
+    data adapter (a firm's deployment), on otherwise. Sources the operator configures
+    explicitly (a FRED key, an SEC e-mail, a named news provider) are used either way."""
+    env = os.environ if env is None else env
+    value = env.get(FOREIGN_SOURCES_ENV, "").strip().lower()
+    if value in TRUE_VALUES:
+        return True
+    if value in FALSE_VALUES:
+        return False
+    return price_provider_choice(env) != "http"
+
+
+def require_foreign_sources(source: str, env: Mapping[str, str] | None = None) -> None:
+    if not foreign_sources_allowed(env):
+        raise ToolError(
+            ErrorCode.UNSUPPORTED,
+            f"{source} is a source abroad, and sources abroad are off in this deployment.",
+            "This deployment uses only the firm's data adapter and the sources its operator "
+            f"configured. The operator can allow sources abroad with {FOREIGN_SOURCES_ENV}=on.",
+            {"source": source},
+        )
+
+
+def news_provider_choice(env: Mapping[str, str] | None = None) -> str:
+    """The configured news source; without one, GDELT, or the data adapter's news when sources
+    abroad are off."""
+    env = os.environ if env is None else env
+    default = "gdelt" if foreign_sources_allowed(env) else "http"
+    return env.get(NEWS_PROVIDER_ENV, "").strip().lower() or default
 
 
 # Names of settings the host passed empty or unsubstituted, removed at startup (for check_setup).
@@ -53,9 +90,11 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
         for name, value in env.items()
         if name.startswith("REALMARKET_CPI_CSV_") and value.strip()
     )
-    news = env.get(NEWS_PROVIDER_ENV, "gdelt").strip().lower() or "gdelt"
+    news = news_provider_choice(env)
+    foreign = foreign_sources_allowed(env)
     # missing: something a tool cannot do without the setting. improvements: it works, and
     # the setting makes it better. A model reading "missing" concludes the data is absent.
+    keyless = "oecd" if foreign else "off"
     missing: list[str] = []
     improvements: list[str] = []
     if "http" in {price, news} and not env.get("REALMARKET_HTTP_URL", "").strip():
@@ -90,22 +129,26 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
             "Turkish inflation (only) comes from the OECD, which lags TÜİK by months, and TL "
             f"deposit comparisons are off; add a TCMB EVDS key ({cpi.EVDS_KEY_ENV}) for both. "
             "US and other OECD members' inflation from the OECD is current."
+            if foreign
+            else "Turkish inflation and TL deposit comparisons are off: add a TCMB EVDS key "
+            f"({cpi.EVDS_KEY_ENV}), or a TÜİK CPI file (REALMARKET_CPI_CSV_TR) for inflation."
         )
     return {
         "price_data": {
             "provider": price,
             "enabled": enabled,
         },
+        "foreign_sources": foreign,
         "financial_statements": {
             "us_companies": "sec_edgar" if contact else (statements or "unavailable"),
-            "eu_uk_companies_by_lei": "esef",  # official, keyless, always on
+            "eu_uk_companies_by_lei": "esef" if foreign else "off",  # official, keyless
             "other_markets": statements or "unavailable",
             "sec_contact_set": contact,
         },
         "inflation": {
-            "TR": "csv" if "TR" in csv_regions else ("evds" if evds else "oecd"),
-            "US": "csv" if "US" in csv_regions else ("fred" if fred else "oecd"),
-            "other_oecd_members": "oecd",
+            "TR": "csv" if "TR" in csv_regions else ("evds" if evds else keyless),
+            "US": "csv" if "US" in csv_regions else ("fred" if fred else keyless),
+            "other_oecd_members": keyless,
             "evds_key_set": evds,
             "fred_key_set": fred,
             "csv_regions": csv_regions,
@@ -217,11 +260,27 @@ def load_cpi(
     csv_path = env.get(f"REALMARKET_CPI_CSV_{region}")
     if csv_path:
         return inflation.load_csv(Path(csv_path), region=region, retrieved_at=retrieved_at)
+    if region == "US" and env.get(cpi.FRED_KEY_ENV, "").strip():
+        return cpi.fred_us_cpi(
+            start, env=env, fetch=fetch or cpi.http_fetch, retrieved_at=retrieved_at
+        )
+    if region == "TR" and env.get(cpi.EVDS_KEY_ENV, "").strip():
+        return cpi.evds_tr_cpi(
+            start, end, env=env, fetch=fetch or cpi.http_fetch, retrieved_at=retrieved_at
+        )
+    if region in cpi.OECD_REGIONS and not foreign_sources_allowed(env):
+        official = {
+            "TR": f"a TCMB EVDS key ({cpi.EVDS_KEY_ENV}) or ",
+            "US": f"a FRED key ({cpi.FRED_KEY_ENV}) or ",
+        }.get(region, "")
+        raise ToolError(
+            ErrorCode.MISSING_API_KEY,
+            f"No inflation source for region {region} is configured in this deployment.",
+            f"The operator can add {official}a monthly CPI file (REALMARKET_CPI_CSV_{region}); "
+            f"the keyless OECD source abroad is off unless {FOREIGN_SOURCES_ENV}=on.",
+            {"region": region},
+        )
     if region == "US":
-        if env.get(cpi.FRED_KEY_ENV, "").strip():
-            return cpi.fred_us_cpi(
-                start, env=env, fetch=fetch or cpi.http_fetch, retrieved_at=retrieved_at
-            )
         try:
             return _oecd(region, start, fetch=fetch, retrieved_at=retrieved_at)
         except ToolError as error:
@@ -229,10 +288,6 @@ def load_cpi(
                 raise
             # The same BLS series; FRED's download licence covers personal use.
             return cpi.fred_us_cpi_keyless(start, fetch=fetch, retrieved_at=retrieved_at)
-    if region == "TR" and env.get(cpi.EVDS_KEY_ENV, "").strip():
-        return cpi.evds_tr_cpi(
-            start, end, env=env, fetch=fetch or cpi.http_fetch, retrieved_at=retrieved_at
-        )
     if region in cpi.OECD_REGIONS:
         return _oecd(region, start, fetch=fetch, retrieved_at=retrieved_at)
     raise ToolError(
@@ -300,8 +355,9 @@ def load_deposit_rates(
 
 def load_news_provider(retrieved_at: str = "") -> NewsProvider:
     """GDELT is free and keyless, so it is the default; ``http`` reads the firm's data adapter
-    (its /news endpoint: KAP disclosures, Foreks or any licensed feed); 'none' disables."""
-    choice = os.environ.get(NEWS_PROVIDER_ENV, "gdelt").strip().lower()
+    (its /news endpoint: KAP disclosures, Foreks or any licensed feed) and is the default when
+    sources abroad are off; 'none' disables."""
+    choice = news_provider_choice()
     if choice == "gdelt":
         from realmarket_mcp.providers.gdelt import GdeltNewsProvider
 
@@ -338,7 +394,8 @@ def load_financials_provider(
         )
     from realmarket_mcp.providers import esef
 
-    if esef.lei_of(symbol):  # an LEI names an ESEF filer; keyless, whatever the other settings
+    if esef.lei_of(symbol):  # an LEI names an ESEF filer; keyless, so a source abroad
+        require_foreign_sources("ESEF (filings.xbrl.org)", env)
         return esef.EsefProvider(retrieved_at=retrieved_at)
     contact = sec.contact_from(env)
     us_symbol = sec.looks_like_us_symbol(symbol)

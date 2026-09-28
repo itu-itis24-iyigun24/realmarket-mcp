@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **No sources abroad by default with the data adapter.** With
+  `REALMARKET_PRICE_PROVIDER=http`, the server no longer reaches keyless sources abroad on its
+  own: inflation no longer falls back to the OECD (or FRED's public CSV), ESEF reports and
+  `find_official_filer` are refused, and news defaults to the adapter's `/news` instead of
+  GDELT. A firm's deployment then contacts only its adapter and the sources it configures
+  (an EVDS key, a CPI file, a FRED key, an SEC e-mail, a named news provider). A tool that
+  needs a source nobody configured stops and names the setting. `REALMARKET_FOREIGN_SOURCES`
+  (`on`/`off`) overrides the default in either direction; `check_setup` reports it. Nothing
+  changes without the adapter.
+- The Turkish integration guide describes the test results as they were (a 119-question
+  test set written the way customers ask, not customers' questions; Haiku 115 of 119 on
+  reading), says that the customer's question and portfolio go to the firm's model, quotes
+  the EVDS terms on charging users with TÜİK's CPI as a file as the alternative, and lists the
+  firm's remaining duties (licence scope for derived data, AI and not-advice notice on
+  screen, personal data).
 - **Removed** `explain_price_move`'s `cause` data field (added in 0.1.7): its facts now say
   that the figures do not show why the price moved. Also removed are two instructions aimed at
   single mistakes, in the `inflation_window_truncated` message and the portfolio notes, which
