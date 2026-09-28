@@ -27,6 +27,7 @@ dependencies = [
 [project.scripts]
 realmarket-mcp = "realmarket_mcp.server:main"
 realmarket-qualify = "realmarket_mcp.qualify:main"
+realmarket-adapter-check = "realmarket_mcp.adapter_check:main"
 
 [project.optional-dependencies]
 yahoo = ["yfinance>=1.5"]

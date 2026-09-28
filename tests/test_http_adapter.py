@@ -164,3 +164,80 @@ def test_credentials_do_not_follow_redirects() -> None:
     assert set(request.headers) == {"User-agent"}  # all a redirect would copy
     assert request.unredirected_hdrs.keys() == {"Authorization", "Key"}
     assert request.get_header("User-agent", "").startswith("realmarket-mcp/")
+
+
+def test_news_from_the_adapter() -> None:
+    from realmarket_mcp.providers.http_adapter import HttpAdapterNewsProvider
+
+    articles = [
+        {
+            "published_at": "2026-09-20T07:30:00Z",
+            "title": "THYAO: yeni uçak siparişi",
+            "url": "https://www.kap.org.tr/tr/Bildirim/1",
+            "source": "KAP",
+            "language": "tr",
+        },
+        {
+            "published_at": "2026-06-01T07:30:00Z",
+            "title": "THYAO: eski haber",
+            "url": "https://www.kap.org.tr/tr/Bildirim/2",
+            "source": "KAP",
+            "language": "tr",
+        },
+    ]
+    fake = FakeAdapter(**{"/news": {"articles": articles}})
+    news = HttpAdapterNewsProvider(provider(fake))
+    found = news.search(
+        "THYAO",
+        dt.datetime(2026, 9, 1, tzinfo=dt.UTC),
+        dt.datetime(2026, 9, 27, tzinfo=dt.UTC),
+        language="tr",
+        limit=10,
+    )
+    assert [n.source for n in found] == ["KAP"]  # outside the window is dropped
+    assert news.name == "adapter:acme-feed"
+    path, params, _ = fake.calls[-1]
+    assert (
+        path == "/news" and params["language"] == "tr" and params["start"] == "2026-09-01T00:00:00Z"
+    )
+    with pytest.raises(ToolError) as raised:
+        HttpAdapterNewsProvider(provider(FakeAdapter())).search(
+            "THYAO", dt.datetime(2026, 9, 1), dt.datetime(2026, 9, 27), language=None, limit=5
+        )
+    assert raised.value.code is ErrorCode.UNSUPPORTED  # the adapter serves no news
+    broken = FakeAdapter(**{"/news": {"articles": [{**articles[0], "url": "javascript:x"}]}})
+    with pytest.raises(ToolError) as raised:
+        HttpAdapterNewsProvider(provider(broken)).search(
+            "THYAO", dt.datetime(2026, 9, 1), dt.datetime(2026, 9, 27), language=None, limit=5
+        )
+    assert raised.value.code is ErrorCode.PROVIDER_UNAVAILABLE
+
+
+def test_news_provider_setting(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(config.NEWS_PROVIDER_ENV, "http")
+    with pytest.raises(ToolError) as raised:
+        config.load_news_provider()
+    assert http_adapter.URL_ENV in raised.value.hint
+    setup = config.describe_setup({config.NEWS_PROVIDER_ENV: "http"})
+    assert setup["news"] == "http" and any("REALMARKET_HTTP_URL" in m for m in setup["missing"])
+
+
+def test_adapter_check_reports_each_endpoint() -> None:
+    from realmarket_mcp import adapter_check
+
+    today = dt.date(2026, 9, 27)
+    results = adapter_check.run_checks(lambda: provider(FakeAdapter()), "THYAO", today=today)
+    status = {r.name: r.status for r in results}
+    assert status["/meta"] == status["/search"] == "PASS"
+    assert status["/bars"] == "WARN"  # served, but with a missing close
+    assert status["/bars exchange rate"] == "WARN"  # the fake serves THYAO bars only
+    assert status["price summary"] == "FAIL"  # two bars, one usable: a real finding
+    assert status["/financials"] == "SKIP" and status["/news"] == "SKIP"  # optional, absent
+    assert "1 check(s) failed" in adapter_check.render(results)
+
+    http_adapter._meta_cache.clear()  # /meta is cached per URL for an hour
+    bad_meta = adapter_check.run_checks(
+        lambda: provider(FakeAdapter(**{"/meta": {**META, "api_version": 9}})), "THYAO", today=today
+    )
+    assert [(r.name, r.status) for r in bad_meta] == [("/meta", "FAIL")]
+    assert "failed" in adapter_check.render(bad_meta)

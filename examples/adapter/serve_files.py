@@ -10,6 +10,7 @@ File layout under --root (the same as realmarket's test fixtures):
     assets.json               [{"symbol", "name", "asset_class", "currency", "exchange"}]
     bars/<SYMBOL>.csv         date,open,high,low,close,volume   (empty cell = missing)
     financials/<SYMBOL>.json  optional; the /financials response body
+    news.json                 optional; {"articles": [...]}, the firm's news or KAP feed
 
 The full contract is docs/adapter-api.md.
 """
@@ -67,6 +68,18 @@ def load_bars(symbol: str, start: str, end: str) -> dict[str, Any] | None:
     }
 
 
+def load_news(query: str, start: str, end: str, limit: int) -> dict[str, Any] | None:
+    path = ROOT / "news.json"
+    if not path.exists():
+        return None  # this adapter serves no news: /news answers 404
+    articles = json.loads(path.read_text(encoding="utf-8"))["articles"]
+    needle = query.casefold()
+    hits = [
+        a for a in articles if needle in a["title"].casefold() and start <= a["published_at"] <= end
+    ]
+    return {"articles": hits[:limit]}
+
+
 def load_financials(symbol: str) -> dict[str, Any] | None:
     path = ROOT / "financials" / f"{symbol}.json"
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
@@ -104,6 +117,11 @@ class Handler(BaseHTTPRequestHandler):
             if statements:
                 return self._send(200, statements)
             return self._send(404, {"error": "no statements"})
+        if url.path == "/news":
+            news = load_news(
+                q.get("q", ""), q.get("start", ""), q.get("end", "9999"), int(q.get("limit", 20))
+            )
+            return self._send(200, news) if news else self._send(404, {"error": "no news"})
         return self._send(404, {"error": "unknown endpoint"})
 
     def log_message(self, *_args: Any) -> None:  # keep stdout quiet

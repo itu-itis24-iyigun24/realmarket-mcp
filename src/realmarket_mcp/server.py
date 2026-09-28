@@ -512,7 +512,7 @@ def build_server() -> MCPServer:
         now = _utc_now()
         return respond(
             lambda: tools.get_news(
-                load_news_provider(),
+                load_news_provider(_stamp(now)),
                 query,
                 days,
                 language,

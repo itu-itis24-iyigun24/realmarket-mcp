@@ -18,6 +18,9 @@ docs/adapter-api.md is the full specification, with an example adapter.
     GET {base}/financials?symbol=<s>                                          optional; 404: none
         {"currency", "sector", "industry",
          "quarterly": [{"end": "YYYY-MM-DD", "values": {field: number | null}}], "annual": [...]}
+    GET {base}/news?q=<text>&start=<ISO>&end=<ISO>&limit=<n>[&language=tr]  optional; 404: none
+        {"articles": [{"published_at": "YYYY-MM-DDTHH:MM:SSZ", "title", "url", "source",
+                       "language", "country"}]}
 
 Configuration: REALMARKET_PRICE_PROVIDER=http, REALMARKET_HTTP_URL=<base>, and optionally
 REALMARKET_HTTP_TOKEN, sent as "Authorization: Bearer <token>" and never echoed.
@@ -41,6 +44,7 @@ from realmarket_mcp.models import (
     AssetRef,
     Bar,
     FinancialStatements,
+    NewsItem,
     PriceSeries,
     statements_from_dict,
 )
@@ -222,3 +226,68 @@ class HttpAdapterProvider:
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise _bad(f"/financials: {exc}") from None
+
+
+class HttpAdapterNewsProvider:
+    """News and disclosures from the same adapter (e.g. the firm's KAP or Foreks news feed)."""
+
+    def __init__(self, adapter: HttpAdapterProvider) -> None:
+        self._adapter = adapter
+        self.name = adapter.name
+
+    def search(
+        self,
+        query: str,
+        start: dt.datetime,
+        end: dt.datetime,
+        *,
+        language: str | None,
+        limit: int,
+    ) -> list[NewsItem]:
+        params: dict[str, str | int] = {
+            "q": query,
+            "start": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "end": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "limit": limit,
+        }
+        if language:
+            params["language"] = language
+        try:
+            payload = self._adapter._get("/news", params)
+        except ToolError as error:
+            if error.code is ErrorCode.NO_DATA_IN_RANGE:
+                raise ToolError(
+                    ErrorCode.UNSUPPORTED,
+                    "The data adapter does not serve news.",
+                    "News comes from the adapter's optional /news endpoint (docs/adapter-api.md);"
+                    " ask whoever runs the adapter, or set REALMARKET_NEWS_PROVIDER=gdelt.",
+                ) from None
+            raise
+        try:
+            items = []
+            for a in payload["articles"]:
+                published = dt.datetime.strptime(str(a["published_at"]), "%Y-%m-%dT%H:%M:%SZ")
+                title, url = str(a["title"]).strip(), str(a["url"])
+                if not title or not url.startswith(("https://", "http://")):
+                    raise ValueError("an article needs a title and an http(s) url")
+                items.append(
+                    NewsItem(
+                        published_at=published.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                        title=title,
+                        url=url,
+                        source=str(a.get("source") or ""),
+                        language=a.get("language"),
+                        country=a.get("country"),
+                    )
+                )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise _bad(f"/news: {exc}") from None
+        naive_start, naive_end = start.replace(tzinfo=None), end.replace(tzinfo=None)
+        kept = [
+            n
+            for n in items
+            if naive_start
+            <= dt.datetime.strptime(n.published_at, "%Y-%m-%dT%H:%M:%SZ")
+            <= naive_end
+        ]
+        return sorted(kept, key=lambda n: n.published_at, reverse=True)[:limit]

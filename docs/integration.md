@@ -94,7 +94,7 @@ system prompt in production too; the test uses them.
 | `REALMARKET_PRICE_PROVIDER=http`, `REALMARKET_HTTP_URL`, `REALMARKET_HTTP_TOKEN` | the firm's data adapter |
 | `REALMARKET_EVDS_API_KEY` | Turkish CPI (current) and TL deposit rates |
 | `REALMARKET_SEC_CONTACT` | official US company statements (the firm's contact e-mail) |
-| `REALMARKET_NEWS_PROVIDER=none` | turn off GDELT news if the firm uses its own news source |
+| `REALMARKET_NEWS_PROVIDER=http` | news from the adapter's `/news` endpoint (KAP, Foreks or another licensed feed); `none` turns news off |
 | `REALMARKET_AUDIT_LOG=/var/log/realmarket/audit.jsonl` | audit log, one line per tool call (below) |
 | `REALMARKET_AUDIT_FULL=1` | also store each full response in the audit log |
 
@@ -129,6 +129,28 @@ firm's own server, so the firm can show afterwards what the assistant was given:
   of answering unlogged. `check_setup` reports whether the log is on.
 - The log records what the tools returned, not what the model then wrote to the customer;
   the firm's application should keep the final answer next to it.
+
+## Showing answers to customers
+
+The firm's backend sends the customer the model's final answer only. Some models write their
+reasoning into the answer text (`<think>…</think>`, `<thought>…</thought>`); turn that off in
+the model server or strip it before the answer leaves the backend. `realmarket-qualify`
+reports a model that does this (`no_reasoning_in_answer`), and the audit log keeps what the
+tools returned next to the answer the application stored.
+
+## Support
+
+realmarket is open source and maintained by its author, who also offers firms:
+
+- a **pilot**: connecting the firm's data adapter and model, running the qualification test
+  and reviewing the audit log with the firm's compliance team;
+- **integration help**: writing or reviewing the data adapter for the firm's feeds, and Turkish
+  report templates for its assistant;
+- **maintenance**: updates when sources change (for example a new withholding-tax or minimum
+  wage decision), and fixes for issues the firm reports.
+
+Issues and questions can be opened on the GitHub repository. Terms for a pilot or support
+are agreed with each firm.
 
 ## Responsibilities that stay with the firm
 

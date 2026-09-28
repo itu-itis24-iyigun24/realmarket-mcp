@@ -2,7 +2,7 @@
 
 A data adapter lets realmarket use market data the operator is licensed to use (an exchange
 feed, a data vendor, an internal database) instead of Yahoo Finance. The adapter is a small
-HTTP service, in any language, that answers four JSON endpoints. realmarket validates every
+HTTP service, in any language, that answers three required JSON endpoints (and two optional ones: financial statements and news). realmarket validates every
 response strictly; nothing is repaired or guessed. A runnable example that serves local files
 is in [`examples/adapter/serve_files.py`](../examples/adapter/serve_files.py).
 
@@ -117,7 +117,60 @@ Unknown fields are ignored. For Turkish companies other than banks, provide the 
 company reports them under TMS 29 (inflation accounting); realmarket applies the TMS 29 rules
 to TRY reporters.
 
+## `GET /news?q=<text>&start=<ISO>&end=<ISO>&limit=<n>[&language=<xx>]` (optional)
+
+News and disclosures from the firm's own feed (KAP disclosures, Foreks, a news agency),
+newest first; 404 if the adapter does not serve news. Used when
+`REALMARKET_NEWS_PROVIDER=http`.
+
+```json
+{"articles": [
+  {"published_at": "2026-09-20T07:30:00Z", "title": "THYAO: Özel durum açıklaması",
+   "url": "https://www.kap.org.tr/tr/Bildirim/123456", "source": "KAP", "language": "tr",
+   "country": "TR"}
+]}
+```
+
+- `published_at` in UTC, `YYYY-MM-DDTHH:MM:SSZ`; articles outside `start`..`end` are dropped.
+- `title` and an `http(s)` `url` are required; `source` names the publisher or feed.
+- Titles are shown to the model as data, never as instructions.
+
+## Funds
+
+Investment funds are ordinary assets to the adapter: list them in `/search` with
+`asset_class` `fund` and serve their daily unit prices from `/bars` (`adjustment` `none`;
+fund prices already include distributions). Every return, inflation and savings tool then
+works for them.
+
 ## Checking an adapter
+
+Before connecting realmarket, run the checker against the adapter. It calls every endpoint
+through the same code realmarket uses at run time, so it passes and fails for the same
+reasons:
+
+```bash
+REALMARKET_HTTP_TOKEN=... realmarket-adapter-check --url https://marketdata.internal/realmarket/v1 --symbol THYAO
+```
+
+```
+[PASS] /meta: source adapter:acme-feed
+[PASS] /search: 2 result(s) for 'THYAO'
+[PASS] /bars: 285 bars for THYAO in TRY, split_and_dividend
+[PASS] /bars exchange rate: USDTRY
+[PASS] /bars gold: XAUUSD
+[PASS] /bars benchmark: XU100
+[PASS] price summary: total_return 0.292003
+[PASS] /financials: 5 quarters, 3 years
+[SKIP] /news: The data adapter does not serve news.
+
+The adapter is ready to connect.
+```
+
+Required: `/meta`, `/search`, `/bars`. A missing exchange rate, gold or benchmark series is a
+warning: the comparisons that need it are skipped. The exit code is 1 when a required check
+fails.
+
+## Trying it by hand
 
 ```bash
 python examples/adapter/serve_files.py --root tests/fixtures/basic --port 8765   # or your adapter

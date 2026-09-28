@@ -7,13 +7,16 @@ import os
 import time
 from collections.abc import Callable, Mapping, MutableMapping
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from realmarket_mcp import audit, inflation
 from realmarket_mcp.contract import ErrorCode, ToolError
 from realmarket_mcp.deposits import DepositRates
 from realmarket_mcp.models import FinancialStatements
 from realmarket_mcp.providers import cpi, sec
+
+if TYPE_CHECKING:
+    from realmarket_mcp.providers.http_adapter import HttpAdapterProvider
 from realmarket_mcp.providers.base import FinancialsProvider, NewsProvider, PriceProvider
 
 PROVIDER_ENV = "REALMARKET_PRICE_PROVIDER"
@@ -52,7 +55,7 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
     )
     news = env.get(NEWS_PROVIDER_ENV, "gdelt").strip().lower() or "gdelt"
     missing: list[str] = []
-    if price == "http" and not env.get("REALMARKET_HTTP_URL", "").strip():
+    if "http" in {price, news} and not env.get("REALMARKET_HTTP_URL", "").strip():
         missing.append(
             "The data adapter is selected but REALMARKET_HTTP_URL is not set; set it to the "
             "adapter's base URL, then restart."
@@ -153,23 +156,27 @@ def load_price_provider(*, retrieved_at: str) -> PriceProvider:
 
         return YahooProvider(retrieved_at=retrieved_at)
     if choice == "http":
-        from realmarket_mcp.providers import http_adapter
-
-        url = os.environ.get(http_adapter.URL_ENV, "").strip()
-        if not url:
-            raise ToolError(
-                ErrorCode.MISSING_API_KEY,
-                "The data adapter's address is not configured.",
-                f"Set {http_adapter.URL_ENV} to the adapter's base URL (see docs/adapter-api.md).",
-            )
-        token = os.environ.get(http_adapter.TOKEN_ENV, "").strip() or None
-        return http_adapter.HttpAdapterProvider(url, token=token, retrieved_at=retrieved_at)
+        return _http_adapter(retrieved_at)
     raise ToolError(
         ErrorCode.UNSUPPORTED,
         f"Unknown price provider {choice!r}.",
         f"Set {PROVIDER_ENV} to one of: yahoo, http, fixture.",
         {"provider": choice},
     )
+
+
+def _http_adapter(retrieved_at: str) -> HttpAdapterProvider:
+    from realmarket_mcp.providers import http_adapter
+
+    url = os.environ.get(http_adapter.URL_ENV, "").strip()
+    if not url:
+        raise ToolError(
+            ErrorCode.MISSING_API_KEY,
+            "The data adapter's address is not configured.",
+            f"Set {http_adapter.URL_ENV} to the adapter's base URL (see docs/adapter-api.md).",
+        )
+    token = os.environ.get(http_adapter.TOKEN_ENV, "").strip() or None
+    return http_adapter.HttpAdapterProvider(url, token=token, retrieved_at=retrieved_at)
 
 
 CURRENCY_REGIONS = {"TRY": "TR", "USD": "US", "GBP": "GB"}
@@ -282,17 +289,23 @@ def load_deposit_rates(
     )
 
 
-def load_news_provider() -> NewsProvider:
-    """GDELT is free and keyless, so it is the default; set the variable to 'none' to disable."""
+def load_news_provider(retrieved_at: str = "") -> NewsProvider:
+    """GDELT is free and keyless, so it is the default; ``http`` reads the firm's data adapter
+    (its /news endpoint: KAP disclosures, Foreks or any licensed feed); 'none' disables."""
     choice = os.environ.get(NEWS_PROVIDER_ENV, "gdelt").strip().lower()
     if choice == "gdelt":
         from realmarket_mcp.providers.gdelt import GdeltNewsProvider
 
         return GdeltNewsProvider()
+    if choice == "http":
+        from realmarket_mcp.providers.http_adapter import HttpAdapterNewsProvider
+
+        return HttpAdapterNewsProvider(_http_adapter(retrieved_at or "1970-01-01T00:00:00Z"))
     raise ToolError(
         ErrorCode.UNSUPPORTED,
         "News search is disabled." if choice == "none" else f"Unknown news provider {choice!r}.",
-        f"Set {NEWS_PROVIDER_ENV}=gdelt in the MCP server's environment to enable news search.",
+        f"Set {NEWS_PROVIDER_ENV}=gdelt (or http, for the data adapter's news) in the MCP "
+        "server's environment to enable news search.",
         {"provider": choice},
     )
 

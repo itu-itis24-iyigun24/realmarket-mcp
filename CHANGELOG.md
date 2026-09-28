@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **News from the firm's own feed.** The adapter API gains an optional `/news` endpoint, so a
+  firm can plug in KAP disclosures, Foreks or any licensed news feed
+  (`REALMARKET_NEWS_PROVIDER=http`). The example adapter serves a `news.json` file.
+- **`realmarket-adapter-check`** calls every adapter endpoint through realmarket's own code and
+  reports PASS, WARN, FAIL or SKIP for each, including the exchange-rate, gold and benchmark
+  series comparisons depend on. A firm runs it before connecting.
+- Funds can be served by an adapter like any asset (`asset_class` `fund`).
+- `docs/integration.md` describes support and pilots, and that the firm's backend shows
+  customers the final answer only, never the model's reasoning.
+
 ## 0.1.6 — 2026-09-27
 
 - Fixes from an independent review of this release:
