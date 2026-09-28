@@ -51,6 +51,12 @@
   `scripts/call_tool.py --log --case` records each call per question, and
   `scripts/score_model_check.py` scores every answer with realmarket-qualify's checks,
   counting figures a fact states as supported.
+- Found by the first model-check run: `check_setup` listed the optional SEC e-mail under
+  `missing`, so Haiku concluded financial statements were unavailable and stopped calling
+  `get_valuation` and `get_financials`. Optional settings now go under `improvements`, and
+  `check_setup` has facts saying what works. `compare_real_return`'s facts state whether the
+  asset stayed ahead of gold, the after-tax deposit and house prices (Haiku had computed its
+  own "+64.3% ahead of the deposit").
 - `scripts/call_tool.py` lists and calls the tools from a shell exactly as an MCP client sees
   them (`--synthetic` for the fictional ORNEK), and the `model-check` skill uses it to have
   Haiku subagents answer standard customer questions, without packaging an extension.

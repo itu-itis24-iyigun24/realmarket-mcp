@@ -54,7 +54,10 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
         if name.startswith("REALMARKET_CPI_CSV_") and value.strip()
     )
     news = env.get(NEWS_PROVIDER_ENV, "gdelt").strip().lower() or "gdelt"
+    # missing: something a tool cannot do without the setting. improvements: it works, and
+    # the setting makes it better. A model reading "missing" concludes the data is absent.
     missing: list[str] = []
+    improvements: list[str] = []
     if "http" in {price, news} and not env.get("REALMARKET_HTTP_URL", "").strip():
         missing.append(
             "The data adapter is selected but REALMARKET_HTTP_URL is not set; set it to the "
@@ -71,7 +74,7 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
             if yahoo
             else "US financial statements are unavailable"
         )
-        missing.append(
+        (improvements if yahoo else missing).append(
             f"{fallback}: fill in 'E-mail for SEC EDGAR' ({sec.CONTACT_ENV}) to use the "
             "companies' official SEC filings, then restart the app."
         )
@@ -113,6 +116,7 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
         # values). This is normal and needs no action; listed only for troubleshooting.
         "optional_settings_left_empty": list(dropped_at_startup),
         "missing": missing,
+        "improvements": improvements,
     }
 
 

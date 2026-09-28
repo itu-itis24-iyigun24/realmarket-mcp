@@ -264,3 +264,11 @@ def test_figures_stated_in_facts_are_supported() -> None:
     )
     checks = check_answer(case, "Paranızın karşılığı 72.952,50 TL.", [call])
     assert next(c for c in checks if c.name == "no_unsupported_figures").passed
+
+
+def test_numbers_in_result_text_and_refusals_without_a_verb() -> None:
+    case = Case("n", "Son haberler?")
+    call = ToolCall("get_news", {}, True, {"data": {"articles": [{"title": "300 yeni uçak"}]}})
+    checks = check_answer(case, "Haber: 300 yeni uçak siparişi.", [call])
+    assert next(c for c in checks if c.name == "no_unsupported_figures").passed
+    assert qualify.advice_wording("Hedef fiyat bilgisine erişilemedi.") == []

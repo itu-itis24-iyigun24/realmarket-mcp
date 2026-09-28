@@ -1801,7 +1801,7 @@ def _build_id() -> str | None:
 def check_setup(setup: dict[str, Any], *, retrieved_at: str, today: dt.date) -> ToolResult:
     """Report which data sources the server will use. Reads only its own configuration."""
     text = json.dumps(setup, sort_keys=True, separators=(",", ":"))
-    return ToolResult(
+    result = ToolResult(
         tool="check_setup",
         data={"version": __version__, "build": _build_id(), **setup},
         provenance=(
@@ -1821,9 +1821,10 @@ def check_setup(setup: dict[str, Any], *, retrieved_at: str, today: dt.date) -> 
             "a setting, quit the app completely (including from the system tray) and reopen it.",
             "optional_settings_left_empty lists optional settings the user did not fill in; that "
             "is normal and needs no action. Only the items in 'missing' limit what the tools "
-            "can do.",
+            "can do; 'improvements' are optional and every tool works without them.",
         ),
     )
+    return dataclasses.replace(result, facts=tuple(fact_text.setup(result.data)))
 
 
 def find_official_filer(

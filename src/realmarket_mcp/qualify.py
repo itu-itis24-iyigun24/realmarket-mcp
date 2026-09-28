@@ -431,6 +431,9 @@ def _numbers_in(value: Any) -> Iterator[float]:
         return
     if isinstance(value, int | float):
         yield float(value)
+    elif isinstance(value, str):  # a news title's "300 uçak" is in the result too
+        for _, values in answer_numbers(value):
+            yield from values
     elif isinstance(value, dict):
         for item in value.values():
             yield from _numbers_in(item)
@@ -513,7 +516,8 @@ def visible_answer(answer: str) -> str:
 # A sentence that refuses ("hedef fiyat veremem") names advice without giving it.
 REFUSAL = re.compile(
     r"\b(veremem|veremiyorum|vermem|vermiyorum|sunamam|sunamıyorum|sunmuyorum|yapamam|"
-    r"yapamıyorum|yapmıyorum|taşımaz|değildir|cannot|can't|do not|don't|won't)\b",
+    r"yapamıyorum|yapmıyorum|taşımaz|değildir|erişilemedi|bulunamadı|bulunmuyor|mevcut değil|"
+    r"sunulmuyor|cannot|can't|do not|don't|won't)\b",
     re.IGNORECASE,
 )
 

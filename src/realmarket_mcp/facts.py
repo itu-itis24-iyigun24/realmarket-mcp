@@ -71,6 +71,11 @@ def month(value: str) -> str:
     return f"{MONTHS[int(number_) - 1]} {year}"
 
 
+def _ahead_noun(value: float) -> str:
+    """'önünde kaldı' / 'gerisinde kaldı', after a genitive: 'altının önünde kaldı'."""
+    return "önünde kaldı" if value > 0 else "gerisinde kaldı" if value < 0 else "ile aynı kaldı"
+
+
 def _ahead(value: float) -> str:
     return "önde" if value > 0 else "geride" if value < 0 else "aynı seviyede"
 
@@ -303,7 +308,8 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
         line = (
             f"Aynı para {first} tarihinde altına yatırılsaydı {last} tarihine kadar "
             f"{cur if cur != 'TRY' else 'TL'} olarak {pct(data['gold_return_in_currency'])} "
-            f"getirirdi; hisse aynı dönemde {nominal}."
+            f"getirirdi; hisse aynı dönemde {nominal}: hisse altının "
+            f"{_ahead_noun(data['nominal_return'] - data['gold_return_in_currency'])}."
         )
         if data["gram_gold_try_start"] is not None:
             line += (
@@ -315,7 +321,9 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
         facts.append(
             f"32 günlük TL mevduat {first} – {last} arasında stopaj sonrası "
             f"{pct(data['deposit_return_after_tax'])} getirirdi (stopaj öncesi "
-            f"{pct(data['deposit_return'])}); hisse aynı dönemde {nominal}."
+            f"{pct(data['deposit_return'])}); hisse aynı dönemde {nominal}: hisse stopaj "
+            f"sonrası mevduatın "
+            f"{_ahead_noun(data['nominal_return'] - data['deposit_return_after_tax'])}."
         )
     if data["deposit_real_return_after_tax"] is not None and window_end:
         facts.append(
@@ -343,7 +351,11 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
         if house.get("house_price_real_return") is not None:
             line += f" (reel {pct(house['house_price_real_return'])})"
         if house.get("asset_return_same_months") is not None:
-            line += f"; hisse aynı aylarda {pct(house['asset_return_same_months'])}"
+            gap = house["asset_return_same_months"] - house["house_price_return"]
+            line += (
+                f"; hisse aynı aylarda {pct(house['asset_return_same_months'])}: hisse konut "
+                f"fiyatlarının {_ahead_noun(gap)}"
+            )
         facts.append(line + ".")
     return facts
 
@@ -715,5 +727,55 @@ def financials(data: Mapping[str, Any]) -> list[str]:
         facts.append(
             "Kaynak resmi değildir; önemli rakamlar şirketin KAP'taki kendi raporlarından "
             "doğrulanmalıdır."
+        )
+    return facts
+
+
+# --- check_setup ------------------------------------------------------------------------------
+
+
+def _source(value: str) -> str:
+    names = {
+        "yahoo": "Yahoo Finance",
+        "http": "kurumun veri adaptörü",
+        "fixture": "yerel test verisi",
+        "sec_edgar": "SEC EDGAR (resmi)",
+        "esef": "ESEF (resmi)",
+        "evds": "TCMB EVDS",
+        "fred": "FRED",
+        "oecd": "OECD (birkaç ay gecikmeli)",
+        "csv": "kullanıcının CSV dosyası",
+        "gdelt": "GDELT",
+        "none": "kapalı",
+    }
+    return names.get(value, "yok" if value.startswith("unavailable") else value)
+
+
+def setup(data: Mapping[str, Any]) -> list[str]:
+    price = data["price_data"]
+    fin = data["financial_statements"]
+    infl = data["inflation"]
+    facts = [
+        "Fiyat verisi: "
+        + (f"açık ({_source(price['provider'])})." if price["enabled"] else "kapalı."),
+        f"Finansal tablolar ve değerleme: Türkiye ve diğer piyasalar için "
+        f"{_source(fin['other_markets'])}, ABD şirketleri için {_source(fin['us_companies'])}, "
+        f"AB ve İngiltere şirketleri için {_source(fin['eu_uk_companies_by_lei'])}.",
+        f"Enflasyon: Türkiye için {_source(infl['TR'])}, ABD için {_source(infl['US'])}.",
+        f"TL mevduat karşılaştırması: {_source(data['deposit_rates']['TRY'])}; konut fiyatları: "
+        f"{_source(data['house_prices']['TR'])}.",
+        f"Haberler: {_source(str(data['news']))}.",
+    ]
+    if data["missing"]:
+        facts.append(
+            f"Eksik {len(data['missing'])} ayar var; bunlar olmadan ilgili araçlar çalışmaz "
+            "(ayrıntılar missing alanında)."
+        )
+    else:
+        facts.append("Eksik ayar yok: bütün araçlar kullanılabilir.")
+    if data.get("improvements"):
+        facts.append(
+            f"İsteğe bağlı {len(data['improvements'])} iyileştirme var; araçlar bunlar olmadan "
+            "da çalışır (ayrıntılar improvements alanında)."
         )
     return facts
