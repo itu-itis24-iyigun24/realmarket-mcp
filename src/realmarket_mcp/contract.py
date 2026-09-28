@@ -156,6 +156,9 @@ class ToolResult:
     provenance: tuple[Provenance, ...]
     quality_flags: tuple[QualityFlag, ...] = ()
     notes: tuple[str, ...] = field(default=())
+    # Turkish sentences, each carrying its figures with their meaning and dates; the answer is
+    # built from these, and data holds the same values for reference.
+    facts: tuple[str, ...] = field(default=())
 
     def __post_init__(self) -> None:
         if not self.tool:
@@ -169,6 +172,7 @@ class ToolResult:
             "ok": True,
             "contract_version": CONTRACT_VERSION,
             "tool": self.tool,
+            **({"facts": list(self.facts)} if self.facts else {}),
             "data": dict(self.data),
             "provenance": [p.to_dict() for p in self.provenance],
             "quality_flags": [f.to_dict() for f in self.quality_flags],

@@ -5,6 +5,7 @@ Each function here is what the tests target; ``server.py`` only registers and se
 
 from __future__ import annotations
 
+import dataclasses
 import datetime as dt
 import hashlib
 import itertools
@@ -17,6 +18,7 @@ from dataclasses import field as dataclass_field
 from typing import Any
 
 from realmarket_mcp import __version__, analytics, quality, tr_reference
+from realmarket_mcp import facts as fact_text
 from realmarket_mcp.config import default_region
 from realmarket_mcp.contract import (
     ErrorCode,
@@ -839,7 +841,7 @@ def compare_real_return(
                 )
             )
 
-    return ToolResult(
+    result = ToolResult(
         tool="compare_real_return",
         data={
             "symbol": symbol,
@@ -899,6 +901,7 @@ def compare_real_return(
             "inflation_window_end) and say nothing about future returns.",
         ),
     )
+    return dataclasses.replace(result, facts=tuple(fact_text.real_return(result.data)))
 
 
 def get_news(
@@ -2366,6 +2369,7 @@ def analyze_portfolio(
     start = min(first_day, today - dt.timedelta(days=366)) - dt.timedelta(days=10)
     prices = _Prices(provider, start, today)
     dated: list[str] = []
+    dated_events: list[tuple[str, str, dt.date]] = []
     for t in parsed:
         if t["month_only"]:
             # "March 2024": the month's first session, which the result states.
@@ -2374,6 +2378,7 @@ def analyze_portfolio(
             if first is not None and (first.year, first.month) == (t["date"].year, t["date"].month):
                 t["date"] = first
             dated.append(f"{t['type']} {t['symbol']} on {t['date'].isoformat()}")
+            dated_events.append((t["type"], t["symbol"], t["date"]))
     if dated:
         parsed.sort(key=lambda t: (t["date"], TRANSACTION_ORDER[t["type"]], t["index"]))
     report = (currency or prices.currency(parsed[0]["symbol"])).upper()
@@ -2385,6 +2390,7 @@ def analyze_portfolio(
     # Splits and bonus issues the source reports after the first trade of each symbol, unless
     # the transactions already record them as a bonus.
     applied: list[str] = []
+    split_events: list[tuple[str, dt.date, float]] = []
     events = list(parsed)
     for symbol in dict.fromkeys(t["symbol"] for t in parsed):
         first = min(t["date"] for t in parsed if t["symbol"] == symbol)
@@ -2401,6 +2407,7 @@ def analyze_portfolio(
                     {"index": -1, "type": "split", "symbol": symbol, "date": day, "ratio": ratio}
                 )
                 applied.append(f"{symbol} {day} ({ratio:g} for 1)")
+                split_events.append((symbol, day, ratio))
     events.sort(key=lambda t: (t["date"], TRANSACTION_ORDER[t["type"]], t["index"]))
     if applied:
         flags.append(
@@ -2485,6 +2492,7 @@ def analyze_portfolio(
 
     rows = []
     value_total = 0.0
+    unentered: dict[str, float] = {}
     for h in holdings.values():
         value = 0.0
         price_now = None
@@ -2503,6 +2511,7 @@ def analyze_portfolio(
                     paid = held * per_share * _split_factor(series, ex_date)
                     estimate += _convert(prices, provider, paid, h.currency, report, ex_date)
             if estimate > 0:
+                unentered[h.symbol] = estimate
                 flags.append(
                     QualityFlag(
                         "dividends_not_entered",
@@ -2560,7 +2569,7 @@ def analyze_portfolio(
     unrealized_total = math.fsum(float(r["unrealized_pnl"]) for r in open_rows)
     weights = [float(r["weight"] or 0) for r in open_rows]
 
-    return ToolResult(
+    result = ToolResult(
         tool="analyze_portfolio",
         data={
             "currency": report,
@@ -2609,6 +2618,14 @@ def analyze_portfolio(
         quality_flags=tuple(prices.flags + flags),
         notes=(RATIO_NOTE, *PORTFOLIO_NOTES, *((COMPARISON_NOTE,) if compare_with else ())),
     )
+    facts = fact_text.portfolio(
+        result.data,
+        splits=split_events,
+        dated=dated_events,
+        prices_assumed=bool(assumed),
+        unentered_dividends=unentered,
+    )
+    return dataclasses.replace(result, facts=tuple(facts))
 
 
 # A field, not only a note: small models set the account total against an index otherwise.
@@ -2885,7 +2902,7 @@ def explain_price_move(
                 + ("today's move." if day == today else f"the move on {day}."),
             )
         )
-    return ToolResult(
+    result = ToolResult(
         tool="explain_price_move",
         data={
             "symbol": symbol,
@@ -2921,6 +2938,15 @@ def explain_price_move(
             ),
         ),
     )
+    facts = fact_text.price_move(
+        result.data,
+        asked=day,
+        today=today,
+        lookback=MOVE_LOOKBACK_SESSIONS,
+        news_available=load_news is not None
+        and not any(f.code == "news_unavailable" for f in flags),
+    )
+    return dataclasses.replace(result, facts=tuple(facts))
 
 
 _TR_ASCII = str.maketrans("ÇĞİÖŞÜçğıöşü", "CGIOSUcgiosu")

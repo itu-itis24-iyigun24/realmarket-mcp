@@ -35,7 +35,10 @@ log = logging.getLogger(__name__)
 
 INSTRUCTIONS = """\
 Market research tools that return computed, sourced figures. Use them instead of recalling
-prices or returns from memory. Returns and ratios are fractions: 0.313 means 31.3%, 2.564
+prices or returns from memory. When a result has "facts", build the answer from them: each is
+a Turkish sentence carrying its figures with their meaning, dates and sign. Use a figure only
+as its fact states it, keep its dates, and do not compute, combine or relabel figures; "data"
+holds the same values for reference. Returns and ratios are fractions: 0.313 means 31.3%, 2.564
 means 256.4%. Every result cites its data source under "provenance"; cite it
 when you report a number. If "quality_flags" contains a warning or critical flag, state it
 before any conclusion that depends on the affected data. Results are research, not investment

@@ -84,6 +84,8 @@ def test_the_move_is_described_next_to_the_market_without_attribution() -> None:
     assert news.queries == ["Stock Company"]  # legal suffix removed from the listed name
     assert any("do not apportion" in n.lower() for n in result.notes)
     assert data["cause"].startswith("Not determined")
+    assert result.facts[-1] == "Bu veriler hareketin nedenini göstermez."
+    assert any("önceki seansa" in f and "değişti" in f for f in result.facts)
 
 
 def test_a_date_without_a_session_uses_the_one_before() -> None:
@@ -94,6 +96,7 @@ def test_a_date_without_a_session_uses_the_one_before() -> None:
     # A warning the model must state: the latest session is not "today".
     assert flag.severity is Severity.WARNING
     assert "(today)" in flag.message and "do not call it today's move" in flag.message
+    assert result.facts[0].startswith(f"Bugün ({later.day} ")
     assert result.data["news"] == []  # no news source given
     assert "no_articles" not in {f.code for f in result.quality_flags}
 

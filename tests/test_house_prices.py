@@ -153,3 +153,4 @@ def test_house_price_real_return_uses_cpi_over_the_same_months() -> None:
     )
     # Houses +80% while prices doubled: a 10% real loss, whatever the nominal gain.
     assert result.data["house_prices"]["house_price_real_return"] == pytest.approx(-0.1)
+    assert any("(reel -%10,0)" in f for f in result.facts)

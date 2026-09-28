@@ -57,6 +57,8 @@ select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
 "src/realmarket_mcp/qualify.py" = ["RUF001", "RUF003"]
 "tests/test_qualify.py" = ["RUF001", "RUF003"]
 "src/realmarket_mcp/tr_reference.py" = ["RUF001", "RUF003"]
+"src/realmarket_mcp/facts.py" = ["RUF001", "RUF003"]
+"tests/test_facts.py" = ["RUF001", "RUF003"]
 
 [tool.mypy]
 files = ["src/realmarket_mcp"]

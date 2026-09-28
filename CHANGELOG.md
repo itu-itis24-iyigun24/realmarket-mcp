@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Facts in Turkish.** `analyze_portfolio`, `explain_price_move` and `compare_real_return`
+  return `facts`: Turkish sentences, each carrying its figures (Turkish number style) with
+  their meaning, dates and sign, and the instructions tell the model to build the answer from
+  them rather than compose figures from `data`. Small models had turned 0.313 into "%313",
+  paired figures from different windows and labelled a portfolio's own return as its lead over
+  an index; with facts they relay sentences instead. `data` is unchanged.
 - **`analyze_portfolio` `compare_with`**: only when the user asks, each holding gets another
   symbol's move (BIST 100, BIST 30, gold, any asset) over the holding's own period, from its
   first purchase to the last session or the day it was sold out, beside its own price move.
