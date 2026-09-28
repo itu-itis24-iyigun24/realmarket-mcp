@@ -233,7 +233,19 @@ def test_adapter_check_reports_each_endpoint() -> None:
     assert status["/bars exchange rate"] == "WARN"  # the fake serves THYAO bars only
     assert status["price summary"] == "FAIL"  # two bars, one usable: a real finding
     assert status["/financials"] == "SKIP" and status["/news"] == "SKIP"  # optional, absent
+    assert status["/peers"] == "SKIP"
+    # Optional parts of /bars: each absent one says what it leaves out.
+    assert status["/bars dividends"] == status["/bars splits"] == "SKIP"
     assert "1 check(s) failed" in adapter_check.render(results)
+
+    http_adapter._meta_cache.clear()
+    full = {**BARS, "dividends": [{"date": "2026-09-24", "amount": 1.0}],
+            "bars": [{**b, "price_close": 1.0} for b in BARS["bars"]]}  # fmt: skip
+    served = adapter_check.run_checks(
+        lambda: provider(FakeAdapter(**{"/bars": full, "/peers": PEERS})), "THYAO", today=today
+    )
+    status = {r.name: r.status for r in served}
+    assert status["/bars dividends"] == status["/bars price_close"] == status["/peers"] == "PASS"
 
     http_adapter._meta_cache.clear()  # /meta is cached per URL for an hour
     bad_meta = adapter_check.run_checks(
@@ -265,3 +277,66 @@ def test_a_fund_served_by_the_adapter_works_like_any_asset() -> None:
     assert found.asset_class.value == "fund"
     data = tools.get_price_summary(p, "AFT", start="2026-01-01", today=dt.date(2026, 9, 27)).data
     assert data["total_return"] == pytest.approx(0.25)  # unit price 0.20 -> 0.25
+
+
+def test_bars_carry_dividends_splits_and_traded_closes() -> None:
+    """What Yahoo supplies and the tools use: dividend yield, the price/dividend split of a
+    return, dividends a portfolio left out, and bonus issues applied to share counts."""
+    bars = {
+        **BARS,
+        "bars": [
+            {**BARS["bars"][0], "price_close": 300.0},
+            {**BARS["bars"][1], "close": 294, "price_close": 302.0},
+        ],
+        "dividends": [{"date": "2026-09-25", "amount": 3.5}],
+        "splits": [{"date": "2026-09-24", "ratio": 2.0}],
+    }
+    series = provider(FakeAdapter(**{"/bars": bars})).daily_bars(
+        "THYAO", dt.date(2026, 9, 1), dt.date(2026, 9, 30)
+    )
+    assert [b.price_close for b in series.bars] == [300.0, 302.0]
+    assert series.dividends == ((dt.date(2026, 9, 25), 3.5),)
+    assert series.splits == ((dt.date(2026, 9, 24), 2.0),)
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"dividends": [{"date": "2026-09-25", "amount": -1}]},
+        {"splits": [{"date": "2026-09-24", "ratio": 0}]},
+        {"dividends": [{"date": "25.09.2026", "amount": 1}]},
+    ],
+)
+def test_bad_corporate_actions_are_refused(extra: dict[str, Any]) -> None:
+    with pytest.raises(ToolError) as info:
+        provider(FakeAdapter(**{"/bars": {**BARS, **extra}})).daily_bars(
+            "THYAO", dt.date(2026, 9, 1), dt.date(2026, 9, 30)
+        )
+    assert info.value.code is ErrorCode.PROVIDER_UNAVAILABLE
+
+
+PEERS = {
+    "industry": "Havayolu",
+    "group": "Havayolu",
+    "market": "Borsa İstanbul",
+    "definition": "ACME piyasa değeri / son bilanço özsermayesi",
+    "peers": [
+        {"symbol": "THYAO", "name": "THY", "price_to_book": 0.37, "market_cap": 4e11},
+        {"symbol": "PGSUS", "name": "Pegasus", "price_to_book": 0.64},
+    ],
+}
+
+
+def test_peers_come_from_the_optional_endpoint() -> None:
+    fake = FakeAdapter(**{"/peers": PEERS})
+    group = provider(fake).industry_peers("THYAO", broader=True)
+    assert fake.calls[-1][1] == {"symbol": "THYAO", "level": "sector"}
+    assert (group.level, group.group, group.market) == ("sector", "Havayolu", "Borsa İstanbul")
+    assert group.provider == "adapter:acme-feed"
+    assert [(p.symbol, p.price_to_book) for p in group.peers] == [("THYAO", 0.37), ("PGSUS", 0.64)]
+    with pytest.raises(ToolError) as info:
+        provider(FakeAdapter()).industry_peers("THYAO")  # no /peers: 404
+    assert info.value.code is ErrorCode.NO_DATA_IN_RANGE
+    with pytest.raises(ToolError) as bad:
+        provider(FakeAdapter(**{"/peers": {"peers": []}})).industry_peers("THYAO")
+    assert bad.value.code is ErrorCode.PROVIDER_UNAVAILABLE

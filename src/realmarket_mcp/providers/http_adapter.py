@@ -1,7 +1,7 @@
 """Bring your own data: prices, search and statements from an HTTP adapter the operator runs.
 
 A firm that holds licensed market data (an exchange feed, a data vendor) puts a thin adapter in
-front of it that answers the four JSON endpoints below; realmarket then uses it in place of
+front of it that answers the JSON endpoints below; realmarket then uses it in place of
 Yahoo, and every calculation, flag and provenance rule applies unchanged. The adapter can be
 written in any language and usually runs on the firm's own network. Contract version 1 —
 docs/adapter-api.md is the full specification, with an example adapter.
@@ -14,10 +14,16 @@ docs/adapter-api.md is the full specification, with an example adapter.
         {"assets": [{"symbol", "name", "asset_class", "currency", "exchange"}]}
     GET {base}/bars?symbol=<s>&start=YYYY-MM-DD&end=YYYY-MM-DD
         {"symbol", "currency", "adjustment",
-         "bars": [{"date", "open", "high", "low", "close", "volume"}]}      404: unknown symbol
+         "bars": [{"date", "open", "high", "low", "close", "volume", "price_close"?}],
+         "dividends"?: [{"date", "amount"}], "splits"?: [{"date", "ratio"}]}
+                                                                           404: unknown symbol
     GET {base}/financials?symbol=<s>                                          optional; 404: none
         {"currency", "sector", "industry",
          "quarterly": [{"end": "YYYY-MM-DD", "values": {field: number | null}}], "annual": [...]}
+    GET {base}/peers?symbol=<s>&level=industry|sector                       optional; 404: none
+        {"industry", "group", "market", "definition",
+         "peers": [{"symbol", "name", "price_to_book", "market_cap"?, "currency"?,
+                    "financial_currency"?}]}
     GET {base}/news?q=<text>&start=<ISO>&end=<ISO>&limit=<n>[&language=tr]  optional; 404: none
         {"articles": [{"published_at": "YYYY-MM-DDTHH:MM:SSZ", "title", "url", "source",
                        "language", "country"}]}
@@ -44,7 +50,9 @@ from realmarket_mcp.models import (
     AssetRef,
     Bar,
     FinancialStatements,
+    IndustryPeers,
     NewsItem,
+    PeerMultiple,
     PriceSeries,
     statements_from_dict,
 )
@@ -76,6 +84,13 @@ def _number(value: Any, what: str) -> float | None:
     if isinstance(value, bool) or not isinstance(value, int | float) or not math.isfinite(value):
         raise _bad(f"{what} is not a finite number")
     return float(value)
+
+
+def _positive(value: Any, what: str) -> float:
+    number = _number(value, what)
+    if number is None or number <= 0:
+        raise _bad(f"{what} must be a positive number")
+    return number
 
 
 class HttpAdapterProvider:
@@ -196,10 +211,21 @@ class HttpAdapterProvider:
                     low=_number(b.get("low"), "low"),
                     close=_number(b.get("close"), "close"),
                     volume=_number(b.get("volume"), "volume"),
+                    price_close=_number(b.get("price_close"), "price_close"),
                 )
                 for b in payload["bars"]
             )
-            series = PriceSeries(symbol, currency, self.name, adjustment, self._retrieved_at, bars)
+            dividends = tuple(
+                (dt.date.fromisoformat(str(d["date"])), _positive(d.get("amount"), "dividend"))
+                for d in payload.get("dividends") or ()
+            )
+            splits = tuple(
+                (dt.date.fromisoformat(str(d["date"])), _positive(d.get("ratio"), "split ratio"))
+                for d in payload.get("splits") or ()
+            )
+            series = PriceSeries(
+                symbol, currency, self.name, adjustment, self._retrieved_at, bars, dividends, splits
+            )
         except ToolError:
             raise
         except (KeyError, TypeError, ValueError) as exc:  # incl. unsorted or duplicate dates
@@ -226,6 +252,53 @@ class HttpAdapterProvider:
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise _bad(f"/financials: {exc}") from None
+
+    def industry_peers(self, symbol: str, *, broader: bool = False) -> IndustryPeers:
+        """The companies the adapter groups with ``symbol`` (its industry, or with ``broader``
+        its sector), each with the adapter's price-to-book, for get_valuation's comparison."""
+        level = "sector" if broader else "industry"
+        try:
+            payload = self._get("/peers", {"symbol": symbol, "level": level})
+        except ToolError as error:
+            if error.code is ErrorCode.NO_DATA_IN_RANGE:
+                raise ToolError(
+                    ErrorCode.NO_DATA_IN_RANGE,
+                    f"The data adapter gives no {level} peer list for {symbol}.",
+                    "Peers come from the adapter's optional /peers endpoint (docs/adapter-api.md).",
+                    {"symbol": symbol},
+                ) from None
+            raise
+        try:
+            peers = tuple(
+                PeerMultiple(
+                    symbol=str(p["symbol"]),
+                    name=str(p.get("name") or p["symbol"]),
+                    price_to_book=_number(p.get("price_to_book"), "price_to_book"),
+                    market_cap=_number(p.get("market_cap"), "market_cap"),
+                    currency=str(p["currency"]).upper() if p.get("currency") else None,
+                    financial_currency=(
+                        str(p["financial_currency"]).upper()
+                        if p.get("financial_currency")
+                        else None
+                    ),
+                )
+                for p in payload["peers"]
+            )
+            return IndustryPeers(
+                symbol=symbol,
+                industry=str(payload["industry"]),
+                group=str(payload.get("group") or payload["industry"]),
+                level=level,
+                market=str(payload["market"]),
+                provider=self.name,
+                retrieved_at=self._retrieved_at,
+                definition=str(payload["definition"]),
+                peers=peers,
+            )
+        except ToolError:
+            raise
+        except (KeyError, TypeError, ValueError) as exc:
+            raise _bad(f"/peers: {exc}") from None
 
 
 class HttpAdapterNewsProvider:

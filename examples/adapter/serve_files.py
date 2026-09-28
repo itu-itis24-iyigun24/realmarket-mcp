@@ -1,15 +1,19 @@
 """Example realmarket data adapter (API v1), serving local files. Standard library only.
 
-A firm replaces the three `load_*` functions with calls to its licensed data feed and keeps the
+A firm replaces the `load_*` functions with calls to its licensed data feed and keeps the
 HTTP layer. Run it, then point realmarket at it:
 
     python examples/adapter/serve_files.py --root tests/fixtures/basic --port 8765
     REALMARKET_PRICE_PROVIDER=http REALMARKET_HTTP_URL=http://127.0.0.1:8765 realmarket-mcp
 
 File layout under --root (the same as realmarket's test fixtures):
-    assets.json               [{"symbol", "name", "asset_class", "currency", "exchange"}]
-    bars/<SYMBOL>.csv         date,open,high,low,close,volume   (empty cell = missing)
+    meta.json                 optional; the /meta body (defaults to META below)
+    assets.json               [{"symbol", "name", "asset_class", "currency", "exchange",
+                                "adjustment"?}]
+    bars/<SYMBOL>.csv         date,open,high,low,close,volume[,price_close]   (empty = missing)
+    actions/<SYMBOL>.json     optional; {"dividends": [...], "splits": [...]} for /bars
     financials/<SYMBOL>.json  optional; the /financials response body
+    peers/<SYMBOL>.json       optional; {"industry": <body>, "sector": <body>} for /peers
     news.json                 optional; {"articles": [...]}, the firm's news or KAP feed
 
 The full contract is docs/adapter-api.md.
@@ -54,17 +58,17 @@ def load_bars(symbol: str, start: str, end: str) -> dict[str, Any] | None:
 
     with path.open(encoding="utf-8", newline="") as handle:
         rows = [r for r in csv.DictReader(handle) if start <= r["date"] <= end]
+    columns = ("open", "high", "low", "close", "volume", "price_close")
+    actions_path = ROOT / "actions" / f"{symbol}.json"
+    actions = json.loads(actions_path.read_text(encoding="utf-8")) if actions_path.exists() else {}
     return {
         "symbol": symbol,
         "currency": asset["currency"],
-        "adjustment": "as_recorded",  # say what your feed does, e.g. "split_and_dividend"
-        "bars": [
-            {
-                "date": r["date"],
-                **{k: number(r[k]) for k in ("open", "high", "low", "close", "volume")},
-            }
-            for r in rows
-        ],
+        # say what your feed does, e.g. "split_and_dividend"
+        "adjustment": asset.get("adjustment", "as_recorded"),
+        "bars": [{"date": r["date"], **{k: number(r[k]) for k in columns if k in r}} for r in rows],
+        "dividends": [d for d in actions.get("dividends", []) if start <= d["date"] <= end],
+        "splits": [d for d in actions.get("splits", []) if start <= d["date"] <= end],
     }
 
 
@@ -78,6 +82,11 @@ def load_news(query: str, start: str, end: str, limit: int) -> dict[str, Any] | 
         a for a in articles if needle in a["title"].casefold() and start <= a["published_at"] <= end
     ]
     return {"articles": hits[:limit]}
+
+
+def load_peers(symbol: str, level: str) -> dict[str, Any] | None:
+    path = ROOT / "peers" / f"{symbol}.json"
+    return json.loads(path.read_text(encoding="utf-8")).get(level) if path.exists() else None
 
 
 def load_financials(symbol: str) -> dict[str, Any] | None:
@@ -100,7 +109,10 @@ class Handler(BaseHTTPRequestHandler):
         url = urlparse(self.path)
         q = {k: v[0] for k, v in parse_qs(url.query).items()}
         if url.path == "/meta":
-            return self._send(200, META)
+            meta = ROOT / "meta.json"
+            return self._send(
+                200, json.loads(meta.read_text(encoding="utf-8")) if meta.exists() else META
+            )
         if url.path == "/search":
             needle = q.get("q", "").casefold()
             hits = [
@@ -117,6 +129,9 @@ class Handler(BaseHTTPRequestHandler):
             if statements:
                 return self._send(200, statements)
             return self._send(404, {"error": "no statements"})
+        if url.path == "/peers":
+            peers = load_peers(q.get("symbol", ""), q.get("level", "industry"))
+            return self._send(200, peers) if peers else self._send(404, {"error": "no peers"})
         if url.path == "/news":
             news = load_news(
                 q.get("q", ""), q.get("start", ""), q.get("end", "9999"), int(q.get("limit", 20))

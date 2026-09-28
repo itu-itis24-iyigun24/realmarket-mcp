@@ -2,7 +2,7 @@
 
 A data adapter lets realmarket use market data the operator is licensed to use (an exchange
 feed, a data vendor, an internal database) instead of Yahoo Finance. The adapter is a small
-HTTP service, in any language, that answers three required JSON endpoints (and two optional ones: financial statements and news). realmarket validates every
+HTTP service, in any language, that answers three required JSON endpoints (and three optional ones: financial statements, industry peers and news). realmarket validates every
 response strictly; nothing is repaired or guessed. A runnable example that serves local files
 is in [`examples/adapter/serve_files.py`](../examples/adapter/serve_files.py).
 
@@ -77,6 +77,27 @@ Daily bars for one symbol between two dates, inclusive, ascending by date, one b
 - `adjustment` states the price policy of the series, e.g. `split_and_dividend` (total-return
   adjusted), `split` or `none`. It is shown with every figure; say what the feed really does.
 - Do not include a bar for the current, unfinished session.
+
+Optional, and each switches on tools that need it:
+
+```json
+{
+  "symbol": "THYAO", "currency": "TRY", "adjustment": "split_and_dividend",
+  "bars": [{"date": "2026-09-25", "open": 292.0, "high": 300.0, "low": 291.0, "close": 290.75,
+            "volume": 1000000, "price_close": 290.75}],
+  "dividends": [{"date": "2026-06-02", "amount": 3.8}],
+  "splits": [{"date": "2026-05-14", "ratio": 2.0}]
+}
+```
+
+| Field | Meaning | Without it |
+|---|---|---|
+| `bars[].price_close` | The close adjusted for splits only (the price that traded), when `close` is also dividend-adjusted | Returns are not split into price and dividends; the period's low and high are dividend-adjusted closes |
+| `dividends` | Cash dividend per share by ex-date, in the series' currency and in the same share units as the bars (adjusted for later splits) | No dividend yield; dividends a portfolio did not list are not flagged |
+| `splits` | Splits and bonus issues (bedelsiz) by date: shares after / shares before (`2.0` for a 1:1 bonus) | A portfolio entered before a bonus issue keeps its old share count unless the user lists the issue |
+
+Send the dividends and splits that fall within the requested dates; amounts and ratios must be
+positive.
 - Do not fill holidays with repeated prices. If the feed does, realmarket flags those bars as
   `placeholder_bars`.
 
@@ -116,6 +137,39 @@ Fields: `revenue`, `gross_profit`, `operating_income`, `net_income` (for the per
 Unknown fields are ignored. For Turkish companies other than banks, provide the figures as the
 company reports them under TMS 29 (inflation accounting); realmarket applies the TMS 29 rules
 to TRY reporters.
+
+## `GET /peers?symbol=<s>&level=industry|sector` (optional)
+
+The companies the firm's data groups with `symbol`, for `get_valuation`'s answer to "is it
+cheap?": its price-to-book ranked among the others, on the same day and measured the same way.
+404 if the adapter does not serve peers (the comparison is then left out and the result says
+so). realmarket asks for `level=industry` first and for `level=sector` when the industry has
+fewer than five other companies with a ratio.
+
+```json
+{
+  "industry": "Havayolu",
+  "group": "Ulaştırma",
+  "market": "Borsa İstanbul",
+  "definition": "Piyasa değeri / son bilanço özsermayesi",
+  "peers": [
+    {"symbol": "THYAO", "name": "Türk Hava Yolları", "price_to_book": 0.37, "market_cap": 3.99e11},
+    {"symbol": "PGSUS", "name": "Pegasus", "price_to_book": 0.64, "market_cap": 7.1e10}
+  ]
+}
+```
+
+- `industry` is the company's own industry; `group` names what the list covers (the industry,
+  or with `level=sector` the sector); `market` is shown as written ("Borsa İstanbul").
+- Include `symbol` itself: its ratio is checked against the one realmarket computes, and the
+  comparison is dropped when they differ by more than 25%, so the peers are known to be
+  measured like the company.
+- `price_to_book` is `null` when there is none; give every company's ratio in one currency
+  definition. Share classes of one company (`KRDMA`, `KRDMB`) count once, by the largest
+  `market_cap`, when their names differ only by a trailing "(A)", "(B)".
+- Optional `currency` and `financial_currency` per company: when they differ, realmarket leaves
+  the company out, since sources often divide a price in one currency by a book value in
+  another.
 
 ## `GET /news?q=<text>&start=<ISO>&end=<ISO>&limit=<n>[&language=<xx>]` (optional)
 

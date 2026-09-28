@@ -603,7 +603,7 @@ def valuation(data: Mapping[str, Any]) -> list[str]:
         )
     peers = data.get("industry_comparison")
     if peers:
-        market = MARKETS.get(str(peers["market"]), str(peers["market"]).upper())
+        market = MARKETS.get(str(peers["market"]), str(peers["market"]))
 
         if peers.get("level") == "sector":
             group = (

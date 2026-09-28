@@ -4,7 +4,8 @@
 
 Every endpoint is called through the same code realmarket uses at run time, so what passes
 here works in production and what fails fails for the same reason, with the same message.
-Required: /meta, /search, /bars. Optional: /financials, /news. The reference series realmarket
+Required: /meta, /search, /bars. Optional: dividends, splits and traded closes in /bars,
+/financials, /peers, /news. The reference series realmarket
 uses for comparisons (the USD exchange rate, gold, the benchmark index) are checked too,
 because a missing one quietly removes those comparisons.
 
@@ -81,6 +82,18 @@ def run_checks(
         record("/bars", FAIL, error.message)
         return results
 
+    # The optional parts of /bars: each one switches on something, so say which are missing.
+    traded = sum(b.price_close is not None for b in series.bars)
+    for label, count, without in (
+        ("dividends", len(series.dividends), "no dividend yield or dividend part of returns"),
+        ("splits", len(series.splits), "bonus issues are not applied to portfolios"),
+        ("price_close", traded, "returns are not split into price and dividends"),
+    ):
+        if count:
+            record(f"/bars {label}", PASS, f"{count} in the last 400 days")
+        else:
+            record(f"/bars {label}", SKIP, f"none sent for {symbol}: {without}")
+
     references = {
         "exchange rate": adapter.fx_symbol("USD", series.currency.upper())
         if series.currency.upper() != "USD"
@@ -118,6 +131,19 @@ def run_checks(
     except ToolError as error:
         status = SKIP if error.code is ErrorCode.NO_DATA_IN_RANGE else FAIL
         record("/financials", status, error.message)
+
+    try:
+        group = adapter.industry_peers(symbol)
+        listed = any(p.symbol == symbol for p in group.peers)
+        record(
+            "/peers",
+            PASS if listed else WARN,
+            f"{len(group.peers)} companies in {group.group} ({group.market})"
+            + ("" if listed else f"; {symbol} itself is missing, so no comparison is made"),
+        )
+    except ToolError as error:
+        status = SKIP if error.code is ErrorCode.NO_DATA_IN_RANGE else FAIL
+        record("/peers", status, error.message)
 
     try:
         now = dt.datetime.combine(today, dt.time(), tzinfo=dt.UTC)
