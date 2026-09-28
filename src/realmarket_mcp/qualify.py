@@ -354,7 +354,10 @@ def synthetic_environment(today: dt.date) -> Iterator[Path]:
 
 # --- checking an answer ----------------------------------------------------------------------
 
-_DATES = re.compile(r"\d{4}-\d{2}-\d{2}|\d{1,2}[./]\d{1,2}[./]\d{2,4}")
+# Dates (also a month alone, '2024-03') and data-version hashes are not figures.
+_DATES = re.compile(
+    r"\d{4}-\d{2}(-\d{2})?|\d{1,2}[./]\d{1,2}[./]\d{2,4}|sha256:[0-9a-f]+|\b[0-9a-f]{16,}\b"
+)
 _NUMBER = re.compile(r"-?\d[\d.,]*\d|-?\d")
 
 ADVICE_PATTERNS = tuple(

@@ -250,3 +250,8 @@ def test_hedged_reasons_count_as_causal_claims() -> None:
     case = next(c for c in CASES if c.id == "price_move")
     checks = check_answer(case, "Neden yükselmiş olabilir? Genel borsa rallisi.", [])
     assert not next(c for c in checks if c.name == "no_causal_claims").passed
+
+
+def test_months_and_data_versions_are_not_figures() -> None:
+    text = "2024-03 alımı; veri sürümü sha256:e5c99d2fdf84179c66c2c651ceac6cf42bdcd5081c417665"
+    assert qualify.answer_numbers(text) == []

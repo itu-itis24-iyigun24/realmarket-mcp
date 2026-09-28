@@ -44,7 +44,8 @@
     already sold. `explain_price_move` returns `cause: "Not determined…"` as a data field, and
     the instructions forbid comparisons no tool returned and hedged lists of possible reasons.
 - `realmarket-qualify` gains a `portfolio` case, and a sentence that refuses advice ("hedef
-  fiyat veremiyorum") no longer counts as advice. `gemini-3.5-flash-lite` passes 7/7.
+  fiyat veremiyorum") no longer counts as advice, nor a month ("2024-03") or a quoted data
+  version as an unsupported figure. `gemini-3.5-flash-lite` passes 7/7.
 - Funds can be served by an adapter like any asset (`asset_class` `fund`).
 - `docs/integration.md` describes support and pilots, and that the firm's backend shows
   customers the final answer only, never the model's reasoning.
