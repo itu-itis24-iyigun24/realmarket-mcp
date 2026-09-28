@@ -74,6 +74,17 @@ def test_missing_price_uses_the_close_and_says_so() -> None:
     assert "price_assumed" in {f.code for f in result.quality_flags}
 
 
+def test_a_trade_on_a_closed_day_happens_at_the_next_session() -> None:
+    """Saturday 6 January 2024: the order fills on Monday the 8th at 220, not at Friday's 180,
+    a price from before the date the user gave (fixture TTT)."""
+    result = run([tx("buy", "2024-01-06", quantity=1)])
+    assert result.data["holdings"][0]["cost_basis"] == 220
+    assert any(
+        f.startswith("Borsanın kapalı olduğu bir güne yazılan işlem") and "8 Ocak 2024" in f
+        for f in result.facts
+    )
+
+
 def test_selling_more_than_held_is_refused() -> None:
     with pytest.raises(ToolError) as raised:
         run([tx("buy", "2023-01-02", quantity=1, price=100), tx("sell", "2024-01-02", quantity=2)])

@@ -524,7 +524,7 @@ def visible_answer(answer: str) -> str:
 REFUSAL = re.compile(
     r"\b(veremem|veremiyorum|vermem|vermiyorum|sunamam|sunamıyorum|sunmuyorum|yapamam|"
     r"yapamıyorum|yapmıyorum|taşımaz|değildir|erişilemedi|bulunamadı|bulunmuyor|mevcut değil|"
-    r"sunulmuyor|cannot|can't|do not|don't|won't)\b",
+    r"sunulmuyor|yer almıyor|yer almamaktadır|cannot|can't|do not|don't|won't)\b",
     re.IGNORECASE,
 )
 

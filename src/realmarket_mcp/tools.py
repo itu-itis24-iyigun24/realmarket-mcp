@@ -2599,6 +2599,7 @@ def analyze_portfolio(
     prices = _Prices(provider, start, today)
     dated: list[str] = []
     dated_events: list[tuple[str, str, dt.date]] = []
+    moved_events: list[tuple[str, str, dt.date]] = []
     for t in parsed:
         if t["month_only"]:
             # "March 2024": the month's first session, which the result states.
@@ -2608,6 +2609,16 @@ def analyze_portfolio(
                 t["date"] = first
             dated.append(f"{t['type']} {t['symbol']} on {t['date'].isoformat()}")
             dated_events.append((t["type"], t["symbol"], t["date"]))
+        elif t["type"] in {"buy", "sell"} and t.get("price") is None:
+            # A trade dated on a weekend or holiday happens at the next session; the close
+            # before the date the user gave is a price they could not have traded at.
+            _, usable = prices.series(t["symbol"])
+            if not any(b.date == t["date"] for b in usable):
+                session = next((b.date for b in usable if b.date >= t["date"]), None)
+                if session is not None and (session - t["date"]).days <= 14:
+                    moved_events.append((t["type"], t["symbol"], session))
+                    dated.append(f"{t['type']} {t['symbol']} on {session.isoformat()}")
+                    t["date"] = session
     if dated:
         parsed.sort(key=lambda t: (t["date"], TRANSACTION_ORDER[t["type"]], t["index"]))
     report = (currency or prices.currency(parsed[0]["symbol"])).upper()
@@ -2867,6 +2878,7 @@ def analyze_portfolio(
         dated=dated_events,
         prices_assumed=bool(assumed),
         unentered_dividends=unentered,
+        moved=moved_events,
     )
     return dataclasses.replace(result, facts=tuple(facts))
 

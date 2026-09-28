@@ -102,17 +102,26 @@ def portfolio(
     dated: Sequence[tuple[str, str, dt.date]],
     prices_assumed: bool,
     unentered_dividends: Mapping[str, float],
+    moved: Sequence[tuple[str, str, dt.date]] = (),
 ) -> list[str]:
     cur = str(data["currency"])
     totals = data["totals"]
     facts: list[str] = []
-    if dated:
-        listed = ", ".join(
+
+    def listed(events: Sequence[tuple[str, str, dt.date]]) -> str:
+        return ", ".join(
             f"{symbol} {'alışı' if kind == 'buy' else 'satışı' if kind == 'sell' else kind} "
             f"{date(day)}"
-            for kind, symbol, day in dated
+            for kind, symbol, day in events
         )
-        facts.append(f"Yalnızca ay verildiği için ayın ilk işlem günü kullanıldı: {listed}.")
+
+    if dated:
+        facts.append(f"Yalnızca ay verildiği için ayın ilk işlem günü kullanıldı: {listed(dated)}.")
+    if moved:
+        facts.append(
+            "Borsanın kapalı olduğu bir güne yazılan işlem, bir sonraki işlem gününün kapanış "
+            f"fiyatıyla hesaplandı: {listed(moved)}."
+        )
     if prices_assumed:
         facts.append("Fiyatı verilmeyen işlemlerde o günün kapanış fiyatı kullanıldı.")
     for symbol, day, ratio in splits:
@@ -194,10 +203,11 @@ def portfolio(
     if unentered_dividends and len(data["holdings"]) > 1:
         # "How much did I make?" with dividends the user did not list: the sum, stated here so
         # it is not added up in the answer.
-        with_dividends = float(totals["total_pnl"]) + sum(unentered_dividends.values())
+        paid = sum(unentered_dividends.values())
         facts.append(
-            "Kaynağın bildirdiği ve girilmeyen temettüler alındıysa hesabın toplam sonucu "
-            f"yaklaşık {money(with_dividends, cur, signed=True)} olur (brüt)."
+            f"Kaynağın bildirdiği ve girilmeyen temettüler (toplam yaklaşık {money(paid, cur)} "
+            "brüt) alındıysa hesabın toplam sonucu yaklaşık "
+            f"{money(float(totals['total_pnl']) + paid, cur, signed=True)} olur."
         )
 
     compared = [h for h in data["holdings"] if h.get("comparison")]

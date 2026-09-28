@@ -94,4 +94,7 @@ def test_dividends_not_entered_are_summed_by_the_facts() -> None:
         )
     )
     assert "Bu temettüler alındıysa AAA toplam sonucu yaklaşık -70,00 TL olur." in text
-    assert "girilmeyen temettüler alındıysa hesabın toplam sonucu yaklaşık -20,00 TL olur" in text
+    assert (
+        "(toplam yaklaşık 30,00 TL brüt) alındıysa hesabın toplam sonucu yaklaşık -20,00 TL olur"
+        in text
+    )
