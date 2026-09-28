@@ -44,6 +44,10 @@
 - A tool called with an argument it does not have now refuses with `invalid_argument` and the
   list of valid arguments. The SDK used to drop it silently: Haiku passed a made-up
   `benchmark` to `analyze_portfolio` and believed it had been applied.
+- `evals/reports/2026-09-28-haiku.md`: the first full run, Haiku on all 119 questions. 94
+  passed the automatic checks; with test artefacts set aside and the fixes below re-run, 105
+  (88%) are correct. No answer gave advice or a reason for a move; the remaining failures are
+  figures the model computed from tool results and three tool choices.
 - **A customer question set for model checks**: `evals/customer_questions.json` holds 119
   Turkish questions a brokerage's customers ask, in twelve categories (returns, inflation,
   comparisons, valuation, financials, "why did it move", event reactions, portfolios, savings
