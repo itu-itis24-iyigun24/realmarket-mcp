@@ -193,6 +193,13 @@ def test_check_setup_says_what_replaces_a_missing_source() -> None:
     assert any("Turkish inflation (only)" in m for m in with_yahoo["missing"])
     bare = config.describe_setup({})["missing"]
     assert any("US financial statements are unavailable" in m for m in bare)
+    # The firm's adapter serves statements too: they are not "unavailable" (a model that read
+    # so refused financial questions the adapter could answer).
+    adapter = config.describe_setup(
+        {config.PROVIDER_ENV: "http", "REALMARKET_HTTP_URL": "http://adapter.internal"}
+    )
+    assert adapter["financial_statements"]["other_markets"] == "http"
+    assert not any("financial statements" in m for m in adapter["missing"])
 
 
 def test_transport_option(monkeypatch: pytest.MonkeyPatch) -> None:

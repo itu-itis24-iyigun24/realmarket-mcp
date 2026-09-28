@@ -2,6 +2,8 @@
 
 This guide is for a brokerage, bank, asset manager or fintech that wants to offer its customers
 an AI assistant for market research, using its own licensed data and its own language model.
+A Turkish guide for brokerages' product, IT and data teams is in
+[`entegrasyon-rehberi.md`](entegrasyon-rehberi.md).
 
 ## What realmarket provides
 

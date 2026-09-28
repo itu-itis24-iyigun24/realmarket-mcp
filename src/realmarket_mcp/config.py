@@ -68,13 +68,20 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
             "Prices are off: tick 'Use Yahoo Finance' in the plugin or extension settings "
             f"(or set {PROVIDER_ENV}=yahoo), then restart the app."
         )
+    enabled = (
+        yahoo
+        or (price == "http" and bool(env.get("REALMARKET_HTTP_URL", "").strip()))
+        or (price == "fixture" and bool(env.get(FIXTURE_DIR_ENV, "").strip()))
+    )
+    # Statements come from the price source when it is on and has them (Yahoo, the adapter).
+    statements = price if enabled and price in {"yahoo", "http", "fixture"} else None
     if not contact:
-        fallback = (
-            "US financial statements come from Yahoo (unofficial) instead"
-            if yahoo
-            else "US financial statements are unavailable"
-        )
-        (improvements if yahoo else missing).append(
+        fallback = {
+            "yahoo": "US financial statements come from Yahoo (unofficial) instead",
+            "http": "US financial statements come from the data adapter instead",
+            "fixture": "US financial statements come from the local test data instead",
+        }.get(statements or "", "US financial statements are unavailable")
+        (improvements if statements else missing).append(
             f"{fallback}: fill in 'E-mail for SEC EDGAR' ({sec.CONTACT_ENV}) to use the "
             "companies' official SEC filings, then restart the app."
         )
@@ -87,14 +94,12 @@ def describe_setup(env: Mapping[str, str] | None = None) -> dict[str, object]:
     return {
         "price_data": {
             "provider": price,
-            "enabled": yahoo
-            or (price == "http" and bool(env.get("REALMARKET_HTTP_URL", "").strip()))
-            or (price == "fixture" and bool(env.get(FIXTURE_DIR_ENV, "").strip())),
+            "enabled": enabled,
         },
         "financial_statements": {
-            "us_companies": "sec_edgar" if contact else ("yahoo" if yahoo else "unavailable"),
+            "us_companies": "sec_edgar" if contact else (statements or "unavailable"),
             "eu_uk_companies_by_lei": "esef",  # official, keyless, always on
-            "other_markets": "yahoo" if yahoo else "unavailable",
+            "other_markets": statements or "unavailable",
             "sec_contact_set": contact,
         },
         "inflation": {
