@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.7 — 2026-09-28
 
 - **`explain_price_move`: "why did it move today?"** The facts around one session: the
   stock's move in traded prices next to the benchmark index's move and the difference between
