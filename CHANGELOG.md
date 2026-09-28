@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `scripts/call_tool.py` lists and calls the tools from a shell exactly as an MCP client sees
+  them (`--synthetic` for the fictional ORNEK), and the `model-check` skill uses it to have
+  Haiku subagents answer standard customer questions, without packaging an extension.
+
 ## 0.1.7 — 2026-09-28
 
 - **`explain_price_move`: "why did it move today?"** The facts around one session: the

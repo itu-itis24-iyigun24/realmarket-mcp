@@ -54,6 +54,8 @@ Workflows in `.claude/skills/` chain them together:
 
 - `add-mcp-tool` — design → implement → test → review → verify, for any tool change.
 - `add-data-provider` — terms check → implement → fixtures → test → integrity review.
+- `model-check` — Haiku subagents answer customer questions through `scripts/call_tool.py`;
+  run it after changing tool descriptions, result fields, notes or instructions.
 
 ## Layout
 
