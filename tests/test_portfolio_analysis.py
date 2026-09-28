@@ -50,6 +50,7 @@ def test_buys_sells_and_dividends_by_average_cost() -> None:
     totals = result.data["totals"]
     assert (totals["purchases"], totals["sale_proceeds"]) == (2510, 995)
     assert totals["total_pnl"] == 1815
+    assert totals["total_return_on_purchases"] == pytest.approx(1815 / 2510, abs=1e-6)
     assert totals["money_weighted_return_annualized"] > 0
     assert result.data["concentration"]["largest"] == {"symbol": "TTT", "weight": 1.0}
 

@@ -2223,7 +2223,9 @@ PORTFOLIO_NOTES = (
     "Costs use the weighted average cost of each holding, in the report currency at each "
     "transaction's date: a sale realizes proceeds minus average cost of the shares sold. "
     "Fees are added to purchases and deducted from sales. total_pnl = realized + unrealized "
-    "+ dividends received.",
+    "+ dividends received. A holding's total_pnl and total_return_on_purchases include shares "
+    "already sold; unrealized_pnl covers only the shares still held. Report the total figures "
+    "for a holding's result, and do not compute other percentages.",
     "Quantities and prices are as traded at the time. Splits and bonus issues (bedelsiz) the "
     "source reports are applied to the shares held, and flagged, unless a 'bonus' "
     "transaction records them. Holdings are valued at traded prices, not dividend-adjusted "
@@ -2232,7 +2234,8 @@ PORTFOLIO_NOTES = (
     "money_weighted_return_annualized is the internal rate of return of all cash flows "
     "(purchases out; sales and dividends in; today's value in). The risk figures describe "
     "the current holdings, at current quantities, over the last year.",
-    "These figures describe the account's past; they are not a view on what to buy or sell.",
+    "These figures describe the account's past; they are not a view on what to buy or sell, "
+    "and nothing here compares the account with the market or any index.",
 )
 
 
@@ -2551,6 +2554,9 @@ def analyze_portfolio(
                 "unrealized_pnl": round(unrealized_total, 2),
                 "realized_pnl": round(realized, 2),
                 "total_pnl": round(realized + unrealized_total + dividends, 2),
+                "total_return_on_purchases": _round(
+                    (realized + unrealized_total + dividends) / invested if invested else None
+                ),
                 "money_weighted_return_annualized": _round(xirr(flows)),
             },
             "concentration": {
@@ -2652,6 +2658,13 @@ MOVE_NOTES = (
     "to the company (no 'x% of the fall is company-specific'), do not say what caused it, and "
     "do not predict what comes next. News and disclosures are listed with their dates as "
     "context only; being near the move does not mean they caused it.",
+)
+
+
+# A field, not only a note: small models read data fields more reliably than notes.
+MOVE_CAUSE = (
+    "Not determined. These figures show what happened, not why; do not name possible reasons "
+    "(market rally, sector, tourism, technical buying...)."
 )
 
 
@@ -2787,6 +2800,7 @@ def explain_price_move(
         data={
             "symbol": symbol,
             "currency": series.currency,
+            "cause": MOVE_CAUSE,
             "session": target.date.isoformat(),
             "previous_session": previous.date.isoformat(),
             "price": _round(traded(target)),

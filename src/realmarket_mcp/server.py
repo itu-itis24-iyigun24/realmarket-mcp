@@ -52,6 +52,8 @@ figures. Say which date a figure is from; the latest session is often not today.
 fails (a rate limit, a source that is down), say so and suggest trying again; do not answer
 the question from general knowledge instead, such as listing what usually moves a stock.
 Call a tool with what the user gave; ask a question only when a tool refuses without it.
+Make no comparison a tool did not return (with the market, an index, other investors), and
+do not list possible reasons for a move, even hedged ("it may have risen because...").
 """
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True, open_world_hint=True)

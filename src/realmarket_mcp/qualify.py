@@ -381,6 +381,8 @@ CAUSAL_PATTERNS = tuple(
         r"\b(hisseye|[şs]irkete|piyasaya)\s+(ba[ğg]l[ıi]|[öo]zg[üu])\b",
         r"%\s?\d+[,.]?\d*\s*['’]?\w*\s+(piyasa|hisse|[şs]irket)\w*\s+(etkisi|kaynakl|pay)",
         r"\b(due to|caused by|driven by|because of)\b",
+        r"\b(y[üu]kselmi[şs]|d[üu][şs]m[üu][şs]|artm[ıi][şs]|gerilemi[şs])\s+olabilir",
+        r"\bneden(leri)?\s+(olabilir|şunlar|sunlar)",
     )
 )
 

@@ -83,6 +83,7 @@ def test_the_move_is_described_next_to_the_market_without_attribution() -> None:
     assert data["news"][0]["title"] == "Stock Company guidance cut"
     assert news.queries == ["Stock Company"]  # legal suffix removed from the listed name
     assert any("do not apportion" in n.lower() for n in result.notes)
+    assert data["cause"].startswith("Not determined")
 
 
 def test_a_date_without_a_session_uses_the_one_before() -> None:

@@ -244,3 +244,9 @@ def test_attributing_a_move_fails_the_causal_check() -> None:
 def test_a_refusal_that_names_advice_is_not_advice() -> None:
     assert qualify.advice_wording("Al-sat önerisi veya hedef fiyat veremiyorum.") == []
     assert qualify.advice_wording("Hedef fiyat 300 TL. Almanızı öneririm.") != []
+
+
+def test_hedged_reasons_count_as_causal_claims() -> None:
+    case = next(c for c in CASES if c.id == "price_move")
+    checks = check_answer(case, "Neden yükselmiş olabilir? Genel borsa rallisi.", [])
+    assert not next(c for c in checks if c.name == "no_causal_claims").passed

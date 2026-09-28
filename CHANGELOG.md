@@ -39,6 +39,10 @@
     user gave instead of asking for more first.
   - `period: null`, which small models send for an unused optional argument, now means the
     default instead of failing the call.
+  - `analyze_portfolio` reports the account's `total_return_on_purchases` (the model had
+    computed its own, wrongly) and its notes say which per-holding figures include shares
+    already sold. `explain_price_move` returns `cause: "Not determined…"` as a data field, and
+    the instructions forbid comparisons no tool returned and hedged lists of possible reasons.
 - `realmarket-qualify` gains a `portfolio` case, and a sentence that refuses advice ("hedef
   fiyat veremiyorum") no longer counts as advice. `gemini-3.5-flash-lite` passes 7/7.
 - Funds can be served by an adapter like any asset (`asset_class` `fund`).
