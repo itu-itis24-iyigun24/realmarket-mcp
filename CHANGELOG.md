@@ -58,6 +58,18 @@
   figures the model computed from tool results and three tool choices. After the second
   round of fixes those nine were re-run: 7 are correct, bringing the run to about 112 (94%);
   the two left are a ratio and a label the model added to facts that already had the figures.
+- **The data adapter covers what Yahoo gave.** `/bars` may carry `dividends`, `splits` and a
+  per-bar `price_close`, and a new optional `/peers?symbol=&level=industry|sector` endpoint
+  feeds `get_valuation`'s industry comparison; all optional, so existing adapters keep
+  working. `realmarket-adapter-check` reports each of them and what is lost without it; the
+  example adapter serves them from files (and `meta.json`). `docs/entegrasyon-rehberi.md`
+  is a Turkish integration guide for brokerages' product, IT and data teams.
+- `evals/reports/2026-09-28-adapter-run.md`: the 119 questions through the adapter, on a
+  firm-style dataset: Haiku 116 / 119 correct on reading (Yahoo path: 115). Fixed from it:
+  `check_setup` reported statements as unavailable with the adapter (Haiku then refused
+  financial questions); a buy or sell dated on a closed day now fills at the next session
+  instead of the previous close; the account-level fact states the total of dividends not
+  entered.
 - `evals/reports/2026-09-28-full-run-2.md`: the second full run. Haiku 114 / 119 on the
   automatic checks (first run: 94), Sonnet 119 / 119; neither gave advice, a reason for a
   move or a cheap/dear verdict. Fixes from it: Yahoo's `GOLD` (Barrick Gold's share, whose
