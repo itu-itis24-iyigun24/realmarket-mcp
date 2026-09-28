@@ -2,11 +2,13 @@
 
 ## Unreleased
 
-- **`explain_price_move`: "why did it move today?"** The session's move in traded prices,
-  split into a market part (the benchmark's move times the stock's sensitivity to it over
-  the previous 60 sessions) and a stock-specific part; how unusual the move and the volume
-  were; whether it was an ex-dividend day; and news or disclosures from the day before to the
-  day after, from GDELT or the firm's own feed. A statistical description, not a cause.
+- **`explain_price_move`: "why did it move today?"** The facts around one session: the
+  stock's move in traded prices next to the benchmark index's move and the difference between
+  them, how large the move and the volume were against recent days, whether it was an
+  ex-dividend day, and news or disclosures from the day before to the day after, from GDELT
+  or the firm's own feed. It deliberately does not split the move into market and company
+  parts or name a cause; the notes and server instructions tell the model not to either, and
+  `realmarket-qualify` has a case that fails an answer that does.
 - **`analyze_portfolio`: the account itself.** From the transactions a brokerage already
   holds (buy, sell, cash dividend, bonus issue), each holding's quantity, average cost,
   market value and weight, unrealized and realized profit, dividends and total result; account

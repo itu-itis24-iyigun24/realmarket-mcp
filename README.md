@@ -33,7 +33,7 @@ compute these figures in code and return them with their sources:
 | `compare_real_return` | "Did it beat inflation?" — nominal vs real return, plus the same holding in US dollars, in gold (and gram gold in TL), in minimum wages, and (TL assets) against a TL deposit account before and after withholding tax and against house prices |
 | `compare_assets` | "How do these compare?" — 2 to 10 assets over one common window |
 | `check_data_quality` | "Can I trust this data?" — gaps, placeholder bars, suspicious jumps, stale data |
-| `explain_price_move` | "Why did it fall today?" — the day's move split into market and stock-specific parts, how unusual the move and volume were, ex-dividend days, and that day's news or disclosures |
+| `explain_price_move` | "Why did it fall today?" — the facts around the session: the stock's move next to the index's, how unusual the move and volume were, ex-dividend days, and that day's news or disclosures, without naming a cause |
 | `analyze_portfolio` | "How is my portfolio doing?" — from the account's buys, sells, dividends and bonus issues: each holding's cost, value, weight, realized and unrealized profit; totals, money-weighted return, concentration, best and worst holding, and last year's volatility and drawdown |
 | `portfolio_real_return` | "Did my savings keep up with inflation?" — dated purchases valued today, money-weighted return, real return, and the same payments replayed into USD, gold, a TL deposit (also after withholding tax), housing or an index |
 | `get_event_reaction` | "How did the stock react to that announcement?" — 1/5/20-session return vs the index, plus pre-event drift |

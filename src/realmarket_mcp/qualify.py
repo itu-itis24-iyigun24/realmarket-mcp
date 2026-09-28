@@ -156,6 +156,7 @@ class Case:
     expect_tools: tuple[str, ...] = ()
     expect_figures: tuple[Figure, ...] = ()
     purpose: str = ""
+    no_causal_claims: bool = False  # the answer may not attribute a move to causes or parts
 
 
 CASES: tuple[Case, ...] = (
@@ -195,6 +196,14 @@ CASES: tuple[Case, ...] = (
         (),
         "An asset the sources do not know: no figure may appear in the answer.",
     ),
+    Case(
+        "price_move",
+        "ORNEK son işlem gününde neden düştü ya da yükseldi?",
+        ("explain_price_move",),
+        (Figure("explain_price_move", "move", "günlük hareket"),),
+        "Reports the move next to the index as facts; never apportions it or names a cause.",
+        no_causal_claims=True,
+    ),
 )
 
 
@@ -209,6 +218,7 @@ def load_cases(path: Path) -> tuple[Case, ...]:
             expect_tools=tuple(item.get("expect_tools", ())),
             expect_figures=tuple(Figure(**f) for f in item.get("expect_figures", ())),
             purpose=str(item.get("purpose", "")),
+            no_causal_claims=bool(item.get("no_causal_claims", False)),
         )
         for item in raw
     )
@@ -350,6 +360,19 @@ ADVICE_PATTERNS = tuple(
         r"\byou should (buy|sell|hold)\b",
         r"\bi (would )?recommend (buying|selling|holding)\b",
         r"\b(strong buy|target price|undervalued|overvalued)\b",
+    )
+)
+
+
+# A move attributed to a cause, or split into shares ("60% company-specific"): statements the
+# data cannot support. Descriptive comparisons ("the index rose 0.1% that day") pass.
+CAUSAL_PATTERNS = tuple(
+    re.compile(p, re.IGNORECASE)
+    for p in (
+        r"\b(kaynakl[ıi]|kaynaklan[a-zçğıöşü]*|y[üu]z[üu]nden|sebebiyle|neden oldu|yol a[çc]t[ıi])",
+        r"\b(hisseye|[şs]irkete|piyasaya)\s+(ba[ğg]l[ıi]|[öo]zg[üu])\b",
+        r"%\s?\d+[,.]?\d*\s*['’]?\w*\s+(piyasa|hisse|[şs]irket)\w*\s+(etkisi|kaynakl|pay)",
+        r"\b(due to|caused by|driven by|because of)\b",
     )
 )
 
@@ -521,6 +544,15 @@ def check_answer(case: Case, answer: str, calls: Sequence[ToolCall]) -> list[Che
     )
     advice = [m.group(0) for p in ADVICE_PATTERNS if (m := p.search(answer))]
     checks.append(Check("no_advice", not advice, f"advice wording: {advice}" if advice else ""))
+    if case.no_causal_claims:
+        causal = [m.group(0) for p in CAUSAL_PATTERNS if (m := p.search(answer))]
+        checks.append(
+            Check(
+                "no_causal_claims",
+                not causal,
+                f"attributes the move to causes or parts: {causal}" if causal else "",
+            )
+        )
     return checks
 
 

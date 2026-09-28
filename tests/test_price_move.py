@@ -65,7 +65,7 @@ class News:
         ]
 
 
-def test_the_move_is_split_into_market_and_stock_specific_parts() -> None:
+def test_the_move_is_described_next_to_the_market_without_attribution() -> None:
     news = News()
     result = tools.explain_price_move(
         Provider(), "STK", today=DAYS[-1], load_news=lambda: news, retrieved_at="t"
@@ -74,14 +74,15 @@ def test_the_move_is_split_into_market_and_stock_specific_parts() -> None:
     assert data["session"] == DAYS[-1].isoformat()
     assert data["move"] == pytest.approx(-0.04, abs=1e-6)
     assert data["benchmark"]["move"] == pytest.approx(-0.02, abs=1e-6)
-    assert data["benchmark"]["beta"] == pytest.approx(BETA, abs=1e-6)
-    assert data["market_part"] == pytest.approx(-0.03, abs=1e-6)
-    assert data["stock_specific_part"] == pytest.approx(-0.01, abs=1e-6)
+    assert data["difference_from_benchmark"] == pytest.approx(-0.02, abs=1e-6)
+    # Facts side by side only: no beta, no market or company share of the move.
+    assert not {"market_part", "stock_specific_part"} & set(data)
+    assert "beta" not in data["benchmark"]
     assert data["volume_ratio"] == pytest.approx(3.0)
     assert data["move_in_sigmas"] < -1
     assert data["news"][0]["title"] == "Stock Company guidance cut"
     assert news.queries == ["Stock Company"]  # legal suffix removed from the listed name
-    assert any("not a cause" in n for n in result.notes)
+    assert any("do not apportion" in n.lower() for n in result.notes)
 
 
 def test_a_date_without_a_session_uses_the_one_before() -> None:

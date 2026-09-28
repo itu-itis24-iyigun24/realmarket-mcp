@@ -44,7 +44,9 @@ tool says a data source is not configured, call check_setup and tell the user wh
 change; do not fill the gap with figures from memory. Call the tool again for every asset
 and period asked about; never reuse figures from an earlier answer about another asset. Keep
 each figure with the window it was measured over: some comparisons in one result cover
-different dates, and each says which.
+different dates, and each says which. Report figures as facts: do not attribute a price move
+or a return to causes, do not split it into parts ("x% came from the market"), and do not
+link news to a move beyond listing it with its date.
 """
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True, open_world_hint=True)
@@ -375,11 +377,12 @@ def build_server() -> MCPServer:
             Field(description="ISO date of the session; defaults to the latest session."),
         ] = None,
     ) -> CallToolResult:
-        """Answer "why did it rise or fall today?": the session's move, how much of it matches
-        the market (the benchmark index's move times the stock's sensitivity to it) and how
-        much is stock-specific, how unusual the move and the volume were, whether it was an
-        ex-dividend day, and news or disclosures from the day before to the day after. A
-        statistical description with the day's headlines, not a proof of cause."""
+        """For "why did it rise or fall today?": the facts around one session. The stock's
+        move next to the benchmark index's move that day and the difference between them, how
+        large the move and the volume were against the stock's recent days, whether it was an
+        ex-dividend day, and news or disclosures from the day before to the day after, with
+        their dates. Present these side by side; never apportion the move to the market or
+        the company, never state its cause, never predict."""
         now = _utc_now()
         stamp = _stamp(now)
         return respond(

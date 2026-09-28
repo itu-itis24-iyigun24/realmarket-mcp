@@ -18,6 +18,7 @@ TOOL_FOR = {
     "real_return": ("compare_real_return", {"symbol": "ORNEK", "start": "2023-01-02"}),
     "valuation_without_pe": ("get_valuation", {"symbol": "ORNEK"}),
     "unknown_symbol": ("get_price_summary", {"symbol": "ZZQX", "period": "1y"}),
+    "price_move": ("explain_price_move", {"symbol": "ORNEK"}),
 }
 
 
@@ -48,6 +49,12 @@ def careful_model(messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -
         return {"content": f"ORNEK bu dönemde {_pct(data['total_return'])} getiri sağladı."}
     if case.id == "real_return":
         return {"content": f"Enflasyondan arındırılmış getiri {_pct(data['real_return'])}."}
+    if case.id == "price_move":
+        bench = data["benchmark"]["move"]
+        return {
+            "content": f"ORNEK {data['session']} günü {_pct(data['move'])} hareket etti; aynı "
+            f"gün endeks {_pct(bench)} değişti. Hareketin nedeni bu verilerle söylenemez."
+        }
     cap = f"{data['market_cap'] / 1e9:.1f}".replace(".", ",")
     return {"content": f"Piyasa değeri {cap} milyar TL; F/K bu kaynaktan hesaplanamıyor."}
 
@@ -70,7 +77,7 @@ def test_a_careless_model_fails_with_reasons() -> None:
     failed = {c.name for r in results for c in r.checks if not c.passed}
     assert {"tools_used", "no_unsupported_figures", "no_advice"} <= failed
     report = qualify.render(results, "careless")
-    assert "0/5 cases passed" in report and "47,3" in report
+    assert "0/6 cases passed" in report and "47,3" in report
 
 
 def test_invented_pe_is_caught_even_when_built_from_tool_figures() -> None:
@@ -123,7 +130,7 @@ def test_cli_writes_a_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     out = tmp_path / "report.json"
     code = qualify.main(["--base-url", "http://x/v1", "--model", "m", "--output", str(out)])
     report = json.loads(out.read_text())
-    assert code == 0 and (report["passed"], report["not_run"], report["total"]) == (5, 0, 5)
+    assert code == 0 and (report["passed"], report["not_run"], report["total"]) == (6, 0, 6)
     assert report["cases"][0]["calls"][0]["tool"] == "get_price_summary"
 
 
@@ -206,3 +213,17 @@ def test_the_time_limit_marks_the_rest_not_run() -> None:
         careful_model, CASES, max_minutes=-1, progress=lambda r: seen.append(r.status)
     )
     assert seen == ["NOT RUN"] * len(CASES) and "limit" in (results[0].error or "")
+
+
+def test_attributing_a_move_fails_the_causal_check() -> None:
+    case = next(c for c in CASES if c.id == "price_move")
+    call = ToolCall("explain_price_move", {}, True, {"data": {"move": -0.04}})
+    for answer in (
+        "Düşüş %-4,0; bunun %60'ı hisseye özgü.",
+        "Hisse %-4,0 düştü, piyasa kaynaklı bir düşüş.",
+        "The %-4,0 fall was driven by the market.",
+    ):
+        checks = {c.name: c for c in check_answer(case, answer, [call])}
+        assert not checks["no_causal_claims"].passed, answer
+    fine = {c.name: c for c in check_answer(case, "Hisse %-4,0, endeks %-2,0 değişti.", [call])}
+    assert fine["no_causal_claims"].passed
