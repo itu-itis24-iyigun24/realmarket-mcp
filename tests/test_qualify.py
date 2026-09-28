@@ -255,3 +255,12 @@ def test_hedged_reasons_count_as_causal_claims() -> None:
 def test_months_and_data_versions_are_not_figures() -> None:
     text = "2024-03 alımı; veri sürümü sha256:e5c99d2fdf84179c66c2c651ceac6cf42bdcd5081c417665"
     assert qualify.answer_numbers(text) == []
+
+
+def test_figures_stated_in_facts_are_supported() -> None:
+    case = Case("c", "Portföyüm nasıl?")
+    call = ToolCall(
+        "analyze_portfolio", {}, True, {"data": {}, "facts": ["Bugünkü karşılığı 72.952,50 TL."]}
+    )
+    checks = check_answer(case, "Paranızın karşılığı 72.952,50 TL.", [call])
+    assert next(c for c in checks if c.name == "no_unsupported_figures").passed

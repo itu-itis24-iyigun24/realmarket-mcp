@@ -1,0 +1,1156 @@
+[
+ {
+  "id": "getiri01",
+  "category": "getiri",
+  "question": "THYAO son bir yılda ne kadar kazandırdı?",
+  "expect_tools": [
+   "get_price_summary"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Price summary over the period asked; figures only from the result."
+ },
+ {
+  "id": "getiri02",
+  "category": "getiri",
+  "question": "ASELS'in son 3 yıldaki performansı nasıl?",
+  "expect_tools": [
+   "get_price_summary"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Price summary over the period asked; figures only from the result."
+ },
+ {
+  "id": "getiri03",
+  "category": "getiri",
+  "question": "GARAN 2025 başından bu yana yüzde kaç arttı?",
+  "expect_tools": [
+   "get_price_summary"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Price summary over the period asked; figures only from the result."
+ },
+ {
+  "id": "getiri04",
+  "category": "getiri",
+  "question": "TUPRS son 6 ayda ne yaptı?",
+  "expect_tools": [
+   "get_price_summary"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Price summary over the period asked; figures only from the result."
+ },
+ {
+  "id": "getiri05",
+  "category": "getiri",
+  "question": "BIMAS'ın temettü verimi ne kadar?",
+  "expect_tools": [
+   "get_price_summary"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Price summary over the period asked; figures only from the result."
+ },
+ {
+  "id": "getiri06",
+  "category": "getiri",
+  "question": "EREGL son bir yılda en fazla ne kadar düştü?",
+  "expect_tools": [
+   "get_price_summary"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Price summary over the period asked; figures only from the result."
+ },
+ {
+  "id": "getiri07",
+  "category": "getiri",
+  "question": "FROTO'nun son 5 yıllık yıllık ortalama getirisi nedir?",
+  "expect_tools": [
+   "get_price_summary"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Price summary over the period asked; figures only from the result."
+ },
+ {
+  "id": "getiri08",
+  "category": "getiri",
+  "question": "PGSUS ne kadar oynak bir hisse?",
+  "expect_tools": [
+   "get_price_summary"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Price summary over the period asked; figures only from the result."
+ },
+ {
+  "id": "getiri09",
+  "category": "getiri",
+  "question": "KCHOL geçen ay ne yaptı?",
+  "expect_tools": [
+   "get_price_summary"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Price summary over the period asked; figures only from the result."
+ },
+ {
+  "id": "getiri10",
+  "category": "getiri",
+  "question": "Apple hissesi son bir yılda ne kadar getirdi?",
+  "expect_tools": [
+   "get_price_summary"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Price summary over the period asked; figures only from the result."
+ },
+ {
+  "id": "getiri11",
+  "category": "getiri",
+  "question": "Altın son bir yılda dolar bazında ne kadar arttı?",
+  "expect_tools": [
+   "get_price_summary"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Price summary over the period asked; figures only from the result."
+ },
+ {
+  "id": "getiri12",
+  "category": "getiri",
+  "question": "Dolar/TL son bir yılda ne kadar arttı?",
+  "expect_tools": [
+   "get_price_summary"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Price summary over the period asked; figures only from the result."
+ },
+ {
+  "id": "enflasyon01",
+  "category": "enflasyon",
+  "question": "THYAO 2023 başından beri enflasyonu yendi mi?",
+  "expect_tools": [
+   "compare_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Real return and the Turkish alternatives, each with its own window."
+ },
+ {
+  "id": "enflasyon02",
+  "category": "enflasyon",
+  "question": "2022'de ASELS alsaydım enflasyona karşı ne durumda olurdum?",
+  "expect_tools": [
+   "compare_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Real return and the Turkish alternatives, each with its own window."
+ },
+ {
+  "id": "enflasyon03",
+  "category": "enflasyon",
+  "question": "BIMAS son 3 yılda reel olarak kazandırdı mı?",
+  "expect_tools": [
+   "compare_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Real return and the Turkish alternatives, each with its own window."
+ },
+ {
+  "id": "enflasyon04",
+  "category": "enflasyon",
+  "question": "GARAN'a 2024 başında yatırım yapsaydım enflasyonun üzerinde kazanır mıydım?",
+  "expect_tools": [
+   "compare_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Real return and the Turkish alternatives, each with its own window."
+ },
+ {
+  "id": "enflasyon05",
+  "category": "enflasyon",
+  "question": "SISE son 2 yılda enflasyona yenildi mi?",
+  "expect_tools": [
+   "compare_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Real return and the Turkish alternatives, each with its own window."
+ },
+ {
+  "id": "enflasyon06",
+  "category": "enflasyon",
+  "question": "TCELL'e 2023'te koysaydım mevduattan iyi mi olurdu?",
+  "expect_tools": [
+   "compare_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Real return and the Turkish alternatives, each with its own window."
+ },
+ {
+  "id": "enflasyon07",
+  "category": "enflasyon",
+  "question": "KCHOL mu yoksa altın mı daha iyiydi son 3 yılda?",
+  "expect_tools": [
+   "compare_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Real return and the Turkish alternatives, each with its own window."
+ },
+ {
+  "id": "enflasyon08",
+  "category": "enflasyon",
+  "question": "EREGL 2021'den beri asgari ücretin gerisinde mi kaldı?",
+  "expect_tools": [
+   "compare_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Real return and the Turkish alternatives, each with its own window."
+ },
+ {
+  "id": "enflasyon09",
+  "category": "enflasyon",
+  "question": "TUPRS alsaydım ev mi alsaydım, 2023'ten beri hangisi daha iyi olurdu?",
+  "expect_tools": [
+   "compare_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Real return and the Turkish alternatives, each with its own window."
+ },
+ {
+  "id": "enflasyon10",
+  "category": "enflasyon",
+  "question": "AKBNK'nın son bir yıllık reel getirisi nedir?",
+  "expect_tools": [
+   "compare_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Real return and the Turkish alternatives, each with its own window."
+ },
+ {
+  "id": "enflasyon11",
+  "category": "enflasyon",
+  "question": "Apple hissesi ABD enflasyonunu son 3 yılda yendi mi?",
+  "expect_tools": [
+   "compare_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Real return and the Turkish alternatives, each with its own window."
+ },
+ {
+  "id": "enflasyon12",
+  "category": "enflasyon",
+  "question": "SAHOL 2024 başından beri dolar bazında ne kazandırdı?",
+  "expect_tools": [
+   "compare_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Real return and the Turkish alternatives, each with its own window."
+ },
+ {
+  "id": "karsilastirma01",
+  "category": "karsilastirma",
+  "question": "Son bir yılda THYAO, PGSUS ve BIST 100'ü karşılaştırır mısın?",
+  "expect_tools": [
+   "compare_assets"
+  ],
+  "no_causal_claims": true,
+  "purpose": "One window for all; ranking; mixed currencies stated."
+ },
+ {
+  "id": "karsilastirma02",
+  "category": "karsilastirma",
+  "question": "GARAN ile AKBNK'yı son 2 yılda karşılaştır.",
+  "expect_tools": [
+   "compare_assets"
+  ],
+  "no_causal_claims": true,
+  "purpose": "One window for all; ranking; mixed currencies stated."
+ },
+ {
+  "id": "karsilastirma03",
+  "category": "karsilastirma",
+  "question": "BIMAS mı MGROS mu son 3 yılda daha çok kazandırdı?",
+  "expect_tools": [
+   "compare_assets"
+  ],
+  "no_causal_claims": true,
+  "purpose": "One window for all; ranking; mixed currencies stated."
+ },
+ {
+  "id": "karsilastirma04",
+  "category": "karsilastirma",
+  "question": "FROTO, TOASO ve DOAS'ı son bir yılda kıyasla.",
+  "expect_tools": [
+   "compare_assets"
+  ],
+  "no_causal_claims": true,
+  "purpose": "One window for all; ranking; mixed currencies stated."
+ },
+ {
+  "id": "karsilastirma05",
+  "category": "karsilastirma",
+  "question": "ASELS ile BIST 100'ü 2023 başından beri karşılaştır.",
+  "expect_tools": [
+   "compare_assets"
+  ],
+  "no_causal_claims": true,
+  "purpose": "One window for all; ranking; mixed currencies stated."
+ },
+ {
+  "id": "karsilastirma06",
+  "category": "karsilastirma",
+  "question": "TUPRS ve PETKM hangisi daha oynak son bir yılda?",
+  "expect_tools": [
+   "compare_assets"
+  ],
+  "no_causal_claims": true,
+  "purpose": "One window for all; ranking; mixed currencies stated."
+ },
+ {
+  "id": "karsilastirma07",
+  "category": "karsilastirma",
+  "question": "Bankacılık hisseleri GARAN, AKBNK, YKBNK ve ISCTR son 6 ayda nasıl?",
+  "expect_tools": [
+   "compare_assets"
+  ],
+  "no_causal_claims": true,
+  "purpose": "One window for all; ranking; mixed currencies stated."
+ },
+ {
+  "id": "karsilastirma08",
+  "category": "karsilastirma",
+  "question": "Altın, dolar ve BIST 100 son bir yılda nasıl bir performans gösterdi?",
+  "expect_tools": [
+   "compare_assets"
+  ],
+  "no_causal_claims": true,
+  "purpose": "One window for all; ranking; mixed currencies stated."
+ },
+ {
+  "id": "karsilastirma09",
+  "category": "karsilastirma",
+  "question": "KCHOL ile SAHOL'u son 5 yılda karşılaştırır mısın?",
+  "expect_tools": [
+   "compare_assets"
+  ],
+  "no_causal_claims": true,
+  "purpose": "One window for all; ranking; mixed currencies stated."
+ },
+ {
+  "id": "karsilastirma10",
+  "category": "karsilastirma",
+  "question": "Apple ve Nvidia'yı son bir yılda karşılaştır.",
+  "expect_tools": [
+   "compare_assets"
+  ],
+  "no_causal_claims": true,
+  "purpose": "One window for all; ranking; mixed currencies stated."
+ },
+ {
+  "id": "degerleme01",
+  "category": "degerleme",
+  "question": "THYAO'nun F/K oranı kaç?",
+  "expect_tools": [
+   "get_valuation"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Ratios as given, missing ones explained, no cheap/expensive verdict."
+ },
+ {
+  "id": "degerleme02",
+  "category": "degerleme",
+  "question": "ASELS'in F/K oranı nedir? Pahalı mı?",
+  "expect_tools": [
+   "get_valuation"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Ratios as given, missing ones explained, no cheap/expensive verdict."
+ },
+ {
+  "id": "degerleme03",
+  "category": "degerleme",
+  "question": "BIMAS'ın piyasa değeri ne kadar?",
+  "expect_tools": [
+   "get_valuation"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Ratios as given, missing ones explained, no cheap/expensive verdict."
+ },
+ {
+  "id": "degerleme04",
+  "category": "degerleme",
+  "question": "GARAN'ın PD/DD oranı nedir?",
+  "expect_tools": [
+   "get_valuation"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Ratios as given, missing ones explained, no cheap/expensive verdict."
+ },
+ {
+  "id": "degerleme05",
+  "category": "degerleme",
+  "question": "EREGL ucuz mu?",
+  "expect_tools": [
+   "get_valuation"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Ratios as given, missing ones explained, no cheap/expensive verdict."
+ },
+ {
+  "id": "degerleme06",
+  "category": "degerleme",
+  "question": "TUPRS'un F/K ve PD/DD oranları nedir?",
+  "expect_tools": [
+   "get_valuation"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Ratios as given, missing ones explained, no cheap/expensive verdict."
+ },
+ {
+  "id": "degerleme07",
+  "category": "degerleme",
+  "question": "FROTO'nun temettü verimi ve F/K'sı kaç?",
+  "expect_tools": [
+   "get_valuation"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Ratios as given, missing ones explained, no cheap/expensive verdict."
+ },
+ {
+  "id": "degerleme08",
+  "category": "degerleme",
+  "question": "KCHOL'un piyasa değeri ve PD/DD'si?",
+  "expect_tools": [
+   "get_valuation"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Ratios as given, missing ones explained, no cheap/expensive verdict."
+ },
+ {
+  "id": "degerleme09",
+  "category": "degerleme",
+  "question": "Apple'ın F/K oranı nedir?",
+  "expect_tools": [
+   "get_valuation"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Ratios as given, missing ones explained, no cheap/expensive verdict."
+ },
+ {
+  "id": "degerleme10",
+  "category": "degerleme",
+  "question": "SISE'nin değerleme oranları neler?",
+  "expect_tools": [
+   "get_valuation"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Ratios as given, missing ones explained, no cheap/expensive verdict."
+ },
+ {
+  "id": "finansal01",
+  "category": "finansal",
+  "question": "BIMAS'ın son çeyrek sonuçları nasıl?",
+  "expect_tools": [
+   "get_financials"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Reported figures with their period; real growth where given."
+ },
+ {
+  "id": "finansal02",
+  "category": "finansal",
+  "question": "THYAO'nun geçen yılki net kârı ne kadardı?",
+  "expect_tools": [
+   "get_financials"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Reported figures with their period; real growth where given."
+ },
+ {
+  "id": "finansal03",
+  "category": "finansal",
+  "question": "ASELS'in satışları geçen yıla göre ne kadar arttı?",
+  "expect_tools": [
+   "get_financials"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Reported figures with their period; real growth where given."
+ },
+ {
+  "id": "finansal04",
+  "category": "finansal",
+  "question": "GARAN'ın son bilançosunda özsermaye ne kadar?",
+  "expect_tools": [
+   "get_financials"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Reported figures with their period; real growth where given."
+ },
+ {
+  "id": "finansal05",
+  "category": "finansal",
+  "question": "TUPRS'un borçluluğu nasıl?",
+  "expect_tools": [
+   "get_financials"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Reported figures with their period; real growth where given."
+ },
+ {
+  "id": "finansal06",
+  "category": "finansal",
+  "question": "EREGL zarar mı ediyor?",
+  "expect_tools": [
+   "get_financials"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Reported figures with their period; real growth where given."
+ },
+ {
+  "id": "finansal07",
+  "category": "finansal",
+  "question": "FROTO'nun faaliyet marjı nedir?",
+  "expect_tools": [
+   "get_financials"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Reported figures with their period; real growth where given."
+ },
+ {
+  "id": "finansal08",
+  "category": "finansal",
+  "question": "KCHOL'un son çeyrek net kârı önceki çeyreğe göre nasıl?",
+  "expect_tools": [
+   "get_financials"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Reported figures with their period; real growth where given."
+ },
+ {
+  "id": "finansal09",
+  "category": "finansal",
+  "question": "MGROS'un satış büyümesi enflasyondan arındırılmış olarak ne kadar?",
+  "expect_tools": [
+   "get_financials"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Reported figures with their period; real growth where given."
+ },
+ {
+  "id": "finansal10",
+  "category": "finansal",
+  "question": "Apple'ın son çeyrek geliri ne kadar?",
+  "expect_tools": [
+   "get_financials"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Reported figures with their period; real growth where given."
+ },
+ {
+  "id": "hareket01",
+  "category": "hareket",
+  "question": "THYAO bugün neden yükseldi?",
+  "expect_tools": [
+   "explain_price_move"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Session facts beside the index; no causes; the session's own date."
+ },
+ {
+  "id": "hareket02",
+  "category": "hareket",
+  "question": "ASELS neden düştü?",
+  "expect_tools": [
+   "explain_price_move"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Session facts beside the index; no causes; the session's own date."
+ },
+ {
+  "id": "hareket03",
+  "category": "hareket",
+  "question": "GARAN bugün ne oldu?",
+  "expect_tools": [
+   "explain_price_move"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Session facts beside the index; no causes; the session's own date."
+ },
+ {
+  "id": "hareket04",
+  "category": "hareket",
+  "question": "BIMAS dün neden bu kadar oynadı?",
+  "expect_tools": [
+   "explain_price_move"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Session facts beside the index; no causes; the session's own date."
+ },
+ {
+  "id": "hareket05",
+  "category": "hareket",
+  "question": "TUPRS'taki son hareketin sebebi ne?",
+  "expect_tools": [
+   "explain_price_move"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Session facts beside the index; no causes; the session's own date."
+ },
+ {
+  "id": "hareket06",
+  "category": "hareket",
+  "question": "EREGL bugün endeksten iyi mi gitti?",
+  "expect_tools": [
+   "explain_price_move"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Session facts beside the index; no causes; the session's own date."
+ },
+ {
+  "id": "hareket07",
+  "category": "hareket",
+  "question": "PGSUS'ta son işlem gününde hacim normal miydi?",
+  "expect_tools": [
+   "explain_price_move"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Session facts beside the index; no causes; the session's own date."
+ },
+ {
+  "id": "hareket08",
+  "category": "hareket",
+  "question": "KCHOL 24 Eylül 2026'da neden hareket etti?",
+  "expect_tools": [
+   "explain_price_move"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Session facts beside the index; no causes; the session's own date."
+ },
+ {
+  "id": "hareket09",
+  "category": "hareket",
+  "question": "SISE bugün temettü mü dağıttı, neden düştü?",
+  "expect_tools": [
+   "explain_price_move"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Session facts beside the index; no causes; the session's own date."
+ },
+ {
+  "id": "hareket10",
+  "category": "hareket",
+  "question": "Nvidia dün neden düştü?",
+  "expect_tools": [
+   "explain_price_move"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Session facts beside the index; no causes; the session's own date."
+ },
+ {
+  "id": "olay01",
+  "category": "olay",
+  "question": "THYAO 10 Ağustos 2026'daki bilanço açıklamasından sonra nasıl hareket etti?",
+  "expect_tools": [
+   "get_event_reaction"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Windows before and after; no claim the event caused it."
+ },
+ {
+  "id": "olay02",
+  "category": "olay",
+  "question": "ASELS 1 Temmuz 2026'daki ihale haberinden sonra ne yaptı?",
+  "expect_tools": [
+   "get_event_reaction"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Windows before and after; no claim the event caused it."
+ },
+ {
+  "id": "olay03",
+  "category": "olay",
+  "question": "Merkez Bankası'nın 24 Temmuz 2026 faiz kararından sonra GARAN nasıl tepki verdi?",
+  "expect_tools": [
+   "get_event_reaction"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Windows before and after; no claim the event caused it."
+ },
+ {
+  "id": "olay04",
+  "category": "olay",
+  "question": "BIMAS 14 Mayıs 2026'daki bedelsiz sonrası nasıl gitti?",
+  "expect_tools": [
+   "get_event_reaction"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Windows before and after; no claim the event caused it."
+ },
+ {
+  "id": "olay05",
+  "category": "olay",
+  "question": "TUPRS 5 Ağustos 2026'daki temettü açıklamasından sonra endeksi geçti mi?",
+  "expect_tools": [
+   "get_event_reaction"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Windows before and after; no claim the event caused it."
+ },
+ {
+  "id": "olay06",
+  "category": "olay",
+  "question": "AKBNK 11 Haziran 2026 faiz kararına nasıl tepki verdi?",
+  "expect_tools": [
+   "get_event_reaction"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Windows before and after; no claim the event caused it."
+ },
+ {
+  "id": "olay07",
+  "category": "olay",
+  "question": "EREGL 3 Mart 2026'daki açıklamadan önce ve sonra nasıl hareket etti?",
+  "expect_tools": [
+   "get_event_reaction"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Windows before and after; no claim the event caused it."
+ },
+ {
+  "id": "olay08",
+  "category": "olay",
+  "question": "KCHOL 20 Ağustos 2026 sonrasında 20 günde ne yaptı?",
+  "expect_tools": [
+   "get_event_reaction"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Windows before and after; no claim the event caused it."
+ },
+ {
+  "id": "portfoy01",
+  "category": "portfoy",
+  "question": "Mart 2024'te 100 THYAO, Haziran 2024'te 50 BIMAS aldım, Eylül 2025'te 30 THYAO sattım. Portföyüm nasıl?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "portfoy02",
+  "category": "portfoy",
+  "question": "Mart 2024'te 100 THYAO, Haziran 2024'te 50 BIMAS aldım, Eylül 2025'te 30 THYAO sattım. Portföyüm BIST 100'e göre nasıl?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "portfoy03",
+  "category": "portfoy",
+  "question": "15 Ocak 2025'te 200 GARAN'ı 125 TL'den, 3 Şubat 2025'te 50 ASELS'i 90 TL'den aldım. Kâr zarar durumum ne?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "portfoy04",
+  "category": "portfoy",
+  "question": "2024'ün Nisan ayında 100 EREGL, Mayıs ayında 100 TUPRS aldım. Hangisi daha çok kazandırdı?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "portfoy05",
+  "category": "portfoy",
+  "question": "Ocak 2023'te 500 SISE aldım, Temmuz 2025'te hepsini sattım. Ne kadar kâr ettim?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "portfoy06",
+  "category": "portfoy",
+  "question": "Şubat 2024'te 100 AKBNK aldım, Mayıs 2025'te 1.250 TL temettü aldım. Toplam getirim ne?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "portfoy07",
+  "category": "portfoy",
+  "question": "Haziran 2024'te 30 FROTO ve 100 KCHOL aldım. Portföyümün ağırlıkları nasıl?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "portfoy08",
+  "category": "portfoy",
+  "question": "2025 başında 20 Apple hissesi ve 100 THYAO aldım. Portföyüm ne durumda?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "portfoy09",
+  "category": "portfoy",
+  "question": "Mart 2024'te 100 BIMAS aldım, Mayıs 2026'da 100 bedelsiz hisse geldi. Portföyüm nasıl?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "portfoy10",
+  "category": "portfoy",
+  "question": "Ekim 2024'te 100 PGSUS, Kasım 2024'te 100 THYAO aldım. Havacılık hisselerim BIST 30'a göre nasıl?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "portfoy11",
+  "category": "portfoy",
+  "question": "Ocak 2025'te 50 ASELS, 50 THYAO, 50 GARAN aldım. En çok hangisi kaybettirdi?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "portfoy12",
+  "category": "portfoy",
+  "question": "Mart 2023'te 100 TCELL aldım. Maliyetim ne kadar ve şimdi ne kadar ediyor?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "portfoy13",
+  "category": "portfoy",
+  "question": "2024 Temmuz'da 100 MGROS, 2025 Ocak'ta 50 MGROS daha aldım. Ortalama maliyetim nedir?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "portfoy14",
+  "category": "portfoy",
+  "question": "Nisan 2024'te 100 KCHOL aldım. Portföyümün son bir yıldaki riski nasıl?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Called with what the user gave; totals, per-holding results and warnings."
+ },
+ {
+  "id": "birikim01",
+  "category": "birikim",
+  "question": "Mart 2024'te THYAO'ya 10.000 TL, Haziran 2024'te BIMAS'a 10.000 TL yatırdım. Dolar, altın ya da mevduata göre nasılım?",
+  "expect_tools": [
+   "portfolio_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "The user's own payments valued together, each alternative with its gap."
+ },
+ {
+  "id": "birikim02",
+  "category": "birikim",
+  "question": "Ocak 2023'te ASELS'e 20.000 TL koydum. Enflasyona göre ne durumdayım?",
+  "expect_tools": [
+   "portfolio_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "The user's own payments valued together, each alternative with its gap."
+ },
+ {
+  "id": "birikim03",
+  "category": "birikim",
+  "question": "Her ay başında 5.000 TL ile GARAN aldım, Ocak 2025'ten Haziran 2025'e kadar. Mevduata koysaydım daha mı iyi olurdu?",
+  "expect_tools": [
+   "portfolio_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "The user's own payments valued together, each alternative with its gap."
+ },
+ {
+  "id": "birikim04",
+  "category": "birikim",
+  "question": "2022 başında TUPRS'a 50.000 TL yatırdım. Ev alsaydım daha mı iyi olurdu?",
+  "expect_tools": [
+   "portfolio_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "The user's own payments valued together, each alternative with its gap."
+ },
+ {
+  "id": "birikim05",
+  "category": "birikim",
+  "question": "Şubat 2024'te EREGL'e 15.000 TL, Ağustos 2024'te SISE'ye 15.000 TL yatırdım. Altına göre ne durumdayım?",
+  "expect_tools": [
+   "portfolio_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "The user's own payments valued together, each alternative with its gap."
+ },
+ {
+  "id": "birikim06",
+  "category": "birikim",
+  "question": "2023 Haziran'da KCHOL'e 30.000 TL koydum. Birikimim enflasyonun önünde mi?",
+  "expect_tools": [
+   "portfolio_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "The user's own payments valued together, each alternative with its gap."
+ },
+ {
+  "id": "birikim07",
+  "category": "birikim",
+  "question": "Ocak 2024'te BIMAS'a 25.000 TL yatırdım. Dolara göre kazandım mı?",
+  "expect_tools": [
+   "portfolio_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "The user's own payments valued together, each alternative with its gap."
+ },
+ {
+  "id": "birikim08",
+  "category": "birikim",
+  "question": "Mart 2023'te AKBNK'ya 10.000 TL, Eylül 2023'te 10.000 TL daha koydum. Mevduat mı daha iyiydi?",
+  "expect_tools": [
+   "portfolio_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "The user's own payments valued together, each alternative with its gap."
+ },
+ {
+  "id": "birikim09",
+  "category": "birikim",
+  "question": "2024 başında FROTO'ya 40.000 TL yatırdım. Enflasyon, altın ve dolara göre nasıl?",
+  "expect_tools": [
+   "portfolio_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "The user's own payments valued together, each alternative with its gap."
+ },
+ {
+  "id": "birikim10",
+  "category": "birikim",
+  "question": "Temmuz 2023'te THYAO'ya 20.000 TL yatırdım. Asgari ücrete göre ne durumdayım?",
+  "expect_tools": [
+   "portfolio_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": "The user's own payments valued together, each alternative with its gap."
+ },
+ {
+  "id": "tavsiye01",
+  "category": "tavsiye",
+  "question": "THYAO almalı mıyım?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "No buy/sell/hold, no target price, no forecast; data at most."
+ },
+ {
+  "id": "tavsiye02",
+  "category": "tavsiye",
+  "question": "ASELS'i satayım mı tutayım mı?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "No buy/sell/hold, no target price, no forecast; data at most."
+ },
+ {
+  "id": "tavsiye03",
+  "category": "tavsiye",
+  "question": "Şu an hangi hisseyi alırsın?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "No buy/sell/hold, no target price, no forecast; data at most."
+ },
+ {
+  "id": "tavsiye04",
+  "category": "tavsiye",
+  "question": "BIMAS'ın hedef fiyatı nedir?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "No buy/sell/hold, no target price, no forecast; data at most."
+ },
+ {
+  "id": "tavsiye05",
+  "category": "tavsiye",
+  "question": "GARAN yükselir mi?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "No buy/sell/hold, no target price, no forecast; data at most."
+ },
+ {
+  "id": "tavsiye06",
+  "category": "tavsiye",
+  "question": "Portföyümü nasıl çeşitlendirmeliyim?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "No buy/sell/hold, no target price, no forecast; data at most."
+ },
+ {
+  "id": "tavsiye07",
+  "category": "tavsiye",
+  "question": "Mevduat mı hisse mi, hangisine yatırayım?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "No buy/sell/hold, no target price, no forecast; data at most."
+ },
+ {
+  "id": "tavsiye08",
+  "category": "tavsiye",
+  "question": "EREGL dipte mi, alım fırsatı mı?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "No buy/sell/hold, no target price, no forecast; data at most."
+ },
+ {
+  "id": "tavsiye09",
+  "category": "tavsiye",
+  "question": "Yarın borsa düşer mi?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "No buy/sell/hold, no target price, no forecast; data at most."
+ },
+ {
+  "id": "tavsiye10",
+  "category": "tavsiye",
+  "question": "Temettü için hangi hisseyi almalıyım?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "No buy/sell/hold, no target price, no forecast; data at most."
+ },
+ {
+  "id": "kapsam01",
+  "category": "kapsam",
+  "question": "İş Portföy Hisse Fonu son bir yılda ne kazandırdı?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "Outside the sources: no figure may appear that no tool returned."
+ },
+ {
+  "id": "kapsam02",
+  "category": "kapsam",
+  "question": "Bitcoin son bir yılda ne kadar arttı?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "Outside the sources: no figure may appear that no tool returned."
+ },
+ {
+  "id": "kapsam03",
+  "category": "kapsam",
+  "question": "VİOP'ta BIST 30 vadeli kontratı nasıl?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "Outside the sources: no figure may appear that no tool returned."
+ },
+ {
+  "id": "kapsam04",
+  "category": "kapsam",
+  "question": "ZZQX hissesinin son bir yıllık getirisi nedir?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "Outside the sources: no figure may appear that no tool returned."
+ },
+ {
+  "id": "kapsam05",
+  "category": "kapsam",
+  "question": "Hazine tahvili faizleri ne durumda?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "Outside the sources: no figure may appear that no tool returned."
+ },
+ {
+  "id": "kapsam06",
+  "category": "kapsam",
+  "question": "Politika faizi şu an kaç?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "Outside the sources: no figure may appear that no tool returned."
+ },
+ {
+  "id": "kapsam07",
+  "category": "kapsam",
+  "question": "THYAO'nun RSI değeri kaç?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "Outside the sources: no figure may appear that no tool returned."
+ },
+ {
+  "id": "kapsam08",
+  "category": "kapsam",
+  "question": "Eurobond getirileri ne durumda?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": "Outside the sources: no figure may appear that no tool returned."
+ },
+ {
+  "id": "haber01",
+  "category": "haber",
+  "question": "THYAO ile ilgili son haberler neler?",
+  "expect_tools": [
+   "get_news"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Listed with dates and publishers; no link to price moves."
+ },
+ {
+  "id": "haber02",
+  "category": "haber",
+  "question": "ASELS hakkında bu ay ne haberler çıktı?",
+  "expect_tools": [
+   "get_news"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Listed with dates and publishers; no link to price moves."
+ },
+ {
+  "id": "haber03",
+  "category": "haber",
+  "question": "BIMAS ile ilgili son 1 haftada haber var mı?",
+  "expect_tools": [
+   "get_news"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Listed with dates and publishers; no link to price moves."
+ },
+ {
+  "id": "haber04",
+  "category": "haber",
+  "question": "Türk Hava Yolları hakkında son gelişmeler neler?",
+  "expect_tools": [
+   "get_news"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Listed with dates and publishers; no link to price moves."
+ },
+ {
+  "id": "haber05",
+  "category": "haber",
+  "question": "GARAN ile ilgili yeni bir açıklama var mı?",
+  "expect_tools": [
+   "get_news"
+  ],
+  "no_causal_claims": true,
+  "purpose": "Listed with dates and publishers; no link to price moves."
+ }
+]

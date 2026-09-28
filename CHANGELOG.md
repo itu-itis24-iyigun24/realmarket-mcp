@@ -44,6 +44,13 @@
 - A tool called with an argument it does not have now refuses with `invalid_argument` and the
   list of valid arguments. The SDK used to drop it silently: Haiku passed a made-up
   `benchmark` to `analyze_portfolio` and believed it had been applied.
+- **A customer question set for model checks**: `evals/customer_questions.json` holds 119
+  Turkish questions a brokerage's customers ask, in twelve categories (returns, inflation,
+  comparisons, valuation, financials, "why did it move", event reactions, portfolios, savings
+  against alternatives, advice requests, questions outside the sources, news).
+  `scripts/call_tool.py --log --case` records each call per question, and
+  `scripts/score_model_check.py` scores every answer with realmarket-qualify's checks,
+  counting figures a fact states as supported.
 - `scripts/call_tool.py` lists and calls the tools from a shell exactly as an MCP client sees
   them (`--synthetic` for the fictional ORNEK), and the `model-check` skill uses it to have
   Haiku subagents answer standard customer questions, without packaging an extension.

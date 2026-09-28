@@ -21,6 +21,7 @@ import contextlib
 import datetime as dt
 import json
 import sys
+from pathlib import Path
 from typing import Any
 
 import anyio
@@ -47,6 +48,8 @@ def call(name: str, arguments: dict[str, Any]) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="call_tool", description=__doc__.split("\n")[0])
     parser.add_argument("--synthetic", action="store_true", help="use the fictional ORNEK data")
+    parser.add_argument("--log", type=Path, help="append each call and its result here (JSONL)")
+    parser.add_argument("--case", default="", help="question id recorded with each logged call")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("tools", help="print the server instructions and every tool")
     run = sub.add_parser("call", help="call one tool and print its result")
@@ -69,7 +72,13 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(f"arguments must be a JSON object: {error}")
         if not isinstance(arguments, dict):
             parser.error("arguments must be a JSON object")
-        print(call(args.name, arguments))
+        text = call(args.name, arguments)
+        print(text)
+        if args.log:
+            record = {"case": args.case, "tool": args.name, "arguments": arguments}
+            record["response"] = json.loads(text)
+            with args.log.open("a", encoding="utf-8") as log:
+                log.write(json.dumps(record, ensure_ascii=False) + "\n")
     return 0
 
 

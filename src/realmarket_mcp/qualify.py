@@ -547,6 +547,14 @@ def check_answer(case: Case, answer: str, calls: Sequence[ToolCall]) -> list[Che
             Check("tools_used", not missing, f"not called: {', '.join(missing)}" if missing else "")
         )
     pool = [n for c in calls for n in _numbers_in(c.response.get("data", {}))]
+    # Facts state some figures data does not hold (a sum, a gap): those are supported too.
+    pool += [
+        v
+        for c in calls
+        for fact in c.response.get("facts", [])
+        for _, values in answer_numbers(str(fact))
+        for v in values
+    ]
     found = answer_numbers(answer, ignore=case.question)
     for figure in case.expect_figures:
         result = next((c for c in reversed(calls) if c.tool == figure.tool and c.ok), None)
