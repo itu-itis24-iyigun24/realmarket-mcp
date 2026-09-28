@@ -47,6 +47,11 @@ def score(questions: list[dict[str, Any]], log: Path, answers: Path) -> list[dic
             if answer
             else [qualify.Check("answered", False, "no answer file")]
         )
+        # A question two tools answer equally well lists the other under also_accept.
+        also = set(q.get("also_accept", ()))
+        called = {c.tool for c in calls[q["id"]]}
+        if also & called:
+            checks = [c for c in checks if c.name != "tools_used"]
         results.append(
             {
                 "id": q["id"],

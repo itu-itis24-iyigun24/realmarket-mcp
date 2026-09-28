@@ -55,7 +55,11 @@
 - `evals/reports/2026-09-28-haiku.md`: the first full run, Haiku on all 119 questions. 94
   passed the automatic checks; with test artefacts set aside and the fixes below re-run, 105
   (88%) are correct. No answer gave advice or a reason for a move; the remaining failures are
-  figures the model computed from tool results and three tool choices.
+  figures the model computed from tool results and three tool choices. After the second
+  round of fixes those nine were re-run: 7 are correct, bringing the run to about 112 (94%);
+  the two left are a ratio and a label the model added to facts that already had the figures.
+- `scripts/score_model_check.py` no longer counts day ranges before a month ("16-23 Temmuz")
+  as figures, and a question may list `also_accept` tools that answer it equally well.
 - **A customer question set for model checks**: `evals/customer_questions.json` holds 119
   Turkish questions a brokerage's customers ask, in twelve categories (returns, inflation,
   comparisons, valuation, financials, "why did it move", event reactions, portfolios, savings

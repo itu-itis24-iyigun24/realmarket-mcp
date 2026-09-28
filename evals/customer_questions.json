@@ -47,7 +47,10 @@
    "get_price_summary"
   ],
   "no_causal_claims": true,
-  "purpose": "Price summary over the period asked; figures only from the result."
+  "purpose": "Price summary over the period asked; figures only from the result.",
+  "also_accept": [
+   "get_valuation"
+  ]
  },
  {
   "id": "getiri06",
@@ -877,7 +880,10 @@
    "portfolio_real_return"
   ],
   "no_causal_claims": true,
-  "purpose": "The user's own payments valued together, each alternative with its gap."
+  "purpose": "The user's own payments valued together, each alternative with its gap.",
+  "also_accept": [
+   "compare_real_return"
+  ]
  },
  {
   "id": "birikim03",
@@ -897,7 +903,10 @@
    "portfolio_real_return"
   ],
   "no_causal_claims": true,
-  "purpose": "The user's own payments valued together, each alternative with its gap."
+  "purpose": "The user's own payments valued together, each alternative with its gap.",
+  "also_accept": [
+   "compare_real_return"
+  ]
  },
  {
   "id": "birikim05",
@@ -917,7 +926,10 @@
    "portfolio_real_return"
   ],
   "no_causal_claims": true,
-  "purpose": "The user's own payments valued together, each alternative with its gap."
+  "purpose": "The user's own payments valued together, each alternative with its gap.",
+  "also_accept": [
+   "compare_real_return"
+  ]
  },
  {
   "id": "birikim07",
@@ -927,7 +939,10 @@
    "portfolio_real_return"
   ],
   "no_causal_claims": true,
-  "purpose": "The user's own payments valued together, each alternative with its gap."
+  "purpose": "The user's own payments valued together, each alternative with its gap.",
+  "also_accept": [
+   "compare_real_return"
+  ]
  },
  {
   "id": "birikim08",
@@ -947,7 +962,10 @@
    "portfolio_real_return"
   ],
   "no_causal_claims": true,
-  "purpose": "The user's own payments valued together, each alternative with its gap."
+  "purpose": "The user's own payments valued together, each alternative with its gap.",
+  "also_accept": [
+   "compare_real_return"
+  ]
  },
  {
   "id": "birikim10",
@@ -957,7 +975,10 @@
    "portfolio_real_return"
   ],
   "no_causal_claims": true,
-  "purpose": "The user's own payments valued together, each alternative with its gap."
+  "purpose": "The user's own payments valued together, each alternative with its gap.",
+  "also_accept": [
+   "compare_real_return"
+  ]
  },
  {
   "id": "tavsiye01",
