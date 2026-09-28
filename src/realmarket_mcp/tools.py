@@ -2402,7 +2402,14 @@ def analyze_portfolio(
             recorded = any(
                 t["symbol"] == symbol
                 and t["type"] == "bonus"
-                and day - dt.timedelta(days=before) <= t["date"] <= day + dt.timedelta(days=after)
+                and (
+                    day - dt.timedelta(days=before) <= t["date"] <= day + dt.timedelta(days=after)
+                    # "a bonus in May 2026": the whole month matches a split in it
+                    or (
+                        t["month_only"]
+                        and (t["date"].year, t["date"].month) == (day.year, day.month)
+                    )
+                )
                 for t in parsed
             )
             if first < day <= today and not recorded:

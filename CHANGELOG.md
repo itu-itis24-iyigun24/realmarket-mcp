@@ -57,6 +57,10 @@
   `check_setup` has facts saying what works. `compare_real_return`'s facts state whether the
   asset stayed ahead of gold, the after-tax deposit and house prices (Haiku had computed its
   own "+64.3% ahead of the deposit").
+- **Fixed:** a bonus issue the customer entered as a month ("100 bedelsiz in May 2026") did
+  not match the split the source reports later that month, so it was applied twice (400
+  shares instead of 200). A month-only bonus now matches a split in the same month. Found by
+  the model check.
 - `scripts/call_tool.py` lists and calls the tools from a shell exactly as an MCP client sees
   them (`--synthetic` for the fictional ORNEK), and the `model-check` skill uses it to have
   Haiku subagents answer standard customer questions, without packaging an extension.

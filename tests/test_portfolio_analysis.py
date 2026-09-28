@@ -210,3 +210,22 @@ def test_a_sold_out_holding_is_compared_up_to_the_sale() -> None:
 def test_no_comparison_unless_asked() -> None:
     result = run([tx("buy", "2024-01-02", quantity=1)])
     assert "comparison" not in result.data["holdings"][0]
+
+
+class LateSplitProvider(FixtureProvider):
+    """TTT with a 2:1 split on 2023-07-20, weeks after the month's start."""
+
+    def daily_bars(self, symbol: str, start: dt.date, end: dt.date) -> Any:
+        series = super().daily_bars(symbol, start, end)
+        return dataclasses.replace(series, splits=((dt.date(2023, 7, 20), 2.0),))
+
+
+def test_a_bonus_given_as_a_month_is_the_split_in_that_month() -> None:
+    result = tools.analyze_portfolio(
+        LateSplitProvider(FIXTURES),
+        [tx("buy", "2023-01-02", quantity=10, price=100), tx("bonus", "2023-07", quantity=10)],
+        today=TODAY,
+    )
+    # Recorded once by the customer, not applied a second time: 20 shares, not 40.
+    assert result.data["holdings"][0]["quantity"] == 20
+    assert "split_applied" not in {f.code for f in result.quality_flags}
