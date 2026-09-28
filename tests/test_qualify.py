@@ -19,6 +19,15 @@ TOOL_FOR = {
     "valuation_without_pe": ("get_valuation", {"symbol": "ORNEK"}),
     "unknown_symbol": ("get_price_summary", {"symbol": "ZZQX", "period": "1y"}),
     "price_move": ("explain_price_move", {"symbol": "ORNEK"}),
+    "portfolio": (
+        "analyze_portfolio",
+        {
+            "transactions": [
+                {"type": "buy", "symbol": "ORNEK", "date": "2024-03", "quantity": 100},
+                {"type": "sell", "symbol": "ORNEK", "date": "2025-09", "quantity": 30},
+            ]
+        },
+    ),
 }
 
 
@@ -55,6 +64,9 @@ def careful_model(messages: list[dict[str, Any]], tools: list[dict[str, Any]]) -
             "content": f"ORNEK {data['session']} günü {_pct(data['move'])} hareket etti; aynı "
             f"gün endeks {_pct(bench)} değişti. Hareketin nedeni bu verilerle söylenemez."
         }
+    if case.id == "portfolio":
+        pnl = f"{data['totals']['total_pnl']:,.2f}".replace(",", " ").replace(".", ",")
+        return {"content": f"Toplam kâr/zarar {pnl.replace(' ', '.')} TL."}
     cap = f"{data['market_cap'] / 1e9:.1f}".replace(".", ",")
     return {"content": f"Piyasa değeri {cap} milyar TL; F/K bu kaynaktan hesaplanamıyor."}
 
@@ -77,7 +89,7 @@ def test_a_careless_model_fails_with_reasons() -> None:
     failed = {c.name for r in results for c in r.checks if not c.passed}
     assert {"tools_used", "no_unsupported_figures", "no_advice"} <= failed
     report = qualify.render(results, "careless")
-    assert "0/6 cases passed" in report and "47,3" in report
+    assert "0/7 cases passed" in report and "47,3" in report
 
 
 def test_invented_pe_is_caught_even_when_built_from_tool_figures() -> None:
@@ -130,7 +142,7 @@ def test_cli_writes_a_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     out = tmp_path / "report.json"
     code = qualify.main(["--base-url", "http://x/v1", "--model", "m", "--output", str(out)])
     report = json.loads(out.read_text())
-    assert code == 0 and (report["passed"], report["not_run"], report["total"]) == (6, 0, 6)
+    assert code == 0 and (report["passed"], report["not_run"], report["total"]) == (7, 0, 7)
     assert report["cases"][0]["calls"][0]["tool"] == "get_price_summary"
 
 
@@ -227,3 +239,8 @@ def test_attributing_a_move_fails_the_causal_check() -> None:
         assert not checks["no_causal_claims"].passed, answer
     fine = {c.name: c for c in check_answer(case, "Hisse %-4,0, endeks %-2,0 değişti.", [call])}
     assert fine["no_causal_claims"].passed
+
+
+def test_a_refusal_that_names_advice_is_not_advice() -> None:
+    assert qualify.advice_wording("Al-sat önerisi veya hedef fiyat veremiyorum.") == []
+    assert qualify.advice_wording("Hedef fiyat 300 TL. Almanızı öneririm.") != []

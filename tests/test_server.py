@@ -61,7 +61,9 @@ def test_search_then_summary_round_trip(fixture_env: None) -> None:
     assert not is_error
     symbol = found["data"]["results"][0]["symbol"]
 
-    summary, is_error = _call("get_price_summary", {"symbol": symbol, "start": "2024-01-01"})
+    summary, is_error = _call(
+        "get_price_summary", {"symbol": symbol, "start": "2024-01-01", "period": None}
+    )  # models often send null for an optional argument
     assert not is_error
     assert summary["ok"] is True
     assert summary["data"]["total_return"] == pytest.approx(0.2)

@@ -48,14 +48,18 @@ different dates, and each says which. Report figures as facts: do not attribute 
 or a return to causes, do not split it into parts ("x% came from the market"), and do not
 link news to a move beyond listing it with its date. This holds for anything you find
 elsewhere too, such as a web search: do not add causes, technical levels or forecasts to these
-figures. Say which date a figure is from; the latest session is often not today.
+figures. Say which date a figure is from; the latest session is often not today. If a tool
+fails (a rate limit, a source that is down), say so and suggest trying again; do not answer
+the question from general knowledge instead, such as listing what usually moves a stock.
+Call a tool with what the user gave; ask a question only when a tool refuses without it.
 """
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True, open_world_hint=True)
 
 Symbol = Annotated[str, Field(description="A symbol returned by search_assets.")]
 PeriodArg = Annotated[
-    Period, Field(description="Lookback ending at `end`. Ignored when `start` is given.")
+    Period | None,
+    Field(description="Lookback ending at `end`. Ignored when `start` is given."),
 ]
 StartArg = Annotated[str | None, Field(description="Optional ISO start date, e.g. '2023-01-01'.")]
 EndArg = Annotated[str | None, Field(description="Optional ISO end date; defaults to today.")]
@@ -229,7 +233,7 @@ def build_server() -> MCPServer:
             lambda: tools.get_price_summary(
                 load_price_provider(retrieved_at=_stamp(now)),
                 symbol,
-                period,
+                period or "1y",
                 start,
                 end,
                 today=now.date(),
@@ -273,7 +277,7 @@ def build_server() -> MCPServer:
                 load_price_provider(retrieved_at=stamp),
                 lambda region, first, last: load_cpi(region, first, last, retrieved_at=stamp),
                 symbol,
-                period,
+                period or "5y",
                 start,
                 end,
                 inflation_region,
@@ -308,7 +312,7 @@ def build_server() -> MCPServer:
             lambda: tools.compare_assets(
                 load_price_provider(retrieved_at=_stamp(now)),
                 symbols,
-                period,
+                period or "1y",
                 start,
                 end,
                 today=now.date(),
@@ -332,7 +336,7 @@ def build_server() -> MCPServer:
             lambda: tools.check_data_quality(
                 load_price_provider(retrieved_at=_stamp(now)),
                 symbol,
-                period,
+                period or "5y",
                 start,
                 end,
                 today=now.date(),

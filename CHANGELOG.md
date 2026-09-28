@@ -34,6 +34,13 @@
   - `explain_price_move` warns, not just notes, when the latest session is not today, and says
     to name its date; the instructions also forbid adding causes, technical levels or forecasts
     found elsewhere, such as in a web search.
+  - When a tool fails (a rate limit, a source that is down), the instructions tell the model
+    to say so rather than list what usually moves a stock, and to call a tool with what the
+    user gave instead of asking for more first.
+  - `period: null`, which small models send for an unused optional argument, now means the
+    default instead of failing the call.
+- `realmarket-qualify` gains a `portfolio` case, and a sentence that refuses advice ("hedef
+  fiyat veremiyorum") no longer counts as advice. `gemini-3.5-flash-lite` passes 7/7.
 - Funds can be served by an adapter like any asset (`asset_class` `fund`).
 - `docs/integration.md` describes support and pilots, and that the firm's backend shows
   customers the final answer only, never the model's reasoning.

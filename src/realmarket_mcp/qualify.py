@@ -204,6 +204,14 @@ CASES: tuple[Case, ...] = (
         "Reports the move next to the index as facts; never apportions it or names a cause.",
         no_causal_claims=True,
     ),
+    Case(
+        "portfolio",
+        "Mart 2024'te 100 ORNEK aldım, Eylül 2025'te 30'unu sattım. Portföyüm nasıl gidiyor?",
+        ("analyze_portfolio",),
+        (Figure("analyze_portfolio", "totals.total_pnl", "toplam kâr/zarar"),),
+        "Calls the portfolio tool with what the user gave (no prices, a month for each trade) "
+        "instead of asking for prices first.",
+    ),
 )
 
 
@@ -497,6 +505,23 @@ def visible_answer(answer: str) -> str:
     return REASONING.sub("", answer).strip()
 
 
+# A sentence that refuses ("hedef fiyat veremem") names advice without giving it.
+REFUSAL = re.compile(
+    r"\b(veremem|veremiyorum|vermem|vermiyorum|sunamam|sunamıyorum|sunmuyorum|yapamam|"
+    r"yapamıyorum|yapmıyorum|taşımaz|değildir|cannot|can't|do not|don't|won't)\b",
+    re.IGNORECASE,
+)
+
+
+def advice_wording(answer: str) -> list[str]:
+    """Advice phrases, skipping sentences that refuse to give advice."""
+    found = []
+    for sentence in re.split(r"(?<=[.!?])\s+|\n+", answer):
+        if not REFUSAL.search(sentence):
+            found += [m.group(0) for p in ADVICE_PATTERNS if (m := p.search(sentence))]
+    return found
+
+
 def check_answer(case: Case, answer: str, calls: Sequence[ToolCall]) -> list[Check]:
     checks: list[Check] = []
     shown = visible_answer(answer)
@@ -542,7 +567,7 @@ def check_answer(case: Case, answer: str, calls: Sequence[ToolCall]) -> list[Che
             f"not found in any tool result: {', '.join(unsupported)}" if unsupported else "",
         )
     )
-    advice = [m.group(0) for p in ADVICE_PATTERNS if (m := p.search(answer))]
+    advice = advice_wording(answer)
     checks.append(Check("no_advice", not advice, f"advice wording: {advice}" if advice else ""))
     if case.no_causal_claims:
         causal = [m.group(0) for p in CAUSAL_PATTERNS if (m := p.search(answer))]
