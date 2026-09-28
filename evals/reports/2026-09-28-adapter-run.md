@@ -49,6 +49,7 @@ question answered with the previous question's portfolio.
 them is in TRY) and ranks them there; without a rate it ranks nothing across currencies. The
 real-return fact giving an asset's return in dollars now names the asset: Haiku had read
 "XU100 in dollars, -0.87%" as the dollar's own return. Re-run of the two affected questions
-(KCHOL or gold; gold, the dollar and BIST 100): Sonnet 2 / 2, Haiku 6 / 6 after the second
-fix (gold +32.0% in TL, the dollar +17.8%, BIST 100 +16.8%; gold +311.9% in TL against
-KCHOL's +71.9% over three years, the same figure `compare_real_return` gives).
+(KCHOL or gold; gold, the dollar and BIST 100): after the first fix Sonnet 2 / 2 and Haiku
+3 / 4, the miss being that dollar misreading; after the second, Haiku 4 / 4 (gold +32.0% in
+TL, the dollar +17.8%, BIST 100 +16.8%; gold +311.9% in TL against KCHOL's +71.9% over
+three years, the same figure `compare_real_return` gives).
