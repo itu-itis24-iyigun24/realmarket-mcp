@@ -511,27 +511,48 @@ def comparison(data: Mapping[str, Any]) -> list[str]:
     ]
     for a in assets:
         facts += _performance(a["symbol"], a["metrics"])
-    ranked = sorted(assets, key=lambda a: -float(a["metrics"]["total_return"]))
-    if len(ranked) > 1:
+    currencies = sorted({str(a["currency"]).upper() for a in assets})
+    common = data.get("common_currency")
+    if len(currencies) > 1 and not common:
+        # Returns in different currencies are not one measure: no ranking, no gaps.
         facts.append(
-            "Toplam getiriye göre sıralama: "
-            + ", ".join(f"{a['symbol']} {pct(a['metrics']['total_return'])}" for a in ranked)
+            "Varlıklar farklı para birimlerinde (" + ", ".join(currencies) + ") ve ortak bir "
+            "para birimine çevrilemedi; getirileri karşılaştırılamaz, sıralama yapılmadı."
+        )
+        return facts
+
+    def measure(a: Mapping[str, Any]) -> float:
+        value = a.get("return_in_common_currency") if common else None
+        return float(value if value is not None else a["metrics"]["total_return"])
+
+    ranked = sorted(assets, key=lambda a: -measure(a))
+    unit = "TL" if common == "TRY" else common
+    if common:
+        converted = [a for a in assets if str(a["currency"]).upper() != common]
+        if converted:
+            facts.append(
+                f"Varlıklar farklı para birimlerinde ({', '.join(currencies)}); kıyas için "
+                f"hepsi {unit} cinsinden ölçüldü: "
+                + ", ".join(
+                    f"{a['symbol']} {unit} cinsinden {pct(a['return_in_common_currency'])}"
+                    for a in converted
+                )
+                + " (kendi para biriminde yukarıdaki getiriler)."
+            )
+    if len(ranked) > 1:
+        label = f" ({unit} cinsinden)" if common else ""
+        facts.append(
+            f"Toplam getiriye göre sıralama{label}: "
+            + ", ".join(f"{a['symbol']} {pct(measure(a))}" for a in ranked)
             + "."
         )
         leader = ranked[0]
         for a in ranked[1:]:
-            gap = float(leader["metrics"]["total_return"]) - float(a["metrics"]["total_return"])
+            gap = measure(leader) - measure(a)
             facts.append(
-                f"{a['symbol']}, {leader['symbol']} ile arasındaki getiri farkında "
+                f"{a['symbol']}, {leader['symbol']} ile arasındaki getiri farkında{label} "
                 f"{_ahead_by(-gap)}."
             )
-    currencies = sorted({str(a["currency"]) for a in assets})
-    if len(currencies) > 1:
-        facts.append(
-            "Varlıklar farklı para birimlerinde ("
-            + ", ".join(currencies)
-            + "); her getiri kendi para birimindedir, doğrudan karşılaştırılamaz."
-        )
     return facts
 
 

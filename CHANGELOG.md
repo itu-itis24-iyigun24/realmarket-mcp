@@ -58,6 +58,12 @@
   figures the model computed from tool results and three tool choices. After the second
   round of fixes those nine were re-run: 7 are correct, bringing the run to about 112 (94%);
   the two left are a ratio and a label the model added to facts that already had the figures.
+- **`compare_assets` compares mixed currencies in one.** A share in lira and gold in dollars
+  were ranked by their own-currency returns, and a model named gold the winner on those. Each
+  asset's return is now also given in a common currency (TRY when one asset is priced in it,
+  else the first asset's; a new `currency` argument chooses another), converted at the
+  window's first and last dates, and the ranking and gaps use it. When a rate is missing, no
+  ranking across currencies is made at all.
 - **The data adapter covers what Yahoo gave.** `/bars` may carry `dividends`, `splits` and a
   per-bar `price_close`, and a new optional `/peers?symbol=&level=industry|sector` endpoint
   feeds `get_valuation`'s industry comparison; all optional, so existing adapters keep

@@ -212,3 +212,48 @@ def test_reference_in_the_wrong_currency_is_not_used(tmp_path: Path) -> None:
     result = _run(p, _cpi({(2023, 1): 100.0, (2024, 1): 160.0}))
     assert result.data["usd_return"] is None
     assert "usd_unavailable" in {f.code for f in result.quality_flags}
+
+
+def test_compare_assets_measures_mixed_currencies_in_one(tmp_path: Path) -> None:
+    """A share in lira and one in dollars are not the same measure: Haiku named gold (USD)
+    the winner over KCHOL (TRY) from their own-currency returns. They are converted to one
+    currency (TRY by default) and ranked there. USDTRY 30 -> 33."""
+    p = _write(
+        tmp_path,
+        [("TRS", "TRY"), ("USS", "USD"), ("USDTRY", "TRY")],
+        {
+            "TRS": "2024-01-02,100,100,100,100,1\n2024-01-08,120,120,120,120,1\n",
+            "USS": "2024-01-02,10,10,10,10,1\n2024-01-08,11,11,11,11,1\n",
+            "USDTRY": "2024-01-02,30,30,30,30,1\n2024-01-08,33,33,33,33,1\n",
+        },
+    )
+    result = tools.compare_assets(p, ["TRS", "USS"], start="2024-01-02", today=TODAY)
+    rows = {r["symbol"]: r for r in result.data["assets"]}
+    assert result.data["common_currency"] == "TRY"
+    # USS +10% in dollars, the dollar +10% in lira: +21% in lira, ahead of TRS's +20%.
+    assert rows["USS"]["return_in_common_currency"] == approx(0.21)
+    assert rows["TRS"]["return_in_common_currency"] == approx(0.2)
+    assert "Toplam getiriye göre sıralama (TL cinsinden): USS +%21,0, TRS +%20,0." in result.facts
+    assert any("USS TL cinsinden +%21,0" in f for f in result.facts)
+
+    in_usd = tools.compare_assets(
+        p, ["TRS", "USS"], start="2024-01-02", today=TODAY, currency="USD"
+    )
+    rows = {r["symbol"]: r for r in in_usd.data["assets"]}
+    assert rows["TRS"]["return_in_common_currency"] == approx(1.2 / 1.1 - 1)
+
+
+def test_compare_assets_does_not_rank_currencies_it_cannot_convert(tmp_path: Path) -> None:
+    p = _write(
+        tmp_path,
+        [("TRS", "TRY"), ("USS", "USD")],
+        {
+            "TRS": "2024-01-02,100,100,100,100,1\n2024-01-08,120,120,120,120,1\n",
+            "USS": "2024-01-02,10,10,10,10,1\n2024-01-08,11,11,11,11,1\n",
+        },
+    )
+    result = tools.compare_assets(p, ["TRS", "USS"], start="2024-01-02", today=TODAY)
+    assert result.data["common_currency"] is None
+    assert not any(f.startswith("Toplam getiriye göre sıralama") for f in result.facts)
+    assert any("sıralama yapılmadı" in f for f in result.facts)
+    assert "mixed_currencies" in {f.code for f in result.quality_flags}

@@ -571,6 +571,7 @@ def compare_assets(
     end: str | None = None,
     *,
     today: dt.date,
+    currency: str | None = None,
 ) -> ToolResult:
     unique = list(dict.fromkeys(s.strip() for s in symbols if s.strip()))
     if not 2 <= len(unique) <= MAX_COMPARE_SYMBOLS:
@@ -594,7 +595,9 @@ def compare_assets(
             "get_price_summary.",
             {"ranges": ranges},
         )
-    rows, provenance, flags = [], [], []
+    rows: list[dict[str, Any]] = []
+    provenance: list[Provenance] = []
+    flags: list[QualityFlag] = []
     for symbol, (series, usable) in loaded.items():
         # Each asset starts from its close as of the common start date (its last bar on or
         # before it), so different holiday calendars cannot shift an asset's base date.
@@ -608,25 +611,54 @@ def compare_assets(
         metrics = _metrics(path) if len(path) >= 2 else None
         rows.append({"symbol": symbol, "currency": series.currency, "metrics": metrics})
 
+    # Assets priced in different currencies are compared in one: a share's return in lira
+    # and gold's in dollars are not the same measure, and ranking them as if they were is
+    # the error this prevents. Default: TRY when one of them is priced in it (a Turkish
+    # customer's money), else the first asset's currency.
+    currencies = {str(row["currency"]).upper() for row in rows}
+    common: str | None = None
+    if len(currencies) > 1 or currency:
+        common = (currency or ("TRY" if "TRY" in currencies else str(rows[0]["currency"]))).upper()
+        fx_prices = _Prices(provider, window_start - dt.timedelta(days=14), window_end)
+        try:
+            for row in rows:
+                own = str(row["currency"]).upper()
+                if row["metrics"] is None:
+                    row["return_in_common_currency"] = None
+                    continue
+                factor = _convert(fx_prices, provider, 1.0, own, common, window_end) / _convert(
+                    fx_prices, provider, 1.0, own, common, window_start
+                )
+                growth = 1 + float(row["metrics"]["total_return"])
+                row["return_in_common_currency"] = _round(growth * factor - 1)
+            provenance.extend(fx_prices.provenance)
+        except ToolError as error:
+            common = None
+            for row in rows:
+                row.pop("return_in_common_currency", None)
+            flags.append(
+                QualityFlag(
+                    "mixed_currencies",
+                    Severity.WARNING,
+                    "The assets are priced in different currencies and could not be converted "
+                    f"to one ({error.message}); their returns are not comparable and are not "
+                    "ranked.",
+                )
+            )
+
     notes = [
         f"{RATIO_NOTE} All assets are measured over the same window, "
         f"{window_start} to {window_end}.",
-        "Returns are nominal, each in its own currency; compare mixed currencies with care.",
+        "Returns are nominal, each in its own currency. When the assets are priced in "
+        "different currencies, return_in_common_currency gives each in common_currency "
+        "(converted at the window's first and last dates) and the comparison uses it.",
     ]
-    if len({row["currency"] for row in rows}) > 1:
-        flags.append(
-            QualityFlag(
-                "mixed_currencies",
-                Severity.WARNING,
-                "The assets are priced in different currencies; their returns are not directly "
-                "comparable. Use compare_real_return to measure each in US dollars.",
-            )
-        )
     result = ToolResult(
         tool="compare_assets",
         data={
             "window_start": window_start.isoformat(),
             "window_end": window_end.isoformat(),
+            "common_currency": common,
             "assets": rows,
         },
         provenance=tuple(provenance),

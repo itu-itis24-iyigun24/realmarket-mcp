@@ -345,11 +345,20 @@ def build_server() -> MCPServer:
         period: PeriodArg = "1y",
         start: StartArg = None,
         end: EndArg = None,
+        currency: Annotated[
+            str | None,
+            Field(
+                description="Currency to compare in when the assets are priced in different "
+                "currencies, e.g. 'USD'. Default: TRY when one of them is priced in TRY, else "
+                "the first asset's currency."
+            ),
+        ] = None,
     ) -> CallToolResult:
         """Put 2 to 10 assets side by side over one common date window: total and annualized
         return, volatility and maximum drawdown for each. Use it to compare assets or an asset
-        against an index. Returns are nominal, each in its own currency; mixed currencies are
-        flagged. Ratios are fractions (0.12 means 12%)."""
+        against an index. Returns are nominal, each in its own currency; assets priced in
+        different currencies (a share in TRY, gold in USD) are also measured in one currency
+        and ranked in it. Ratios are fractions (0.12 means 12%)."""
         now = _utc_now()
         return respond(
             lambda: tools.compare_assets(
@@ -359,6 +368,7 @@ def build_server() -> MCPServer:
                 start,
                 end,
                 today=now.date(),
+                currency=currency,
             )
         )
 
