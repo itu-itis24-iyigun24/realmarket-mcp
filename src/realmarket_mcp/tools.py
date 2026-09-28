@@ -11,6 +11,8 @@ import itertools
 import json
 import math
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from typing import Any
 
 from realmarket_mcp import __version__, analytics, quality, tr_reference
@@ -2201,3 +2203,357 @@ def get_valuation(
             *st.source_notes[:1],
         ),
     )
+
+
+# --- analyze_portfolio: an account's actual transactions --------------------------------------
+
+MAX_TRANSACTIONS = 500
+TRANSACTION_ORDER = {"buy": 0, "bonus": 1, "sell": 2, "dividend": 3}  # within one day
+PORTFOLIO_NOTES = (
+    "Costs use the weighted average cost of each holding, in the report currency at each "
+    "transaction's date: a sale realizes proceeds minus average cost of the shares sold. "
+    "Fees are added to purchases and deducted from sales. total_pnl = realized + unrealized "
+    "+ dividends received.",
+    "Prices are the prices actually traded (adjusted for splits only), not dividend-adjusted "
+    "closes, so dividends are counted once: as the cash entered. A missing price is taken "
+    "from that day's close and flagged. Quantities are in today's share units: record a "
+    "bonus issue (bedelsiz) or split as a 'bonus' transaction with the shares received.",
+    "money_weighted_return_annualized is the internal rate of return of all cash flows "
+    "(purchases out; sales and dividends in; today's value in). The risk figures describe "
+    "the current holdings, at current quantities, over the last year.",
+    "These figures describe the account's past; they are not a view on what to buy or sell.",
+)
+
+
+@dataclass
+class _Holding:
+    symbol: str
+    currency: str
+    quantity: float = 0.0
+    cost: float = 0.0  # remaining cost basis, report currency
+    bought: float = 0.0  # all purchase amounts incl. fees, report currency
+    realized: float = 0.0
+    dividends: float = 0.0
+    dividend_entries: int = 0
+    timeline: list[tuple[dt.date, float]] = dataclass_field(
+        default_factory=list
+    )  # quantity after each
+
+
+def _traded(prices: _Prices, symbol: str, day: dt.date) -> float:
+    """The price actually traded on ``day`` (split-adjusted only), where the source says."""
+    _, usable = prices.series(symbol)
+    bar = _as_of(usable, day)
+    if bar is None:
+        prices.close(symbol, day)  # raises the standard error
+        raise AssertionError("unreachable")
+    return bar.price_close if bar.price_close else _close(bar)
+
+
+def _parse_transactions(
+    transactions: Sequence[Mapping[str, Any]], today: dt.date
+) -> list[dict[str, Any]]:
+    if not 1 <= len(transactions) <= MAX_TRANSACTIONS:
+        raise ToolError(
+            ErrorCode.INVALID_ARGUMENT,
+            f"Pass between 1 and {MAX_TRANSACTIONS} transactions.",
+            "Each is {type: buy|sell|dividend|bonus, symbol, date, quantity, price, fee, amount}.",
+        )
+    parsed: list[dict[str, Any]] = []
+    for i, tx in enumerate(transactions):
+        kind = str(tx.get("type", "")).strip().lower()
+        symbol = str(tx.get("symbol", "")).strip()
+        day = parse_date(str(tx.get("date", "")), f"transactions[{i}].date")
+
+        def number(key: str, i: int = i, tx: Mapping[str, Any] = tx) -> float | None:
+            value = tx.get(key)
+            if value is None:
+                return None
+            number = float(value)
+            if not math.isfinite(number) or number < 0:
+                raise ToolError(
+                    ErrorCode.INVALID_ARGUMENT,
+                    f"transactions[{i}].{key} must be a non-negative number.",
+                    "Check the transaction.",
+                )
+            return number
+
+        quantity, price, fee, amount = (number(k) for k in ("quantity", "price", "fee", "amount"))
+        problem = None
+        if kind not in TRANSACTION_ORDER or not symbol:
+            problem = "needs a type (buy, sell, dividend or bonus) and a symbol"
+        elif day > today:
+            problem = "is dated in the future"
+        elif kind in {"buy", "sell", "bonus"} and not quantity:
+            problem = f"is a {kind} and needs a positive quantity"
+        elif kind == "dividend" and not amount:
+            problem = "is a dividend and needs the cash amount received"
+        if problem:
+            raise ToolError(
+                ErrorCode.INVALID_ARGUMENT,
+                f"transactions[{i}] {problem}.",
+                "Example: {'type': 'buy', 'symbol': 'THYAO.IS', 'date': '2024-03-01', "
+                "'quantity': 100, 'price': 285.5, 'fee': 12}.",
+            )
+        parsed.append(
+            {
+                "index": i,
+                "type": kind,
+                "symbol": symbol,
+                "date": day,
+                "quantity": quantity,
+                "price": price or None,
+                "fee": fee or 0.0,
+                "amount": amount,
+            }
+        )
+    parsed.sort(key=lambda t: (t["date"], TRANSACTION_ORDER[t["type"]], t["index"]))
+    return parsed
+
+
+def analyze_portfolio(
+    provider: PriceProvider,
+    transactions: Sequence[Mapping[str, Any]],
+    currency: str | None = None,
+    *,
+    today: dt.date,
+) -> ToolResult:
+    parsed = _parse_transactions(transactions, today)
+    first_day = parsed[0]["date"]
+    start = min(first_day, today - dt.timedelta(days=366)) - dt.timedelta(days=10)
+    prices = _Prices(provider, start, today)
+    report = (currency or prices.currency(parsed[0]["symbol"])).upper()
+    holdings: dict[str, _Holding] = {}
+    flows: list[tuple[dt.date, float]] = []
+    flags: list[QualityFlag] = []
+    assumed: list[str] = []
+
+    for tx in parsed:
+        symbol, day = tx["symbol"], tx["date"]
+        h = holdings.setdefault(symbol, _Holding(symbol, prices.currency(symbol)))
+
+        def to_report(value: float, h: _Holding = h, day: dt.date = day) -> float:
+            return _convert(prices, provider, value, h.currency, report, day)
+
+        if tx["type"] in {"buy", "sell"}:
+            price = tx["price"]
+            if price is None:
+                price = _traded(prices, symbol, day)
+                assumed.append(f"{symbol} {day}")
+        if tx["type"] == "buy":
+            cost = to_report(tx["quantity"] * price + tx["fee"])
+            h.quantity += tx["quantity"]
+            h.cost += cost
+            h.bought += cost
+            flows.append((day, -cost))
+        elif tx["type"] == "bonus":
+            h.quantity += tx["quantity"]
+        elif tx["type"] == "sell":
+            if tx["quantity"] > h.quantity * (1 + 1e-9):
+                raise ToolError(
+                    ErrorCode.INVALID_ARGUMENT,
+                    f"transactions[{tx['index']}] sells {tx['quantity']:g} {symbol} on {day}, "
+                    f"but only {h.quantity:g} are held then.",
+                    "Include every earlier purchase and bonus issue of this symbol.",
+                )
+            proceeds = to_report(tx["quantity"] * price - tx["fee"])
+            basis = h.cost * tx["quantity"] / h.quantity
+            h.realized += proceeds - basis
+            h.cost -= basis
+            h.quantity = max(0.0, h.quantity - tx["quantity"])
+            if h.quantity == 0.0:
+                h.cost = 0.0
+            flows.append((day, proceeds))
+        else:  # dividend: cash received, in the asset's currency
+            received = to_report(tx["amount"])
+            h.dividends += received
+            h.dividend_entries += 1
+            flows.append((day, received))
+        h.timeline.append((day, h.quantity))
+
+    if assumed:
+        flags.append(
+            QualityFlag(
+                "price_assumed",
+                Severity.INFO,
+                "No price was given for these trades; the day's close was used: "
+                + ", ".join(assumed[:10])
+                + ("…" if len(assumed) > 10 else "")
+                + ".",
+            )
+        )
+
+    rows = []
+    value_total = 0.0
+    for h in holdings.values():
+        value = 0.0
+        price_now = None
+        if h.quantity > 0:
+            price_now = _traded(prices, h.symbol, today)
+            value = _convert(prices, provider, h.quantity * price_now, h.currency, report, today)
+        value_total += value
+        rows.append((h, price_now, value))
+        # Dividends the source reports while the account held the shares, if none were entered.
+        series, _ = prices.series(h.symbol)
+        if not h.dividend_entries and series.dividends:
+            estimate = 0.0
+            for ex_date, per_share in series.dividends:
+                held = next((q for d, q in reversed(h.timeline) if d < ex_date), 0.0)
+                if held > 0:
+                    estimate += _convert(
+                        prices, provider, held * per_share, h.currency, report, ex_date
+                    )
+            if estimate > 0:
+                flags.append(
+                    QualityFlag(
+                        "dividends_not_entered",
+                        Severity.WARNING,
+                        f"{h.symbol} paid dividends while held (about {estimate:,.2f} {report} "
+                        "gross for these shares) but none are among the transactions; its "
+                        "total_pnl leaves them out.",
+                        (h.symbol,),
+                    )
+                )
+    flows.append((today, value_total))
+
+    holdings_out: list[dict[str, Any]] = []
+    for h, price_now, value in rows:
+        unrealized = value - h.cost if h.quantity > 0 else 0.0
+        total = h.realized + unrealized + h.dividends
+        holdings_out.append(
+            {
+                "symbol": h.symbol,
+                "currency": h.currency,
+                "quantity": round(h.quantity, 6),
+                "average_cost": (
+                    None
+                    if h.quantity <= 0
+                    else _round(
+                        _convert(prices, provider, h.cost, report, h.currency, today) / h.quantity
+                    )
+                ),
+                "price": None if price_now is None else _round(price_now),
+                "market_value": round(value, 2),
+                "weight": _round(value / value_total) if value_total > 0 else None,
+                "cost_basis": round(h.cost, 2),
+                "unrealized_pnl": round(unrealized, 2),
+                "unrealized_return": _round(unrealized / h.cost) if h.cost > 0 else None,
+                "realized_pnl": round(h.realized, 2),
+                "dividends_received": round(h.dividends, 2),
+                "total_pnl": round(total, 2),
+                "total_return_on_purchases": _round(total / h.bought) if h.bought > 0 else None,
+            }
+        )
+    holdings_out.sort(key=lambda r: -float(r["market_value"]))
+    open_rows = [r for r in holdings_out if float(r["quantity"]) > 0]
+    ranked = sorted(
+        (r for r in holdings_out if r["total_return_on_purchases"] is not None),
+        key=lambda r: float(r["total_return_on_purchases"]),
+    )
+    invested = math.fsum(h.bought for h in holdings.values())
+    realized = math.fsum(h.realized for h in holdings.values())
+    dividends = math.fsum(h.dividends for h in holdings.values())
+    unrealized_total = math.fsum(float(r["unrealized_pnl"]) for r in open_rows)
+    weights = [float(r["weight"] or 0) for r in open_rows]
+
+    return ToolResult(
+        tool="analyze_portfolio",
+        data={
+            "currency": report,
+            "as_of": today.isoformat(),
+            "holdings": holdings_out,
+            "totals": {
+                "purchases": round(invested, 2),
+                "sale_proceeds": round(
+                    math.fsum(cf for d, cf in flows[:-1] if cf > 0) - dividends, 2
+                ),
+                "dividends_received": round(dividends, 2),
+                "market_value": round(value_total, 2),
+                "cost_basis_open": round(math.fsum(h.cost for h in holdings.values()), 2),
+                "unrealized_pnl": round(unrealized_total, 2),
+                "realized_pnl": round(realized, 2),
+                "total_pnl": round(realized + unrealized_total + dividends, 2),
+                "money_weighted_return_annualized": _round(xirr(flows)),
+            },
+            "concentration": {
+                "open_holdings": len(open_rows),
+                "largest": None
+                if not open_rows
+                else {"symbol": open_rows[0]["symbol"], "weight": open_rows[0]["weight"]},
+                "top3_weight": _round(sum(weights[:3])) if weights else None,
+                "by_currency": _currency_split(open_rows, value_total),
+            },
+            "best": None
+            if not ranked
+            else {
+                "symbol": ranked[-1]["symbol"],
+                "total_return_on_purchases": ranked[-1]["total_return_on_purchases"],
+            },
+            "worst": None
+            if not ranked
+            else {
+                "symbol": ranked[0]["symbol"],
+                "total_return_on_purchases": ranked[0]["total_return_on_purchases"],
+            },
+            "risk_last_year": _holdings_risk(prices, open_rows, report, today, flags),
+        },
+        provenance=tuple(prices.provenance),
+        quality_flags=tuple(prices.flags + flags),
+        notes=(RATIO_NOTE, *PORTFOLIO_NOTES),
+    )
+
+
+def _currency_split(rows: Sequence[Mapping[str, Any]], total: float) -> dict[str, float | None]:
+    split: dict[str, float] = {}
+    for r in rows:
+        split[str(r["currency"])] = split.get(str(r["currency"]), 0.0) + float(r["market_value"])
+    return {c: _round(v / total) if total > 0 else None for c, v in sorted(split.items())}
+
+
+def _holdings_risk(
+    prices: _Prices,
+    rows: Sequence[Mapping[str, Any]],
+    report: str,
+    today: dt.date,
+    flags: list[QualityFlag],
+) -> dict[str, Any] | None:
+    """Volatility and maximum drawdown of the current holdings, at current quantities, over the
+    last year (dividend-adjusted closes, so a dividend is not a fall)."""
+    if not rows:
+        return None
+    if any(r["currency"] != report for r in rows):
+        flags.append(
+            QualityFlag(
+                "risk_unavailable",
+                Severity.INFO,
+                "No risk figures: the holdings trade in more than one currency.",
+            )
+        )
+        return None
+    start = today - dt.timedelta(days=365)
+    series = {str(r["symbol"]): prices.series(str(r["symbol"]))[1] for r in rows}
+    dates = sorted({b.date for bars in series.values() for b in bars if start <= b.date <= today})
+    closes_now = {s: _close(bars[-1]) for s, bars in series.items()}
+    values = []
+    for day in dates:
+        total = 0.0
+        for r in rows:
+            bar = _as_of(series[str(r["symbol"])], day)
+            if bar is None:
+                break
+            # current value scaled by the holding's total-return path
+            total += float(r["market_value"]) * _close(bar) / closes_now[str(r["symbol"])]
+        else:
+            values.append((day, total))
+    if len(values) < 20:
+        return None
+    drawdown = analytics.max_drawdown([d for d, _ in values], [v for _, v in values])
+    volatility = analytics.annualized_volatility([v for _, v in values])
+    return {
+        "from": values[0][0].isoformat(),
+        "to": values[-1][0].isoformat(),
+        "annualized_volatility": _round(volatility),
+        "max_drawdown": None if drawdown is None else _round(drawdown.depth),
+        "max_drawdown_peak_date": None if drawdown is None else drawdown.peak_date.isoformat(),
+        "max_drawdown_trough_date": None if drawdown is None else drawdown.trough_date.isoformat(),
+    }

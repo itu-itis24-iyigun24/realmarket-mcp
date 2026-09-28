@@ -57,6 +57,28 @@ StartArg = Annotated[str | None, Field(description="Optional ISO start date, e.g
 EndArg = Annotated[str | None, Field(description="Optional ISO end date; defaults to today.")]
 
 
+class Transaction(BaseModel):
+    type: Literal["buy", "sell", "dividend", "bonus"] = Field(
+        description="buy, sell, dividend (cash received) or bonus (bonus issue or split: shares "
+        "received at no cost)."
+    )
+    symbol: str = Field(description="A symbol returned by search_assets.")
+    date: str = Field(description="ISO trade or payment date, e.g. '2024-03-01'.")
+    quantity: float | None = Field(
+        default=None, gt=0, description="Shares bought, sold or received (buy, sell, bonus)."
+    )
+    price: float | None = Field(
+        default=None,
+        gt=0,
+        description="Price per share actually paid or received, in the asset's currency. "
+        "If omitted, that day's close is used.",
+    )
+    fee: float | None = Field(default=None, ge=0, description="Commission, asset's currency.")
+    amount: float | None = Field(
+        default=None, gt=0, description="Dividend cash received, in the asset's currency."
+    )
+
+
 class Purchase(BaseModel):
     symbol: str = Field(description="A symbol returned by search_assets.")
     date: str = Field(description="ISO purchase date, e.g. '2023-03-01'.")
@@ -341,6 +363,37 @@ def build_server() -> MCPServer:
                 benchmark,
                 windows,
                 today=today,
+            )
+        )
+
+    @server.tool(annotations=READ_ONLY)
+    @audited
+    def analyze_portfolio(
+        transactions: Annotated[
+            list[Transaction],
+            Field(min_length=1, max_length=500, description="The account's transactions."),
+        ],
+        currency: Annotated[
+            str | None,
+            Field(description="Report currency; defaults to the first asset's currency."),
+        ] = None,
+    ) -> CallToolResult:
+        """Analyze an actual brokerage account from its transactions (buys, sells, cash
+        dividends received, bonus issues): each holding's quantity, average cost, market value,
+        weight, unrealized and realized profit, dividends and total result; account totals and
+        the money-weighted annual return; concentration (largest holding, top three, by
+        currency); best and worst holding; and the current holdings' volatility and maximum
+        drawdown over the last year. Use it for "how is my portfolio doing", "which stock lost
+        me the most", "what is my cost". For "did my savings keep up with inflation" use
+        portfolio_real_return. Describes the past, not what to buy or sell."""
+        now = _utc_now()
+        stamp = _stamp(now)
+        return respond(
+            lambda: tools.analyze_portfolio(
+                load_price_provider(retrieved_at=stamp),
+                [t.model_dump() for t in transactions],
+                currency,
+                today=now.date(),
             )
         )
 

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **`analyze_portfolio`: the account itself.** From the transactions a brokerage already
+  holds (buy, sell, cash dividend, bonus issue), each holding's quantity, average cost,
+  market value and weight, unrealized and realized profit, dividends and total result; account
+  totals and the money-weighted return; the largest holding, top-three weight and currency
+  split; best and worst holding; and the current holdings' volatility and drawdown over the
+  last year. It values holdings at traded prices (not dividend-adjusted closes), so dividends
+  count once, and warns when the source reports dividends the transactions leave out.
 - **News from the firm's own feed.** The adapter API gains an optional `/news` endpoint, so a
   firm can plug in KAP disclosures, Foreks or any licensed news feed
   (`REALMARKET_NEWS_PROVIDER=http`). The example adapter serves a `news.json` file.

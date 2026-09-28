@@ -44,6 +44,7 @@ def test_tools_are_listed_with_descriptions_and_read_only_hints() -> None:
         "get_news",
         "get_event_reaction",
         "portfolio_real_return",
+        "analyze_portfolio",
         "get_financials",
         "check_setup",
         "find_official_filer",
