@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **`analyze_portfolio` `compare_with`**: only when the user asks, each holding gets another
+  symbol's move (BIST 100, BIST 30, gold, any asset) over the holding's own period, from its
+  first purchase to the last session or the day it was sold out, beside its own price move.
+  There is deliberately no account-level comparison (money went in on different days), and the
+  result says so in a data field.
+- A tool called with an argument it does not have now refuses with `invalid_argument` and the
+  list of valid arguments. The SDK used to drop it silently: Haiku passed a made-up
+  `benchmark` to `analyze_portfolio` and believed it had been applied.
 - `scripts/call_tool.py` lists and calls the tools from a shell exactly as an MCP client sees
   them (`--synthetic` for the fictional ORNEK), and the `model-check` skill uses it to have
   Haiku subagents answer standard customer questions, without packaging an extension.

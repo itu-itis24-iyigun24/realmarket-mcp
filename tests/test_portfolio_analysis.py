@@ -162,3 +162,44 @@ def test_search_retries_without_turkish_letters() -> None:
         AsciiSearchProvider(FIXTURES), "Alpha A\u0131rlines", 5, today=TODAY, retrieved_at="x"
     )
     assert [r["symbol"] for r in result.data["results"]] == ["AAA"]
+
+
+def test_comparison_covers_each_holdings_own_period() -> None:
+    result = tools.analyze_portfolio(
+        FixtureProvider(FIXTURES),
+        [tx("buy", "2024-01-02", quantity=1)],
+        compare_with="AAA",
+        today=TODAY,
+    )
+    # TTT 200 -> 220 from 2024-01-02 to the last session; AAA 100 -> 120 on the same days.
+    assert result.data["holdings"][0]["comparison"] == {
+        "with": "AAA",
+        "from": "2024-01-02",
+        "to": "2024-01-08",
+        "holding_price_return": pytest.approx(0.1),
+        "comparison_return": pytest.approx(0.2),
+        "difference": pytest.approx(-0.1),
+    }
+    assert any("no account-level comparison" in n for n in result.notes)
+    assert result.data["account_comparison"].startswith("Not computed")
+
+
+def test_a_sold_out_holding_is_compared_up_to_the_sale() -> None:
+    result = tools.analyze_portfolio(
+        FixtureProvider(FIXTURES),
+        [
+            tx("buy", "2024-01-02", quantity=1),
+            tx("sell", "2024-01-05", quantity=1),
+            tx("dividend", "2024-01-08", amount=1),  # paid after the sale: not the end
+        ],
+        compare_with="AAA",
+        today=TODAY,
+    )
+    comparison = result.data["holdings"][0]["comparison"]
+    assert (comparison["to"], comparison["holding_price_return"]) == ("2024-01-05", -0.1)
+    assert comparison["comparison_return"] == pytest.approx(0.05)
+
+
+def test_no_comparison_unless_asked() -> None:
+    result = run([tx("buy", "2024-01-02", quantity=1)])
+    assert "comparison" not in result.data["holdings"][0]

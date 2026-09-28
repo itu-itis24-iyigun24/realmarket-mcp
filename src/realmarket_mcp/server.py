@@ -176,8 +176,30 @@ def audited(fn: F) -> F:
     return wrapper  # type: ignore[return-value]
 
 
+class RealmarketServer(MCPServer):
+    """Refuses arguments a tool does not have. The SDK drops them silently, so a model that
+    invents one (a 'benchmark' for analyze_portfolio) would believe it had been applied."""
+
+    async def call_tool(self, name: str, arguments: dict[str, Any], context: Any = None) -> Any:
+        tool = self._tool_manager.get_tool(name)
+        if tool is not None:
+            known = set(tool.parameters.get("properties", {}))
+            unknown = sorted(set(arguments) - known)
+            if unknown:
+                error = ToolError(
+                    ErrorCode.INVALID_ARGUMENT,
+                    f"{name} has no argument {', '.join(map(repr, unknown))}; nothing was "
+                    "computed.",
+                    f"Its arguments are: {', '.join(sorted(known)) or 'none'}. Call it again "
+                    "with those only, or use another tool for what the extra argument asked.",
+                    {"unknown_arguments": unknown},
+                )
+                return _to_call_result(error.to_dict(), is_error=True)
+        return await super().call_tool(name, arguments, context)
+
+
 def build_server() -> MCPServer:
-    server: MCPServer = MCPServer(
+    server: MCPServer = RealmarketServer(
         name="realmarket",
         title="realmarket-mcp",
         instructions=INSTRUCTIONS,
@@ -422,6 +444,14 @@ def build_server() -> MCPServer:
             str | None,
             Field(description="Report currency; defaults to the first asset's currency."),
         ] = None,
+        compare_with: Annotated[
+            str | None,
+            Field(
+                description="Only when the user asks how the holdings did against something: "
+                "a symbol from search_assets (e.g. 'XU100.IS' for BIST 100, 'XU030.IS', gold). "
+                "Each holding gets that symbol's move over the holding's own period."
+            ),
+        ] = None,
     ) -> CallToolResult:
         """Analyze an actual brokerage account from its transactions (buys, sells, cash
         dividends received, bonus issues): each holding's quantity, average cost, market value,
@@ -441,6 +471,7 @@ def build_server() -> MCPServer:
                 load_price_provider(retrieved_at=stamp),
                 [t.model_dump() for t in transactions],
                 currency,
+                compare_with,
                 today=now.date(),
             )
         )

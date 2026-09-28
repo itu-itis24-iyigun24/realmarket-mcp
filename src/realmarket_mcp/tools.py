@@ -2261,6 +2261,8 @@ class _Holding:
     realized: float = 0.0
     dividends: float = 0.0
     dividend_entries: int = 0
+    first_bought: dt.date | None = None
+    sold_out: dt.date | None = None  # the day the last share was sold, while none are held
     timeline: list[tuple[dt.date, float]] = dataclass_field(
         default_factory=list
     )  # quantity after each
@@ -2355,6 +2357,7 @@ def analyze_portfolio(
     provider: PriceProvider,
     transactions: Sequence[Mapping[str, Any]],
     currency: str | None = None,
+    compare_with: str | None = None,
     *,
     today: dt.date,
 ) -> ToolResult:
@@ -2428,6 +2431,8 @@ def analyze_portfolio(
             h.quantity += tx["quantity"]
             h.cost += cost
             h.bought += cost
+            h.first_bought = h.first_bought or day
+            h.sold_out = None
             flows.append((day, -cost))
         elif tx["type"] == "bonus":
             h.quantity += tx["quantity"]
@@ -2448,6 +2453,7 @@ def analyze_portfolio(
             h.quantity = max(0.0, h.quantity - tx["quantity"])
             if h.quantity == 0.0:
                 h.cost = 0.0
+                h.sold_out = day
             flows.append((day, proceeds))
         else:  # dividend: cash received, in the asset's currency
             received = to_report(tx["amount"])
@@ -2538,6 +2544,10 @@ def analyze_portfolio(
                 "unrealized_return": _round(unrealized / h.cost) if h.cost > 0 else None,
             }
         )
+        if compare_with:
+            holdings_out[-1]["comparison"] = _holding_comparison(
+                prices, h, compare_with, today, flags
+            )
     holdings_out.sort(key=lambda r: -float(r["market_value"]))
     open_rows = [r for r in holdings_out if float(r["quantity"]) > 0]
     ranked = sorted(
@@ -2593,11 +2603,78 @@ def analyze_portfolio(
                 "total_return_on_purchases": ranked[0]["total_return_on_purchases"],
             },
             "risk_last_year": _holdings_risk(prices, open_rows, report, today, flags),
+            **({"account_comparison": ACCOUNT_COMPARISON} if compare_with else {}),
         },
         provenance=tuple(prices.provenance),
         quality_flags=tuple(prices.flags + flags),
-        notes=(RATIO_NOTE, *PORTFOLIO_NOTES),
+        notes=(RATIO_NOTE, *PORTFOLIO_NOTES, *((COMPARISON_NOTE,) if compare_with else ())),
     )
+
+
+# A field, not only a note: small models set the account total against an index otherwise.
+ACCOUNT_COMPARISON = (
+    "Not computed. Money went in and out on different days, so no single index period matches "
+    "the account: do not set the account's total return against an index return. Compare per "
+    "holding, with each holding's comparison."
+)
+
+COMPARISON_NOTE = (
+    "comparison (asked for with compare_with): each holding's price move from its first "
+    "purchase to the last session, or to the day it was sold out, beside compare_with's move "
+    "over the same sessions. Both are price moves (split-adjusted, dividends excluded; an "
+    "index such as XU100 is a price index), so the holding's figure differs from its "
+    "total_return_on_purchases. There is no account-level comparison: money went in on "
+    "different days. Report the two figures side by side as facts, per holding; they say "
+    "nothing about why, and the index is not something the customer could have bought."
+)
+
+
+def _split_adjusted(bar: Bar) -> float:
+    """A close comparable across splits and without dividends."""
+    return bar.price_close if bar.price_close else _close(bar)
+
+
+def _holding_comparison(
+    prices: _Prices, h: _Holding, other: str, today: dt.date, flags: list[QualityFlag]
+) -> dict[str, Any] | None:
+    if h.first_bought is None:
+        return None
+    end = h.sold_out or today
+    _, own = prices.series(h.symbol)
+    other_series, theirs = prices.series(other)
+    start_bar, end_bar = _as_of(own, h.first_bought), _as_of(own, end)
+    if start_bar is None or end_bar is None:
+        return None
+    first, last = _as_of(theirs, start_bar.date), _as_of(theirs, end_bar.date)
+    if first is None or last is None or first.date == last.date:
+        flags.append(
+            QualityFlag(
+                "comparison_unavailable",
+                Severity.WARNING,
+                f"{other} has no prices from {start_bar.date} to {end_bar.date}; no comparison "
+                f"for {h.symbol}.",
+            )
+        )
+        return None
+    if other_series.currency.upper() != h.currency.upper():
+        flags.append(
+            QualityFlag(
+                "comparison_currency_differs",
+                Severity.WARNING,
+                f"{h.symbol} is in {h.currency} and {other} in {other_series.currency}; each "
+                "move is in its own currency.",
+            )
+        )
+    own_move = _split_adjusted(end_bar) / _split_adjusted(start_bar) - 1.0
+    other_move = _close(last) / _close(first) - 1.0
+    return {
+        "with": other,
+        "from": start_bar.date.isoformat(),
+        "to": end_bar.date.isoformat(),
+        "holding_price_return": _round(own_move),
+        "comparison_return": _round(other_move),
+        "difference": _round(own_move - other_move),
+    }
 
 
 def _currency_split(rows: Sequence[Mapping[str, Any]], total: float) -> dict[str, float | None]:

@@ -201,3 +201,12 @@ def test_transport_option(monkeypatch: pytest.MonkeyPatch) -> None:
     server_module.main([])
     server_module.main(["--transport", "http", "--port", "9000"])
     assert runs == [((), {}), (("streamable-http",), {"host": "127.0.0.1", "port": 9000})]
+
+
+def test_an_unknown_argument_is_refused_not_ignored(fixture_env: None) -> None:
+    payload, is_error = _call(
+        "get_price_summary", {"symbol": "AAA", "period": "1y", "benchmark": "IDX"}
+    )
+    assert is_error and payload["error"]["code"] == "invalid_argument"
+    assert payload["error"]["details"] == {"unknown_arguments": ["benchmark"]}
+    assert "period" in payload["error"]["hint"]
