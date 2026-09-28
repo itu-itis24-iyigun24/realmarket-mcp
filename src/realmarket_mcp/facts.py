@@ -109,9 +109,16 @@ def portfolio(
         f"Hesap özeti ({date(data['as_of'])} itibarıyla): alışlar toplamı "
         f"{money(totals['purchases'], cur)}, satışlardan gelen "
         f"{money(totals['sale_proceeds'], cur)}, elde kalan hisselerin değeri "
-        f"{money(totals['market_value'], cur)}. Toplam kâr/zarar "
-        f"{money(totals['total_pnl'], cur, signed=True)}"
+        f"{money(totals['market_value'], cur)}"
     )
+    received = totals["sale_proceeds"] + totals["dividends_received"]
+    if received:
+        # What the money paid in amounts to now: what is still held plus what came back.
+        total_line += (
+            f"; alışların bugünkü karşılığı, satışlardan ve girilen temettülerden gelenle "
+            f"birlikte {money(totals['market_value'] + received, cur)}"
+        )
+    total_line += f". Toplam kâr/zarar {money(totals['total_pnl'], cur, signed=True)}"
     if totals["total_return_on_purchases"] is not None:
         total_line += f" (alışlara oranla {pct(totals['total_return_on_purchases'])})"
     if totals["dividends_received"]:

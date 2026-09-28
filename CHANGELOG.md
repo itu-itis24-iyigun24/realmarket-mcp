@@ -25,6 +25,11 @@
   "cause": reasons for a price move (never given) and a holding's share of the result
   (arithmetic, said as the fact states it). With the figures given, Haiku stopped writing
   "BIMAS was the main driver" in all three portfolio questions.
+- Two general rules replace wording slips one by one: a figure keeps its fact's unit and
+  label (TL, %, puan, kat; "value of the shares still held" is not "what your money is worth
+  now"), and nothing is said about markets or the account that no result says. The account
+  fact now states what the purchases amount to today, sale proceeds included, and
+  `analyze_portfolio`'s description names its comparison with an index.
 - The server instructions lose the rules added for single mistakes (fractions written as
   percentages, figures kept with their windows, dates of the latest session, comparisons no
   tool returned, hedged reasons, web-search additions): the facts now carry each of these.
