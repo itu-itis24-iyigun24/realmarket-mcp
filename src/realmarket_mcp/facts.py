@@ -197,7 +197,9 @@ def price_move(
     session = dt.date.fromisoformat(data["session"])
     facts: list[str] = []
     if session != asked:
-        when = f"Bugün ({date(asked)})" if asked == today else date(asked)
+        when = (
+            f"Bugün ({date(asked, weekday=True)})" if asked == today else date(asked, weekday=True)
+        )
         facts.append(
             f"{when} için tamamlanmış seans yok; aşağıdaki rakamlar "
             f"{date(session, weekday=True)} seansına aittir."
@@ -484,4 +486,204 @@ def valuation(data: Mapping[str, Any]) -> list[str]:
         "Oranlar bugünkü fiyatı geçmiş sonuçlarla karşılaştırır; ucuz ya da pahalı "
         "olduğu anlamına gelmez."
     )
+    return facts
+
+
+# --- get_event_reaction -----------------------------------------------------------------------
+
+
+def event_reaction(data: Mapping[str, Any]) -> list[str]:
+    symbol, bench = data["symbol"], data.get("benchmark")
+    facts = [
+        f"Olay tarihi {date(data['event_date'])}. Getiriler, olaydan önceki son kapanıştan "
+        f"({date(data['base_date'])}, {number(data['base_close'])}) itibaren ölçüldü."
+    ]
+
+    def line(r: Mapping[str, Any]) -> str:
+        text = f"{symbol} {pct(r['return'])}"
+        if bench and r.get("benchmark_return") is not None:
+            text += (
+                f"; aynı sürede {bench} {pct(r['benchmark_return'])}, {symbol} için endekse göre "
+                f"göreli getiri {pct(r['excess_return'])}"
+            )
+        return text
+
+    drift = data.get("pre_event_drift")
+    if drift and drift.get("return") is not None and drift.get("from"):
+        facts.append(
+            f"Olaydan önceki {drift['sessions']} seansta ({date(drift['from'])} – "
+            f"{date(data['base_date'])}): {line(drift)}."
+        )
+    for r in data["reaction"]:
+        if r.get("date") is None or r.get("return") is None:
+            facts.append(f"Olaydan sonraki {r['sessions']}. seans henüz tamamlanmadı.")
+            continue
+        facts.append(
+            f"Olaydan sonraki {r['sessions']}. seans ({date(r['date'])}) sonunda: {line(r)}."
+        )
+    facts.append(
+        "Olaydan sonraki fiyat hareketi, olayın bu hareketi yarattığını göstermez; başka "
+        "haberler, piyasanın geneli ve rastlantı da fiyatı etkiler."
+    )
+    return facts
+
+
+# --- portfolio_real_return --------------------------------------------------------------------
+
+ALTERNATIVES = {
+    "USD": "dolar",
+    "GOLD": "altın",
+    "DEPOSIT": "32 günlük TL mevduat",
+    "HOUSE": "Türkiye konut fiyat endeksi",
+}
+
+
+def portfolio_real(data: Mapping[str, Any]) -> list[str]:
+    cur = str(data["currency"])
+    facts = [
+        f"Toplam {money(data['invested'], cur)} yatırıldı; {date(data['as_of'])} itibarıyla değeri "
+        f"{money(data['value_now'], cur)}, getiri {pct(data['return'])}."
+    ]
+    if data.get("annualized_money_weighted") is not None:
+        facts[0] += (
+            " Paranın ne zaman girdiğini hesaba katan yıllık getiri "
+            f"{pct(data['annualized_money_weighted'])}."
+        )
+    for lot in data["lots"]:
+        facts.append(
+            f"{lot['symbol']}: {date(lot['date'])} tarihinde {money(lot['amount'], cur)}; bugün "
+            f"{money(lot['value_now'], cur)}, getiri {pct(lot['return'])}."
+        )
+    if data.get("real_return") is not None:
+        verdict = (
+            "birikim enflasyonun önünde"
+            if data["real_return"] > 0
+            else "birikim enflasyonun gerisinde"
+        )
+        facts.append(
+            f"Enflasyon verisi {date(data['real_return_as_of'])} tarihine kadar yayımlandı. O "
+            f"tarihte değer {money(data['value_at_real_return_date'], cur)}; o tarihe kadar "
+            "yapılan ödemelerin o tarihteki satın alma gücüyle karşılığı "
+            f"{money(data['invested_in_money_of_real_return_date'], cur)}. Reel getiri "
+            f"{pct(data['real_return'])}: {verdict}."
+        )
+    for alt in data.get("alternatives", []):
+        name = ALTERNATIVES.get(str(alt["alternative"]), str(alt["alternative"]))
+        when = date(alt["valued_as_of"])
+        if alt["alternative"] == "HOUSE":
+            line = (
+                "Aynı ödemeler Türkiye konut fiyat endeksindeki değişimle büyüseydi "
+                f"{when} itibarıyla {money(alt['value_now'], cur)} olurdu "
+                f"(getiri {pct(alt['return'])})"
+            )
+        else:
+            line = (
+                f"Aynı ödemeler aynı günlerde {name} olarak tutulsaydı {when} itibarıyla "
+                f"{money(alt['value_now'], cur)} olurdu (getiri {pct(alt['return'])})"
+            )
+        if alt.get("value_now_after_tax") is not None:
+            line += (
+                f"; stopaj sonrası {money(alt['value_now_after_tax'], cur)} (getiri "
+                f"{pct(alt['return_after_tax'])})"
+            )
+        compared = alt.get("value_now_after_tax") or alt["value_now"]
+        if alt["valued_as_of"] == data["as_of"]:
+            gap = data["value_now"] - compared
+            side = "önde" if gap > 0 else "geride" if gap < 0 else "eşit"
+            line += (
+                f". Birikim bugün {money(data['value_now'], cur)}: bu alternatife göre "
+                f"{money(abs(gap), cur)} {side}"
+            )
+        facts.append(line + ".")
+    return facts
+
+
+# --- get_financials ---------------------------------------------------------------------------
+
+LINES = (
+    ("revenue", "satışlar"),
+    ("gross_profit", "brüt kâr"),
+    ("operating_income", "faaliyet kârı"),
+    ("net_income", "net kâr"),
+)
+GROWTH = (
+    ("quarter_on_quarter", "Önceki çeyreğe göre"),
+    ("year_on_year", "Geçen yılın aynı çeyreğine göre"),
+    ("annual", "Önceki yıla göre"),
+)
+
+
+def financials(data: Mapping[str, Any]) -> list[str]:
+    symbol, cur = data["symbol"], str(data["reporting_currency"])
+    restated = str(data.get("inflation_accounting", "")).startswith("TMS 29")
+    facts = [
+        f"{symbol} finansallarını {cur} olarak raporluyor"
+        + (
+            "; 2023 yıl sonundan itibaren rakamlar enflasyon muhasebesine (TMS 29) göre "
+            "düzeltilmiştir."
+            if restated
+            else "; enflasyon muhasebesi uygulanmamıştır."
+        )
+    ]
+    for key, label in (("latest_quarter", "Son çeyrek"), ("latest_year", "Son mali yıl")):
+        p = data.get(key)
+        if not p:
+            continue
+        figures = [f"{name} {amount(p[k], cur)}" for k, name in LINES if p.get(k) is not None]
+        margins = [
+            f"{name} {pct(p[k], signed=False)}"
+            for k, name in (
+                ("gross_margin", "brüt marj"),
+                ("operating_margin", "faaliyet marjı"),
+                ("net_margin", "net marj"),
+            )
+            if p.get(k) is not None
+        ]
+        text = f"{label} ({date(p['end'])} dönem sonu): " + ", ".join(figures)
+        if margins:
+            text += "; " + ", ".join(margins)
+        facts.append(text + ".")
+    q = data.get("latest_quarter") or {}
+    if q.get("total_assets") is not None:
+        text = (
+            f"{date(q['end'])} itibarıyla toplam varlıklar {amount(q['total_assets'], cur)}, "
+            f"özsermaye {amount(q['total_equity'], cur)}"
+        )
+        if q.get("total_debt") is not None:
+            text += f", toplam finansal borç {amount(q['total_debt'], cur)}"
+        if q.get("debt_to_equity") is not None:
+            text += f"; borç/özsermaye {number(q['debt_to_equity'])}"
+        facts.append(text + ".")
+    for key, label in GROWTH:
+        g = (data.get("growth") or {}).get(key)
+        if not g:
+            continue
+        # Under TMS 29 the company restates the earlier period itself: one figure, already real.
+        company_restated = str(g.get("real_method", "")).startswith("company-restated")
+        parts = []
+        for k, name in LINES:
+            v = g.get(k)
+            if not v:
+                continue
+            if v.get("as_reported") is None:
+                parts.append(f"{name} hesaplanamıyor (dönemlerden biri zarar ya da sıfır)")
+                continue
+            text = f"{name} {pct(v['as_reported'])}"
+            if v.get("real") is not None and not company_restated:
+                text += f" (enflasyondan arındırılmış {pct(v['real'])})"
+            parts.append(text)
+        if parts:
+            note = (
+                " (şirketin enflasyona göre düzeltilmiş karşılaştırma rakamlarıyla)"
+                if company_restated
+                else ""
+            )
+            facts.append(
+                f"{label} ({date(g['from'])} → {date(g['to'])}){note}: " + "; ".join(parts) + "."
+            )
+    if symbol.upper().endswith(".IS"):
+        facts.append(
+            "Kaynak resmi değildir; önemli rakamlar şirketin KAP'taki kendi raporlarından "
+            "doğrulanmalıdır."
+        )
     return facts

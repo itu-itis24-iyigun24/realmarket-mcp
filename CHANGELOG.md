@@ -12,8 +12,17 @@
   them rather than compose figures from `data`. Small models had turned 0.313 into "%313",
   paired figures from different windows and labelled a portfolio's own return as its lead over
   an index; with facts they relay sentences instead. `data` is unchanged. `get_price_summary`,
-  `compare_assets` (with a ranking by total return) and `get_valuation` (ratios, their basis,
-  and why a ratio is missing) have facts too.
+  `compare_assets` (with a ranking by total return), `get_valuation` (ratios, their basis,
+  and why a ratio is missing), `get_event_reaction`, `portfolio_real_return` and
+  `get_financials` (latest quarter and year, balance sheet, growth with and without
+  inflation) have facts too: every tool that returns figures.
+- `portfolio_real_return`'s facts set the account against each alternative (how many TL ahead
+  or behind), which the question asks and Haiku had otherwise computed itself ("4 times
+  more"). Its description and `compare_real_return`'s now split their ground: one asset over a
+  period, or the user's own purchases.
+- The server instructions lose the rules added for single mistakes (fractions written as
+  percentages, figures kept with their windows, dates of the latest session, comparisons no
+  tool returned, hedged reasons, web-search additions): the facts now carry each of these.
 - **`analyze_portfolio` `compare_with`**: only when the user asks, each holding gets another
   symbol's move (BIST 100, BIST 30, gold, any asset) over the holding's own period, from its
   first purchase to the last session or the day it was sold out, beside its own price move.

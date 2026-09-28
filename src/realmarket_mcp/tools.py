@@ -1095,7 +1095,7 @@ def get_event_reaction(
             "excess_return": _round(_excess(ret, bret)),
         }
 
-    return ToolResult(
+    result = ToolResult(
         tool="get_event_reaction",
         data={
             "symbol": symbol,
@@ -1118,6 +1118,7 @@ def get_event_reaction(
             "whole market and chance all move prices.",
         ),
     )
+    return dataclasses.replace(result, facts=tuple(fact_text.event_reaction(result.data)))
 
 
 MAX_LOTS = 50
@@ -1468,7 +1469,7 @@ def portfolio_real_return(
                 )
             )
 
-    return ToolResult(
+    result = ToolResult(
         tool="portfolio_real_return",
         data={
             "currency": report,
@@ -1516,6 +1517,7 @@ def portfolio_real_return(
             "Purchases only: sales and dividends paid out in cash are not modelled.",
         ),
     )
+    return dataclasses.replace(result, facts=tuple(fact_text.portfolio_real(result.data)))
 
 
 FLOW_FIELDS = ("revenue", "gross_profit", "operating_income", "net_income")
@@ -1747,7 +1749,7 @@ def get_financials(
         }
 
     latest_view = with_ratios(latest)
-    return ToolResult(
+    result = ToolResult(
         tool="get_financials",
         data={
             "symbol": symbol,
@@ -1784,6 +1786,7 @@ def get_financials(
             "Growth is null when the earlier figure is zero or a loss.",
         ),
     )
+    return dataclasses.replace(result, facts=tuple(fact_text.financials(result.data)))
 
 
 def _build_id() -> str | None:

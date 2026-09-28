@@ -80,6 +80,11 @@ def test_reaction_windows_and_excess_returns(provider: FixtureProvider) -> None:
 
     assert twenty["return"] is None  # not enough sessions yet
     assert "window_incomplete" in {f.code for f in result.quality_flags}
+    assert (
+        "Olaydan sonraki 1. seans (11 Mart 2024) sonunda: EVT +%10,0; aynı sürede IDX +%1,00, "
+        "EVT için endekse göre göreli getiri +%8,91." in result.facts
+    )
+    assert "Olaydan sonraki 20. seans henüz tamamlanmadı." in result.facts
 
 
 def test_event_on_a_trading_day_counts_that_day_as_session_one(provider: FixtureProvider) -> None:

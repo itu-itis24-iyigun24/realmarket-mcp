@@ -101,6 +101,13 @@ def test_tms29_company_uses_restated_comparatives_and_restates_the_previous_quar
     assert annual["real_method"] == RESTATED
     assert annual["revenue"]["real"] == approx(0.3)  # 5200 / 4000, both company-restated
 
+    facts = tools.get_financials(
+        _provider(tmp_path, "RET", _retailer()), _loader, "RET", today=TODAY
+    ).facts
+    # Company-restated comparatives: one figure; a CPI-restated quarter: both.
+    assert any("düzeltilmiş karşılaştırma rakamlarıyla): satışlar +%10,0;" in f for f in facts)
+    assert any("satışlar +%17,9 (enflasyondan arındırılmış +%10,0)" in f for f in facts)
+
 
 def test_bank_growth_is_deflated_with_cpi(tmp_path: Path) -> None:
     data = tools.get_financials(
@@ -166,6 +173,10 @@ def test_losses_give_no_growth_rate(tmp_path: Path) -> None:
     data = tools.get_financials(_provider(tmp_path, "LOS", spec), _loader, "LOS", today=TODAY).data
     net = data["growth"]["quarter_on_quarter"]["net_income"]
     assert net == {"as_reported": None, "real": None}
+    facts = tools.get_financials(
+        _provider(tmp_path, "LOS", spec), _loader, "LOS", today=TODAY
+    ).facts
+    assert any("net kâr hesaplanamıyor (dönemlerden biri zarar ya da sıfır)" in f for f in facts)
 
 
 def test_without_cpi_the_cpi_based_comparisons_have_no_real_value(tmp_path: Path) -> None:

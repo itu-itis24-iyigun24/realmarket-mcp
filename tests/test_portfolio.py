@@ -51,6 +51,10 @@ def test_value_return_and_real_return(provider: FixtureProvider) -> None:
     assert data["real_return"] == approx(4000 / invested_real - 1)
     assert data["cumulative_inflation_since_first_purchase"] == approx(0.6)
     assert [lot["value_now"] for lot in data["lots"]] == [2000.0, 2000.0]
+    facts = tools.portfolio_real_return(provider, cpi, LOTS, today=TODAY).facts
+    assert facts[0].startswith(
+        "Toplam 2.500,00 TL yatırıldı; 2 Ocak 2024 itibarıyla değeri 4.000,00 TL, getiri +%60,0."
+    )
 
 
 def test_alternatives_replay_the_same_payments(provider: FixtureProvider) -> None:
@@ -63,6 +67,9 @@ def test_alternatives_replay_the_same_payments(provider: FixtureProvider) -> Non
     assert alternatives["GOLD"]["value_now"] == pytest.approx(125 / 1800 * 2000 * 30, abs=0.01)
     # USDTRY has no bar near 2023-06-30, so that conversion is flagged as stale.
     assert "stale_price" in {f.code for f in result.quality_flags}
+    # The account is worth 4000 TRY against 3750 in dollars: 250 ahead, said in the fact.
+    usd = next(f for f in result.facts if "dolar olarak" in f)
+    assert usd.endswith("Birikim bugün 4.000,00 TL: bu alternatife göre 250,00 TL önde.")
 
 
 def test_missing_cpi_keeps_everything_else(provider: FixtureProvider) -> None:
