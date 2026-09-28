@@ -58,6 +58,12 @@
   figures the model computed from tool results and three tool choices. After the second
   round of fixes those nine were re-run: 7 are correct, bringing the run to about 112 (94%);
   the two left are a ratio and a label the model added to facts that already had the figures.
+- Valuation facts state each ratio with both its sides ("PD/DD 0,77: piyasa değeri,
+  özsermayenin (330,30 milyar TL, 30 Haziran 2026 tarihli) 0,77 katı"), and
+  `get_valuation`'s description opens with the questions it answers, dividend yield
+  included. The event-reaction fact no longer lists things that move prices, which a model
+  had turned into a hedged cause. The server instructions add that tools are called for the
+  assets the user named: choosing assets for the user is a recommendation.
 - `scripts/score_model_check.py` no longer counts day ranges before a month ("16-23 Temmuz")
   as figures, and a question may list `also_accept` tools that answer it equally well.
 - **A customer question set for model checks**: `evals/customer_questions.json` holds 119

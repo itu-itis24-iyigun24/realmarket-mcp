@@ -502,20 +502,24 @@ def valuation(data: Mapping[str, Any]) -> list[str]:
     }.get(str(data.get("earnings_basis")), "")
     periods = data.get("periods_used") or []
     when = f" ({date(periods[0])} – {date(periods[-1])} dönem sonları)" if len(periods) > 1 else ""
-    ratios = []
+    # Each ratio with its two sides, so its meaning is in the sentence rather than left to
+    # the reader: "market value is 0.77 times the equity".
+    rc = data.get("reporting_currency") or cur
     if data["price_to_earnings"] is not None:
-        ratios.append(f"F/K {number(data['price_to_earnings'])}")
+        r = number(data["price_to_earnings"])
+        earnings = amount(data["earnings"], rc)
+        facts.append(f"F/K {r}: piyasa değeri, net kârın ({earnings}) {r} katı.")
     if data["price_to_book"] is not None:
-        ratios.append(f"PD/DD {number(data['price_to_book'])}")
+        r = number(data["price_to_book"])
+        on = f", {date(data['equity_as_of'])} tarihli" if data.get("equity_as_of") else ""
+        facts.append(
+            f"PD/DD {r}: piyasa değeri, özsermayenin ({amount(data['equity'], rc)}{on}) {r} katı."
+        )
     if data["price_to_sales"] is not None:
-        ratios.append(f"F/S {number(data['price_to_sales'])}")
-    if ratios:
-        line = ", ".join(ratios) + "."
-        if basis and (data["price_to_earnings"] is not None or data["price_to_sales"] is not None):
-            line += f" Kâr ve satışlar {basis}{when}."
-        if data.get("equity_as_of") and data["price_to_book"] is not None:
-            line += f" Özsermaye {date(data['equity_as_of'])} tarihli."
-        facts.append(line)
+        r = number(data["price_to_sales"])
+        facts.append(f"F/S {r}: piyasa değeri, satışların ({amount(data['sales'], rc)}) {r} katı.")
+    if basis and (data["price_to_earnings"] is not None or data["price_to_sales"] is not None):
+        facts.append(f"Kâr ve satışlar {basis}{when}.")
     for key, name, figure in (
         ("pe", "F/K", "earnings"),
         ("pb", "PD/DD", "equity"),
@@ -585,8 +589,8 @@ def event_reaction(data: Mapping[str, Any]) -> list[str]:
             f"Olaydan sonraki {r['sessions']}. seans ({date(r['date'])}) sonunda: {line(r)}."
         )
     facts.append(
-        "Olaydan sonraki fiyat hareketi, olayın bu hareketi yarattığını göstermez; başka "
-        "haberler, piyasanın geneli ve rastlantı da fiyatı etkiler."
+        "Bu rakamlar olaydan önceki kapanıştan itibaren fiyat değişimini ölçer; hareketin "
+        "nedenini göstermez."
     )
     return facts
 

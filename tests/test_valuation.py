@@ -66,7 +66,9 @@ def test_multiples_from_four_quarters(tmp_path: Path) -> None:
     assert data["price_to_sales"] == approx(220_000 / (1000 * 30))
     assert data["earnings_basis"] == "trailing_four_quarters"
     facts = run(provider(tmp_path / "f", st)).facts
-    assert any(f.startswith("F/K 73,33, PD/DD 3,67, F/S 7,33.") for f in facts)
+    assert "F/K 73,33: piyasa değeri, net kârın (100,00 USD) 73,33 katı." in facts
+    assert any(f.startswith("PD/DD 3,67: piyasa değeri, özsermayenin (2.000,00 USD") for f in facts)
+    assert "F/S 7,33: piyasa değeri, satışların (1.000,00 USD) 7,33 katı." in facts
     assert any("30,0000 kuruyla TRY cinsine" in f for f in facts)
 
 
