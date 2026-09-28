@@ -171,6 +171,11 @@ def test_an_amount_turns_the_figures_into_money() -> None:
         f.startswith("Yatırılan 1.000,00 TL 2 Ocak 2024 itibarıyla 2.000,00 TL")
         for f in result.facts
     )
+    # Each alternative in money too, so the answer never multiplies a percentage itself.
+    assert any(
+        "altına yatırılsaydı" in f and "(1.000,00 TL → 1.666,67 TL)" in f for f in result.facts
+    )
+    assert any("asgari ücret" in f and "(1.000,00 TL → 1.998,65 TL)" in f for f in result.facts)
     with pytest.raises(ToolError):
         tools.compare_real_return(
             FixtureProvider(FIXTURES), lambda *_: CPI, "TTT", start="2023-01-01",

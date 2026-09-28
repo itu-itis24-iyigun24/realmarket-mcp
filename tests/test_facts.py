@@ -74,3 +74,24 @@ def test_results_without_facts_keep_their_envelope() -> None:
         FixtureProvider(FIXTURES), "Alpha", 5, today=dt.date(2024, 1, 10), retrieved_at="x"
     )
     assert "facts" not in result.to_dict()
+
+
+def test_dividends_not_entered_are_summed_by_the_facts() -> None:
+    """ "How much did I make?" with dividends the source reports but the user did not list:
+    the facts give the result with them, so the answer does not add them up itself."""
+    holding = {"symbol": "AAA", "quantity": 0, "total_pnl": -100.0,
+               "total_return_on_purchases": -0.1, "realized_pnl": -100.0,
+               "dividends_received": 0.0}  # fmt: skip
+    other = {**holding, "symbol": "BBB", "total_pnl": 50.0, "realized_pnl": 50.0}
+    data = {"currency": "TRY", "as_of": "2025-01-10", "holdings": [holding, other],
+            "totals": {"purchases": 1000.0, "sale_proceeds": 950.0, "market_value": 0.0,
+                       "dividends_received": 0.0, "total_pnl": -50.0,
+                       "total_return_on_purchases": -0.05,
+                       "money_weighted_return_annualized": None}}  # fmt: skip
+    text = "\n".join(
+        facts.portfolio(
+            data, splits=(), dated=(), prices_assumed=False, unentered_dividends={"AAA": 30.0}
+        )
+    )
+    assert "Bu temettüler alındıysa AAA toplam sonucu yaklaşık -70,00 TL olur." in text
+    assert "girilmeyen temettüler alındıysa hesabın toplam sonucu yaklaşık -20,00 TL olur" in text

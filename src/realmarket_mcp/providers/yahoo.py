@@ -32,6 +32,7 @@ from realmarket_mcp.models import (
 
 # Over-the-counter venues: not listed on an exchange, so not an industry's listed companies.
 OVER_THE_COUNTER = frozenset({"PNK", "OQB", "OQX", "OEM", "OGM", "NCM"})
+NOT_GOLD = frozenset({"GOLD"})  # Barrick Gold's share on Yahoo, not the metal
 PEER_SCREEN_SIZE = 250  # the screener's page limit; an industry on one exchange is smaller
 
 INSTALL_HINT = 'Install the optional dependency: pip install "realmarket-mcp[yahoo]".'
@@ -354,6 +355,16 @@ class YahooProvider:
         return assets[:limit]
 
     def daily_bars(self, symbol: str, start: dt.date, end: dt.date) -> PriceSeries:
+        if symbol.upper() in NOT_GOLD:
+            # A model asked for gold writes "GOLD"; on Yahoo that is a mining company's share,
+            # whose return would be reported as gold's.
+            raise ToolError(
+                ErrorCode.INVALID_ARGUMENT,
+                f"On Yahoo Finance {symbol!r} is Barrick Gold's share, not the price of gold.",
+                "For gold in US dollars per troy ounce use 'GC=F'. For gold in TL (gram gold), "
+                "compare_real_return and portfolio_real_return compare with gold themselves.",
+                {"symbol": symbol},
+            )
         raw = self._call(lambda: self._backend.history(symbol, start, end), symbol=symbol)
         # A bar dated on or after the retrieval day may be an in-progress session: exclude it.
         cutoff = min(end, dt.date.fromisoformat(self._retrieved_at[:10]) - dt.timedelta(days=1))

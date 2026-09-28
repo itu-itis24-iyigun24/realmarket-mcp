@@ -98,7 +98,11 @@ class Transaction(BaseModel):
 
 class Purchase(BaseModel):
     symbol: str = Field(description="A symbol returned by search_assets.")
-    date: str = Field(description="ISO purchase date, e.g. '2023-03-01'.")
+    date: str = Field(
+        description="Purchase date, e.g. '2023-03-01', or a month, e.g. '2023-03', when the user "
+        "gave no day (the month's first session is used). A weekend or holiday buys at the next "
+        "session."
+    )
     amount: float = Field(gt=0, description="Amount paid, in the report currency.")
 
 
@@ -234,8 +238,9 @@ def build_server() -> MCPServer:
     def check_setup() -> CallToolResult:
         """Report which data sources this server will use and which settings are missing:
         price data, financial statements (SEC for US companies), inflation per region and
-        news. Settings are shown as present or absent, never their values. Call it when a tool
-        says a source is not configured, or before a first report."""
+        news, and which tools each source serves. Settings are shown as present or absent,
+        never their values. Call it when a tool says a source is not configured; to answer a
+        question, call the tool for it."""
         now = _utc_now()
         return respond(
             lambda: tools.check_setup(

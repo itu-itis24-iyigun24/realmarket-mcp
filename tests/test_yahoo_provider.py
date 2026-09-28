@@ -250,3 +250,10 @@ def test_industry_peers_need_an_industry() -> None:
     with pytest.raises(ToolError) as info:
         yahoo.industry_peers("FUND")
     assert info.value.code is ErrorCode.NO_DATA_IN_RANGE
+
+
+def test_gold_ticker_is_refused_as_it_is_a_mining_share() -> None:
+    with pytest.raises(ToolError) as info:
+        _provider().daily_bars("GOLD", D(2024, 1, 2), D(2024, 1, 9))
+    assert info.value.code is ErrorCode.INVALID_ARGUMENT
+    assert "GC=F" in info.value.hint

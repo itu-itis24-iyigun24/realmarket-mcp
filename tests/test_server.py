@@ -178,6 +178,11 @@ def test_check_setup_tool_over_the_protocol(monkeypatch: pytest.MonkeyPatch) -> 
     assert not is_error
     assert payload["data"]["price_data"]["provider"] == "yahoo"
     assert payload["provenance"][0]["dataset"] == "server_configuration"
+    # The facts name the tool for each kind of question: a model that checks the setup first
+    # had answered "no valuation data" without calling get_valuation.
+    facts = " ".join(payload["facts"])
+    for tool in ("get_valuation", "get_financials", "compare_real_return", "get_news"):
+        assert tool in facts
 
 
 def test_check_setup_says_what_replaces_a_missing_source() -> None:

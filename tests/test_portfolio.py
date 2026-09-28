@@ -141,3 +141,26 @@ def test_no_real_return_when_cpi_ends_before_the_first_purchase(
     assert result.data["value_now"] == 4000.0
     flag = next(f for f in result.quality_flags if f.code == "inflation_unavailable")
     assert "before the first purchase" in flag.message
+
+
+def test_a_purchase_on_a_closed_day_buys_at_the_next_session(provider: FixtureProvider) -> None:
+    """Money put in on a Saturday (or a holiday) buys at the next session, never at the close
+    before the date the user gave; "January 2024" is the month's first session. AAA closes
+    100 on 2 Jan and 120 on 8 Jan (fixture)."""
+    today = dt.date(2024, 1, 10)
+    lots = [
+        {"symbol": "AAA", "date": "2024-01-06", "amount": 1200},
+        {"symbol": "AAA", "date": "2024-01", "amount": 1000},
+    ]
+    data = tools.portfolio_real_return(provider, _no_cpi, lots, today=today).data
+    first, second = data["lots"]
+    assert (first["date"], first["date_given"], first["value_now"]) == (
+        "2024-01-08",
+        "2024-01-06",
+        1200.0,
+    )
+    assert (second["date"], second["date_given"], second["value_now"]) == (
+        "2024-01-02",
+        "2024-01-01",
+        1200.0,
+    )

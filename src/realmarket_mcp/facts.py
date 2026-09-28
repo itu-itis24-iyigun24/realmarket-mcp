@@ -186,8 +186,19 @@ def portfolio(
             facts.append(
                 f"{symbol} elde tutulurken temettü dağıttı (bu hisseler için yaklaşık "
                 f"{money(unentered_dividends[symbol], cur)} brüt); işlemlerde temettü girilmediği "
-                "için yukarıdaki sonuçlara dahil değil."
+                "için yukarıdaki sonuçlara dahil değil. Bu temettüler alındıysa "
+                f"{symbol} toplam sonucu yaklaşık "
+                f"{money(float(h['total_pnl']) + unentered_dividends[symbol], cur, signed=True)}"
+                " olur."
             )
+    if unentered_dividends and len(data["holdings"]) > 1:
+        # "How much did I make?" with dividends the user did not list: the sum, stated here so
+        # it is not added up in the answer.
+        with_dividends = float(totals["total_pnl"]) + sum(unentered_dividends.values())
+        facts.append(
+            "Kaynağın bildirdiği ve girilmeyen temettüler alındıysa hesabın toplam sonucu "
+            f"yaklaşık {money(with_dividends, cur, signed=True)} olur (brüt)."
+        )
 
     compared = [h for h in data["holdings"] if h.get("comparison")]
     for h in compared:
@@ -314,6 +325,15 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
             "Bu dönem için enflasyon karşılaştırması yapılamadı."
         )
     nominal = pct(data["nominal_return"])
+    paid_in = float(data["amount"]) if data.get("amount") else None
+
+    def worth(growth: float) -> str:
+        """With an amount, what the same money would have become: the question asks it in money
+        and a model otherwise multiplies the percentage itself."""
+        if paid_in is None:
+            return ""
+        return f" ({money(paid_in, cur)} → {money(paid_in * (1 + growth), cur)})"
+
     if data.get("amount"):
         # "I put 20,000 TL in": the same figures, in money.
         paid = float(data["amount"])
@@ -334,7 +354,8 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
         line = (
             f"Aynı para {first} tarihinde altına yatırılsaydı {last} tarihine kadar "
             f"{cur if cur != 'TRY' else 'TL'} olarak {pct(data['gold_return_in_currency'])} "
-            f"getirirdi; hisse aynı dönemde {nominal}: hisse altının "
+            f"getirirdi{worth(data['gold_return_in_currency'])}; hisse aynı dönemde {nominal}: "
+            "hisse altının "
             f"{_ahead_by(data['nominal_return'] - data['gold_return_in_currency'])}."
         )
         if data["gram_gold_try_start"] is not None:
@@ -346,7 +367,8 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
     if data["deposit_return_after_tax"] is not None:
         facts.append(
             f"32 günlük TL mevduat {first} – {last} arasında stopaj sonrası "
-            f"{pct(data['deposit_return_after_tax'])} getirirdi (stopaj öncesi "
+            f"{pct(data['deposit_return_after_tax'])} getirirdi"
+            f"{worth(data['deposit_return_after_tax'])} (stopaj öncesi "
             f"{pct(data['deposit_return'])}); hisse aynı dönemde {nominal}: hisse stopaj "
             f"sonrası mevduatın "
             f"{_ahead_by(data['nominal_return'] - data['deposit_return_after_tax'])}."
@@ -365,7 +387,8 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
         )
         facts.append(
             f"Net asgari ücret {first} – {last} arasında {pct(data['minimum_wage_growth'])} "
-            f"arttı; hisse aynı dönemde {nominal}, yani asgari ücret artışının "
+            f"arttı{worth(data['minimum_wage_growth'])}; hisse aynı dönemde {nominal}, yani "
+            "asgari ücret artışının "
             f"{_ahead_by(data['nominal_return'] - data['minimum_wage_growth'])}. Asgari ücret "
             f"cinsinden hisse {pct(wages)}: {verdict}."
         )
@@ -374,6 +397,7 @@ def real_return(data: Mapping[str, Any]) -> list[str]:
         line = (
             f"Konut fiyat endeksi ({house['area']}) {month(house['from_month'])} – "
             f"{month(house['to_month'])} arasında {pct(house['house_price_return'])} değişti"
+            f"{worth(house['house_price_return'])}"
         )
         if house.get("house_price_real_return") is not None:
             line += f" (reel {pct(house['house_price_real_return'])})"
@@ -873,16 +897,28 @@ def setup(data: Mapping[str, Any]) -> list[str]:
     price = data["price_data"]
     fin = data["financial_statements"]
     infl = data["inflation"]
+    # Each source with the tools it serves: a model that checks the setup first then knows
+    # which tool answers the question, instead of stopping at the list of sources.
+    on = price["enabled"]
     facts = [
         "Fiyat verisi: "
-        + (f"açık ({_source(price['provider'])})." if price["enabled"] else "kapalı."),
+        + (
+            f"açık ({_source(price['provider'])}); fiyat, getiri, karşılaştırma, hareket, olay "
+            "ve portföy soruları için get_price_summary, compare_assets, explain_price_move, "
+            "get_event_reaction, analyze_portfolio ve portfolio_real_return."
+            if on
+            else "kapalı."
+        ),
         f"Finansal tablolar ve değerleme: Türkiye ve diğer piyasalar için "
         f"{_source(fin['other_markets'])}, ABD şirketleri için {_source(fin['us_companies'])}, "
-        f"AB ve İngiltere şirketleri için {_source(fin['eu_uk_companies_by_lei'])}.",
-        f"Enflasyon: Türkiye için {_source(infl['TR'])}, ABD için {_source(infl['US'])}.",
+        f"AB ve İngiltere şirketleri için {_source(fin['eu_uk_companies_by_lei'])}. Satış, kâr, "
+        "marj ve borç için get_financials; piyasa değeri, F/K, PD/DD ve temettü verimi için "
+        "get_valuation.",
+        f"Enflasyon: Türkiye için {_source(infl['TR'])}, ABD için {_source(infl['US'])}; reel "
+        "getiri için compare_real_return ve portfolio_real_return.",
         f"TL mevduat karşılaştırması: {_source(data['deposit_rates']['TRY'])}; konut fiyatları: "
         f"{_source(data['house_prices']['TR'])}.",
-        f"Haberler: {_source(str(data['news']))}.",
+        f"Haberler: {_source(str(data['news']))}; get_news.",
     ]
     if data["missing"]:
         facts.append(

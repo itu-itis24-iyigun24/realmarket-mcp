@@ -1254,6 +1254,13 @@ class _Prices:
         return self.series(symbol)[0].currency.upper()
 
 
+def _next_session(prices: _Prices, symbol: str, day: dt.date) -> dt.date:
+    """The first session on or after ``day`` within a fortnight, else ``day`` itself."""
+    _, usable = prices.series(symbol)
+    session = next((b.date for b in usable if b.date >= day), None)
+    return session if session is not None and (session - day).days <= 14 else day
+
+
 def _convert(
     prices: _Prices, provider: PriceProvider, value: float, src: str, dst: str, day: dt.date
 ) -> float:
@@ -1284,7 +1291,9 @@ def portfolio_real_return(
         )
     parsed = []
     for i, lot in enumerate(lots):
-        day = parse_date(str(lot.get("date", "")), f"lots[{i}].date")
+        raw_date = str(lot.get("date", "")).strip()
+        month_only = MONTH_DATE.fullmatch(raw_date) is not None
+        day = parse_date(raw_date + "-01" if month_only else raw_date, f"lots[{i}].date")
         amount = float(lot.get("amount", 0))
         if day > today or not math.isfinite(amount) or amount <= 0:
             raise ToolError(
@@ -1297,9 +1306,18 @@ def portfolio_real_return(
     first_day = min(d for _, d, _ in parsed)
     prices = _Prices(provider, first_day - dt.timedelta(days=AS_OF_TOLERANCE_DAYS * 2), today)
     report = (currency or prices.currency(parsed[0][0])).upper()
+    # Money paid on a weekend or holiday buys at the next session, as a real order would; the
+    # previous close (a price from before the date the user gave) is never used. "March 2024"
+    # is that month's first session. Each row states the session used.
+    given = {i: day for i, (_, day, _) in enumerate(parsed)}
+    parsed = [
+        (symbol, _next_session(prices, symbol, day), amount) for symbol, day, amount in parsed
+    ]
 
-    rows, flows, value_total = [], [], 0.0
-    for symbol, day, amount in parsed:
+    rows: list[dict[str, Any]] = []
+    flows: list[tuple[dt.date, float]] = []
+    value_total = 0.0
+    for lot_no, (symbol, day, amount) in enumerate(parsed):
         ccy = prices.currency(symbol)
         units = _convert(prices, provider, amount, report, ccy, day) / prices.close(symbol, day)
         now_value = _convert(
@@ -1311,6 +1329,7 @@ def portfolio_real_return(
             {
                 "symbol": symbol,
                 "date": day.isoformat(),
+                "date_given": given[lot_no].isoformat() if given[lot_no] != day else None,
                 "amount": round(amount, 2),
                 "value_now": round(now_value, 2),
                 "return": _round(now_value / amount - 1.0),
