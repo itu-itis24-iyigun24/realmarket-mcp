@@ -1781,12 +1781,21 @@ def get_financials(
     )
 
 
+def _build_id() -> str | None:
+    """The commit a packaged build was made from (scripts/build_mcpb.py writes it)."""
+    try:
+        from realmarket_mcp import _build  # type: ignore[attr-defined]
+    except ImportError:
+        return None
+    return str(_build.BUILD)
+
+
 def check_setup(setup: dict[str, Any], *, retrieved_at: str, today: dt.date) -> ToolResult:
     """Report which data sources the server will use. Reads only its own configuration."""
     text = json.dumps(setup, sort_keys=True, separators=(",", ":"))
     return ToolResult(
         tool="check_setup",
-        data={"version": __version__, **setup},
+        data={"version": __version__, "build": _build_id(), **setup},
         provenance=(
             Provenance(
                 provider="realmarket-mcp",
@@ -2224,8 +2233,9 @@ PORTFOLIO_NOTES = (
     "transaction's date: a sale realizes proceeds minus average cost of the shares sold. "
     "Fees are added to purchases and deducted from sales. total_pnl = realized + unrealized "
     "+ dividends received. A holding's total_pnl and total_return_on_purchases include shares "
-    "already sold; unrealized_pnl covers only the shares still held. Report the total figures "
-    "for a holding's result, and do not compute other percentages.",
+    "already sold; unrealized_pnl and unrealized_return cover only the shares still held. A "
+    "holding's result is its total_pnl and total_return_on_purchases, and the account's is "
+    "totals.total_pnl and totals.total_return_on_purchases; do not compute other percentages.",
     "Quantities and prices are as traded at the time. Splits and bonus issues (bedelsiz) the "
     "source reports are applied to the shares held, and flagged, unless a 'bonus' "
     "transaction records them. Holdings are valued at traded prices, not dividend-adjusted "
@@ -2516,13 +2526,14 @@ def analyze_portfolio(
                 "price": None if price_now is None else _round(price_now),
                 "market_value": round(value, 2),
                 "weight": _round(value / value_total) if value_total > 0 else None,
+                # The holding's result first: small models take the first return they see.
+                "total_pnl": round(total, 2),
+                "total_return_on_purchases": _round(total / h.bought) if h.bought > 0 else None,
+                "realized_pnl": round(h.realized, 2),
+                "dividends_received": round(h.dividends, 2),
                 "cost_basis": round(h.cost, 2),
                 "unrealized_pnl": round(unrealized, 2),
                 "unrealized_return": _round(unrealized / h.cost) if h.cost > 0 else None,
-                "realized_pnl": round(h.realized, 2),
-                "dividends_received": round(h.dividends, 2),
-                "total_pnl": round(total, 2),
-                "total_return_on_purchases": _round(total / h.bought) if h.bought > 0 else None,
             }
         )
     holdings_out.sort(key=lambda r: -float(r["market_value"]))

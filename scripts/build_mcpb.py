@@ -175,6 +175,16 @@ def stage(out: Path) -> Path:
             shutil.copytree(source, out / item, ignore=ignore)
         else:
             shutil.copy2(source, out / item)
+    # Test builds share a version number; the commit tells them apart (check_setup's "build").
+    commit = subprocess.run(
+        ["git", "-C", str(ROOT), "describe", "--always", "--dirty"],
+        capture_output=True,
+        text=True,
+        check=False,
+    ).stdout.strip()
+    (out / "src" / "realmarket_mcp" / "_build.py").write_text(
+        f'BUILD = "{commit or "unknown"}"\n', encoding="utf-8"
+    )
     (out / "manifest.json").write_text(json.dumps(manifest(), indent=2) + "\n", encoding="utf-8")
     (out / ".mcpbignore").write_text(".venv/\n__pycache__/\n*.pyc\n", encoding="utf-8")
     # Pin every dependency version for the host's uv install.

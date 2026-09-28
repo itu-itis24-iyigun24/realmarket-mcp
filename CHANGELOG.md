@@ -43,6 +43,11 @@
     computed its own, wrongly) and its notes say which per-holding figures include shares
     already sold. `explain_price_move` returns `cause: "Not determined…"` as a data field, and
     the instructions forbid comparisons no tool returned and hedged lists of possible reasons.
+  - A holding's total result now comes before its open-shares-only `unrealized_return`, which
+    a model had reported as the holding's return; `get_news` and `get_price_summary` point
+    "why did it move" questions to `explain_price_move`.
+- `check_setup` reports the `build` (commit) of a packaged extension, so test builds with the
+  same version number can be told apart.
 - `realmarket-qualify` gains a `portfolio` case, and a sentence that refuses advice ("hedef
   fiyat veremiyorum") no longer counts as advice, nor a month ("2024-03") or a quoted data
   version as an unsupported figure. `gemini-3.5-flash-lite` passes 7/7.
