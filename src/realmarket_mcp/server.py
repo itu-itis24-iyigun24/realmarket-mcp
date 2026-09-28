@@ -49,8 +49,10 @@ limit, a source that is down), say so and suggest trying again; do not answer th
 from general knowledge instead. Call a tool with what the user gave; ask a question only when
 a tool refuses without it. Call the tool again for every asset and period asked about; never
 reuse figures from an earlier answer about another asset. Report figures as facts: do not
-attribute a price move or a return to causes, do not split it into parts ("x% came from the
-market"), and do not link news to a move beyond listing it with its date.
+give reasons for a price move or a return (news, the market, a sector, sentiment), do not
+split a move into estimated parts ("x% came from the market"), and do not link news to a move
+beyond listing it with its date. How much each holding added to an account's result may be
+said, as its fact states it.
 """
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True, open_world_hint=True)

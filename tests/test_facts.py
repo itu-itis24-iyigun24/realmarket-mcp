@@ -36,6 +36,7 @@ def test_portfolio_facts_bind_each_figure_to_its_meaning() -> None:
     )
     text = "\n".join(result.facts)
     assert "Toplam kâr/zarar +40,00 TL (alışlara oranla +%13,3)" in text  # (20 + 20) / 300
+    assert "Hesabın toplam sonucu (+40,00 TL) hisselere göre: TTT +20,00 TL, AAA +20,00 TL." in text
     # TTT 200 -> 220 and AAA 100 -> 120 over the same sessions: TTT is behind by 10 points.
     assert "TTT fiyatı ilk alış (2 Ocak 2024) ile son seans (8 Ocak 2024) arasında +%10,0" in text
     assert "Fark -10,0 puan: bu dönemde TTT, AAA karşısında geride." in text

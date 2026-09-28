@@ -20,6 +20,11 @@
   or behind), which the question asks and Haiku had otherwise computed itself ("4 times
   more"). Its description and `compare_real_return`'s now split their ground: one asset over a
   period, or the user's own purchases.
+- `analyze_portfolio` and `portfolio_real_return` facts state how much each holding added to
+  the account's result, in TL. The instructions now separate the two things a model called a
+  "cause": reasons for a price move (never given) and a holding's share of the result
+  (arithmetic, said as the fact states it). With the figures given, Haiku stopped writing
+  "BIMAS was the main driver" in all three portfolio questions.
 - The server instructions lose the rules added for single mistakes (fractions written as
   percentages, figures kept with their windows, dates of the latest session, comparisons no
   tool returned, hedged reasons, web-search additions): the facts now carry each of these.

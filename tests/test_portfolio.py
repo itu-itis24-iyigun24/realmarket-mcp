@@ -55,6 +55,7 @@ def test_value_return_and_real_return(provider: FixtureProvider) -> None:
     assert facts[0].startswith(
         "Toplam 2.500,00 TL yatırıldı; 2 Ocak 2024 itibarıyla değeri 4.000,00 TL, getiri +%60,0."
     )
+    assert any(f.startswith("Toplam kazanç (+1.500,00 TL) alımlara göre:") for f in facts)
 
 
 def test_alternatives_replay_the_same_payments(provider: FixtureProvider) -> None:

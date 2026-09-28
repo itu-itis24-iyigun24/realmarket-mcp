@@ -123,6 +123,18 @@ def portfolio(
             f"{pct(totals['money_weighted_return_annualized'])}."
         )
     facts.append(total_line)
+    # Each holding's share of the account's result: arithmetic, stated so that a summary of
+    # "what made the result" rests on these figures rather than on a reason.
+    holdings = sorted(data["holdings"], key=lambda h: -float(h["total_pnl"]))
+    if len(holdings) > 1:
+        facts.append(
+            f"Hesabın toplam sonucu ({money(totals['total_pnl'], cur, signed=True)}) hisselere "
+            "göre: "
+            + ", ".join(
+                f"{h['symbol']} {money(h['total_pnl'], cur, signed=True)}" for h in holdings
+            )
+            + "."
+        )
 
     for h in data["holdings"]:
         symbol = h["symbol"]
@@ -553,6 +565,17 @@ def portfolio_real(data: Mapping[str, Any]) -> list[str]:
         facts.append(
             f"{lot['symbol']}: {date(lot['date'])} tarihinde {money(lot['amount'], cur)}; bugün "
             f"{money(lot['value_now'], cur)}, getiri {pct(lot['return'])}."
+        )
+    if len(data["lots"]) > 1:
+        gains = sorted(
+            ((lot["symbol"], lot["value_now"] - lot["amount"]) for lot in data["lots"]),
+            key=lambda g: -g[1],
+        )
+        facts.append(
+            f"Toplam kazanç ({money(data['value_now'] - data['invested'], cur, signed=True)}) "
+            "alımlara göre: "
+            + ", ".join(f"{symbol} {money(gain, cur, signed=True)}" for symbol, gain in gains)
+            + "."
         )
     if data.get("real_return") is not None:
         verdict = (
