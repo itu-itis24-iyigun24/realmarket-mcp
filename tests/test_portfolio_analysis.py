@@ -136,3 +136,28 @@ def test_a_recorded_bonus_is_not_applied_twice() -> None:
     )
     assert result.data["holdings"][0]["quantity"] == 20
     assert "split_applied" not in {f.code for f in result.quality_flags}
+
+
+def test_a_month_alone_uses_its_first_session() -> None:
+    result = run([tx("buy", "2023-06", quantity=4)])
+    assert result.data["holdings"][0]["cost_basis"] == 600  # the 2023-06-30 close, 150
+    flag = next(f for f in result.quality_flags if f.code == "date_assumed")
+    assert "buy TTT on 2023-06-30" in flag.message
+
+
+class AsciiSearchProvider(FixtureProvider):
+    """A source that, like Yahoo, finds 'Turk' but not 'Türk'."""
+
+    def search(self, query: str, limit: int) -> Any:
+        return (
+            []
+            if query != query.encode("ascii", "ignore").decode()
+            else super().search(query, limit)
+        )
+
+
+def test_search_retries_without_turkish_letters() -> None:
+    result = tools.search_assets(
+        AsciiSearchProvider(FIXTURES), "Alpha A\u0131rlines", 5, today=TODAY, retrieved_at="x"
+    )
+    assert [r["symbol"] for r in result.data["results"]] == ["AAA"]

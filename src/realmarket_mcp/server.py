@@ -46,7 +46,9 @@ and period asked about; never reuse figures from an earlier answer about another
 each figure with the window it was measured over: some comparisons in one result cover
 different dates, and each says which. Report figures as facts: do not attribute a price move
 or a return to causes, do not split it into parts ("x% came from the market"), and do not
-link news to a move beyond listing it with its date.
+link news to a move beyond listing it with its date. This holds for anything you find
+elsewhere too, such as a web search: do not add causes, technical levels or forecasts to these
+figures. Say which date a figure is from; the latest session is often not today.
 """
 
 READ_ONLY = ToolAnnotations(read_only_hint=True, idempotent_hint=True, open_world_hint=True)
@@ -65,7 +67,10 @@ class Transaction(BaseModel):
         "received at no cost)."
     )
     symbol: str = Field(description="A symbol returned by search_assets.")
-    date: str = Field(description="ISO trade or payment date, e.g. '2024-03-01'.")
+    date: str = Field(
+        description="ISO trade or payment date, e.g. '2024-03-01', or just the month "
+        "('2024-03') when the user gave no day."
+    )
     quantity: float | None = Field(
         default=None, gt=0, description="Shares bought, sold or received (buy, sell, bonus)."
     )
@@ -382,7 +387,9 @@ def build_server() -> MCPServer:
         large the move and the volume were against the stock's recent days, whether it was an
         ex-dividend day, and news or disclosures from the day before to the day after, with
         their dates. Present these side by side; never apportion the move to the market or
-        the company, never state its cause, never predict."""
+        the company, never state its cause, never predict, and do not add causes, technical
+        levels or forecasts from a web search or memory. Name the session's date: without a
+        date, it is the latest completed session, which is often not today."""
         now = _utc_now()
         stamp = _stamp(now)
         return respond(
@@ -415,7 +422,10 @@ def build_server() -> MCPServer:
         currency); best and worst holding; and the current holdings' volatility and maximum
         drawdown over the last year. Use it for "how is my portfolio doing", "which stock lost
         me the most", "what is my cost". For "did my savings keep up with inflation" use
-        portfolio_real_return. Describes the past, not what to buy or sell."""
+        portfolio_real_return. Only symbol, date and quantity are needed: call it with what the
+        user gave rather than asking for prices, days or fees first (missing prices use the
+        day's close, a month alone uses its first session, and the result flags both).
+        Describes the past, not what to buy or sell."""
         now = _utc_now()
         stamp = _stamp(now)
         return respond(

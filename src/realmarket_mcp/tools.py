@@ -366,6 +366,10 @@ def search_assets(
         )
     limit = max(1, min(limit, MAX_SEARCH_RESULTS))
     hits = provider.search(query, limit)
+    folded = query.translate(_TR_ASCII)
+    if not hits and folded != query:
+        # Some sources (Yahoo among them) match 'Turk Hava Yollari' but not 'Türk Hava Yollari'.
+        hits = provider.search(folded, limit)
     results = [asset.to_dict() for asset in hits]
     digest = hashlib.sha256(json.dumps(results, sort_keys=True).encode()).hexdigest()
     return ToolResult(
@@ -2211,7 +2215,10 @@ def get_valuation(
 MAX_TRANSACTIONS = 500
 # Within one day: a split applies to the shares held before that session.
 TRANSACTION_ORDER = {"split": -1, "buy": 0, "bonus": 1, "sell": 2, "dividend": 3}
-SPLIT_MATCH_DAYS = (7, 45)  # a bonus entered this close to a reported split is that split
+SPLIT_MATCH_DAYS = (7, 45)
+MONTH_DATE = re.compile(
+    r"\d{4}-\d{2}"
+)  # a bonus entered this close to a reported split is that split
 PORTFOLIO_NOTES = (
     "Costs use the weighted average cost of each holding, in the report currency at each "
     "transaction's date: a sale realizes proceeds minus average cost of the shares sold. "
@@ -2278,7 +2285,9 @@ def _parse_transactions(
     for i, tx in enumerate(transactions):
         kind = str(tx.get("type", "")).strip().lower()
         symbol = str(tx.get("symbol", "")).strip()
-        day = parse_date(str(tx.get("date", "")), f"transactions[{i}].date")
+        raw_date = str(tx.get("date", "")).strip()
+        month_only = MONTH_DATE.fullmatch(raw_date) is not None
+        day = parse_date(raw_date + "-01" if month_only else raw_date, f"transactions[{i}].date")
 
         def number(key: str, i: int = i, tx: Mapping[str, Any] = tx) -> float | None:
             value = tx.get(key)
@@ -2320,6 +2329,7 @@ def _parse_transactions(
                 "price": price or None,
                 "fee": fee or 0.0,
                 "amount": amount,
+                "month_only": month_only,
             }
         )
     parsed.sort(key=lambda t: (t["date"], TRANSACTION_ORDER[t["type"]], t["index"]))
@@ -2337,6 +2347,17 @@ def analyze_portfolio(
     first_day = parsed[0]["date"]
     start = min(first_day, today - dt.timedelta(days=366)) - dt.timedelta(days=10)
     prices = _Prices(provider, start, today)
+    dated: list[str] = []
+    for t in parsed:
+        if t["month_only"]:
+            # "March 2024": the month's first session, which the result states.
+            _, usable = prices.series(t["symbol"])
+            first = next((b.date for b in usable if b.date >= t["date"]), None)
+            if first is not None and (first.year, first.month) == (t["date"].year, t["date"].month):
+                t["date"] = first
+            dated.append(f"{t['type']} {t['symbol']} on {t['date'].isoformat()}")
+    if dated:
+        parsed.sort(key=lambda t: (t["date"], TRANSACTION_ORDER[t["type"]], t["index"]))
     report = (currency or prices.currency(parsed[0]["symbol"])).upper()
     holdings: dict[str, _Holding] = {}
     flows: list[tuple[dt.date, float]] = []
@@ -2420,6 +2441,15 @@ def analyze_portfolio(
             flows.append((day, received))
         h.timeline.append((day, h.quantity))
 
+    if dated:
+        flags.append(
+            QualityFlag(
+                "date_assumed",
+                Severity.WARNING,
+                "Only the month was given for these transactions; the month's first session was "
+                "used: " + ", ".join(dated[:10]) + ("…" if len(dated) > 10 else "") + ".",
+            )
+        )
     if assumed:
         flags.append(
             QualityFlag(
@@ -2740,12 +2770,16 @@ def explain_price_move(
             )
 
     if target.date != day:
+        weekday = target.date.strftime("%A")
         flags.append(
             QualityFlag(
                 "session_before_date",
-                Severity.INFO,
-                f"No session on {day}; the latest session on or before it, {target.date}, is "
-                "described.",
+                Severity.WARNING,
+                f"No completed session on {day}"
+                + (" (today)" if day == today else "")
+                + f"; the move described is from {weekday} {target.date}, against "
+                f"{previous.date}. Name that date; do not call it "
+                + ("today's move." if day == today else f"the move on {day}."),
             )
         )
     return ToolResult(

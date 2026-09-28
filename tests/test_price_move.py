@@ -7,7 +7,7 @@ import datetime as dt
 import pytest
 
 from realmarket_mcp import tools
-from realmarket_mcp.contract import ErrorCode, ToolError
+from realmarket_mcp.contract import ErrorCode, Severity, ToolError
 from realmarket_mcp.models import AssetClass, AssetRef, Bar, NewsItem, PriceSeries
 
 DAYS = [dt.date(2026, 6, 1) + dt.timedelta(days=i) for i in range(70)]
@@ -87,9 +87,12 @@ def test_the_move_is_described_next_to_the_market_without_attribution() -> None:
 
 def test_a_date_without_a_session_uses_the_one_before() -> None:
     later = DAYS[-1] + dt.timedelta(days=3)
-    result = tools.explain_price_move(Provider(), "STK", later.isoformat(), today=later)
+    result = tools.explain_price_move(Provider(), "STK", None, today=later)
     assert result.data["session"] == DAYS[-1].isoformat()
-    assert "session_before_date" in {f.code for f in result.quality_flags}
+    (flag,) = [f for f in result.quality_flags if f.code == "session_before_date"]
+    # A warning the model must state: the latest session is not "today".
+    assert flag.severity is Severity.WARNING
+    assert "(today)" in flag.message and "do not call it today's move" in flag.message
     assert result.data["news"] == []  # no news source given
     assert "no_articles" not in {f.code for f in result.quality_flags}
 

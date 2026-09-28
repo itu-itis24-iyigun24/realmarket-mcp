@@ -25,6 +25,15 @@
 - **`realmarket-adapter-check`** calls every adapter endpoint through realmarket's own code and
   reports PASS, WARN, FAIL or SKIP for each, including the exchange-rate, gold and benchmark
   series comparisons depend on. A firm runs it before connecting.
+- Found in a Claude Desktop test with a small model:
+  - `search_assets` retries without Turkish letters when a name finds nothing ("Türk Hava
+    Yolları" returned nothing from Yahoo, so the model concluded Turkish shares were not
+    covered).
+  - `analyze_portfolio` accepts a month alone ("2024-03") and uses its first session, flagged
+    `date_assumed`; its description tells the model to call it rather than ask for prices first.
+  - `explain_price_move` warns, not just notes, when the latest session is not today, and says
+    to name its date; the instructions also forbid adding causes, technical levels or forecasts
+    found elsewhere, such as in a web search.
 - Funds can be served by an adapter like any asset (`asset_class` `fund`).
 - `docs/integration.md` describes support and pilots, and that the firm's backend shows
   customers the final answer only, never the model's reasoning.
