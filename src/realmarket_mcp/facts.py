@@ -165,12 +165,20 @@ def portfolio(
             "temettü hariç fiyat değişimidir; bu rakam hissenin yukarıdaki toplam sonucundan "
             "farklıdır."
         )
-    if "account_comparison" in data and compared:
-        facts.append(
-            f"Hesabın toplamı {compared[0]['comparison']['with']} ile karşılaştırılmaz: para "
-            "farklı günlerde girip çıktığı için ikisini aynı döneme koymak mümkün değil. "
-            "Karşılaştırma yalnızca hisse bazındadır."
-        )
+    if "account_comparison" in data:
+        a = data["account_comparison"]
+        if a and a["difference"] is not None:
+            facts.append(
+                f"Hesabın tamamı: paranın girip çıktığı günler hesaba katıldığında hesabın yıllık "
+                f"getirisi {pct(a['money_weighted_return_annualized'])}. {a['with']} fiyatının "
+                f"aynı günlerdeki değişimi aynı tutarlara uygulandığında yıllık getiri "
+                f"{pct(a['comparison_money_weighted_return_annualized'])} olurdu "
+                f"({date(a['from'])} – {date(a['to'])}). Fark {points(a['difference'])}: hesap "
+                f"{a['with']} karşısında {_ahead(a['difference'])}. {a['with']} temettü içermez; "
+                "hesabın getirisi yalnızca işlemlerde girilen temettüleri içerir."
+            )
+        else:
+            facts.append("Hesabın tamamı için karşılaştırma hesaplanamadı (uyarılara bakın).")
     return facts
 
 

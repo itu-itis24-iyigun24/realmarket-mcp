@@ -19,6 +19,7 @@ from realmarket_mcp.providers.fixture import FixtureProvider
 
 FIXTURES = Path(__file__).parent / "fixtures" / "basic"
 TODAY = dt.date(2024, 1, 10)
+LATER = dt.date(2025, 1, 10)  # a year on: an annual rate over 8 days overflows
 
 
 def tx(kind: str, day: str, **values: Any) -> dict[str, Any]:
@@ -169,7 +170,7 @@ def test_comparison_covers_each_holdings_own_period() -> None:
         FixtureProvider(FIXTURES),
         [tx("buy", "2024-01-02", quantity=1)],
         compare_with="AAA",
-        today=TODAY,
+        today=LATER,
     )
     # TTT 200 -> 220 from 2024-01-02 to the last session; AAA 100 -> 120 on the same days.
     assert result.data["holdings"][0]["comparison"] == {
@@ -180,8 +181,14 @@ def test_comparison_covers_each_holdings_own_period() -> None:
         "comparison_return": pytest.approx(0.2),
         "difference": pytest.approx(-0.1),
     }
-    assert any("no account-level comparison" in n for n in result.notes)
-    assert result.data["account_comparison"].startswith("Not computed")
+    # The account's cash flows replayed in AAA: 200 TL buys 2 units at 100, worth 240 at 120.
+    account = result.data["account_comparison"]
+    assert account["from"] == "2024-01-02" and account["to"] == "2024-01-08"
+    ours = tools.xirr([(dt.date(2024, 1, 2), -200.0), (LATER, 220.0)])
+    theirs = tools.xirr([(dt.date(2024, 1, 2), -200.0), (LATER, 240.0)])
+    assert account["money_weighted_return_annualized"] == pytest.approx(ours, abs=1e-5)
+    assert account["comparison_money_weighted_return_annualized"] == pytest.approx(theirs, abs=1e-5)
+    assert account["difference"] < 0
 
 
 def test_a_sold_out_holding_is_compared_up_to_the_sale() -> None:

@@ -11,8 +11,11 @@
 - **`analyze_portfolio` `compare_with`**: only when the user asks, each holding gets another
   symbol's move (BIST 100, BIST 30, gold, any asset) over the holding's own period, from its
   first purchase to the last session or the day it was sold out, beside its own price move.
-  There is deliberately no account-level comparison (money went in on different days), and the
-  result says so in a data field.
+  `account_comparison` answers for the whole account: the account's money-weighted annual
+  return beside the same figure for the other symbol, computed by replaying the account's own
+  purchases, sales and dividends in it on their days. Without it, Haiku set the account's
+  total return against the index's return over a different period, and reached the opposite
+  conclusion (for the test account: +15.3% a year against +12.1%, the account ahead).
 - A tool called with an argument it does not have now refuses with `invalid_argument` and the
   list of valid arguments. The SDK used to drop it silently: Haiku passed a made-up
   `benchmark` to `analyze_portfolio` and believed it had been applied.

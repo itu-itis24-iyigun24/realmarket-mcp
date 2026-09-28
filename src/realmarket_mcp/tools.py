@@ -2612,7 +2612,15 @@ def analyze_portfolio(
                 "total_return_on_purchases": ranked[0]["total_return_on_purchases"],
             },
             "risk_last_year": _holdings_risk(prices, open_rows, report, today, flags),
-            **({"account_comparison": ACCOUNT_COMPARISON} if compare_with else {}),
+            **(
+                {
+                    "account_comparison": _account_comparison(
+                        prices, flows, compare_with, report, flags
+                    )
+                }
+                if compare_with
+                else {}
+            ),
         },
         provenance=tuple(prices.provenance),
         quality_flags=tuple(prices.flags + flags),
@@ -2628,22 +2636,71 @@ def analyze_portfolio(
     return dataclasses.replace(result, facts=tuple(facts))
 
 
-# A field, not only a note: small models set the account total against an index otherwise.
-ACCOUNT_COMPARISON = (
-    "Not computed. Money went in and out on different days, so no single index period matches "
-    "the account: do not set the account's total return against an index return. Compare per "
-    "holding, with each holding's comparison."
-)
-
 COMPARISON_NOTE = (
     "comparison (asked for with compare_with): each holding's price move from its first "
     "purchase to the last session, or to the day it was sold out, beside compare_with's move "
     "over the same sessions. Both are price moves (split-adjusted, dividends excluded; an "
     "index such as XU100 is a price index), so the holding's figure differs from its "
-    "total_return_on_purchases. There is no account-level comparison: money went in on "
-    "different days. Report the two figures side by side as facts, per holding; they say "
-    "nothing about why, and the index is not something the customer could have bought."
+    "total_return_on_purchases. account_comparison sets the account's money-weighted annual "
+    "return beside the same figure for compare_with, computed by applying compare_with's "
+    "price moves to the account's own cash flows (every purchase, sale and dividend on its "
+    "day), so both cover the same money over the same days. The figures say nothing about "
+    "why, and an index is not something the customer could have bought."
 )
+
+
+def _account_comparison(
+    prices: _Prices,
+    flows: Sequence[tuple[dt.date, float]],
+    other: str,
+    report: str,
+    flags: list[QualityFlag],
+) -> dict[str, Any] | None:
+    """The account's money-weighted return beside other's, over the same cash flows: each
+    purchase buys, and each sale or dividend sells, that day's worth of other's units."""
+    series, theirs = prices.series(other)
+    if series.currency.upper() != report:
+        flags.append(
+            QualityFlag(
+                "comparison_unavailable",
+                Severity.WARNING,
+                f"No account-level comparison: {other} is in {series.currency}, the account "
+                f"is reported in {report}.",
+            )
+        )
+        return None
+    *cash, (end, _) = flows
+    units = 0.0
+    for day, cf in cash:
+        bar = _as_of(theirs, day)
+        if bar is None:
+            return None
+        units -= cf / _close(bar)
+        if units < -1e-9:
+            flags.append(
+                QualityFlag(
+                    "comparison_unavailable",
+                    Severity.WARNING,
+                    f"No account-level comparison: by {day} the account had taken out more "
+                    f"than the same money would have been worth in {other}.",
+                )
+            )
+            return None
+    last = _as_of(theirs, end)
+    if last is None:
+        return None
+    ours = xirr(flows)
+    theirs_return = xirr([*cash, (end, units * _close(last))])
+    return {
+        "with": other,
+        "from": cash[0][0].isoformat(),
+        "to": last.date.isoformat(),
+        "money_weighted_return_annualized": _round(ours),
+        "comparison_money_weighted_return_annualized": _round(theirs_return),
+        "difference": None
+        if ours is None or theirs_return is None
+        else _round(ours - theirs_return),
+    }
 
 
 def _split_adjusted(bar: Bar) -> float:

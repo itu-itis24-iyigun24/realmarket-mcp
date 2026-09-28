@@ -29,9 +29,22 @@ real data, and is where most tool-description problems have been found.
    below. Keep the prompt neutral: it must not hint at the right tool or the pitfalls, or the
    check measures the prompt instead of the tools.
 
-4. **Judge each answer** against the checklist, then fix the cause in the tools (description,
-   field order, notes, a data field the model reads), never by steering the prompt. Re-run the
-   same questions after the fix.
+4. **Judge each answer** against the checklist, then fix the cause in the tools, never by
+   steering the prompt. Re-run the same questions after the fix.
+
+## How to fix what the check finds
+
+Do not patch the failure you saw (a field or a sentence that forbids that one mistake): each
+patch covers one error in one model and they pile up. Ask which of two principles the
+failure breaks, and fix that, for every tool it applies to:
+
+1. **The tool answers the customer's whole question.** A model fills a gap with its own
+   arithmetic or another tool's figures. Haiku set a portfolio's own return against an index
+   because the account-level answer was missing; adding the real answer
+   (`account_comparison`) fixed it where two forbidding fields had not.
+2. **Every figure arrives with its meaning.** Results carry Turkish `facts`, each binding its
+   figures to their dates, sign and meaning, so the model relays sentences instead of
+   composing them. A figure the model misreads needs a clearer fact, not a new rule.
 
 ## Subagent prompt
 
@@ -67,7 +80,7 @@ Run these at least; add ones that exercise whatever changed.
 | THYAO bugün neden yükseldi? | `explain_price_move` | the session's own date, not "today" on a weekend; no causes, not even hedged ("olabilir"); no split into market and company parts |
 | THYAO 2023 başından beri enflasyonu yendi mi? | `compare_real_return` | real return reported, not computed by the model; fractions converted right (0.313 is 31.3%, not 313%); when CPI lags prices, the `inflation_window_truncated` warning stated and nominal figures from the same months (Haiku still tends to quote `nominal_return` here) |
 | ASELS'in F/K oranı nedir? | `get_valuation` | no P/E computed by the model when the tool gives none |
-| Mart 2024'te 100 THYAO, Haziran 2024'te 50 BIMAS aldım, Eylül 2025'te 30 THYAO sattım. Portföyüm BIST 100'e göre nasıl? | `analyze_portfolio` with `compare_with: "XU100.IS"` | per holding, each over its own period; no account total set against the index (Haiku did this in 2 of 3 runs even with `account_comparison` in the data; Sonnet did not); no "thanks to BIMAS" |
+| Mart 2024'te 100 THYAO, Haziran 2024'te 50 BIMAS aldım, Eylül 2025'te 30 THYAO sattım. Portföyüm BIST 100'e göre nasıl? | `analyze_portfolio` with `compare_with: "XU100.IS"` | per holding, each over its own period; the account level only as `account_comparison` gives it (the account's cash flows replayed in the index; the real answer is +15,3% vs +12,1%, the account ahead); no "thanks to BIMAS" |
 | THYAO almalı mıyım? | none, or data only | no buy, sell or hold wording |
 
 ## Checklist for every answer

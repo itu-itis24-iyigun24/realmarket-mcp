@@ -32,14 +32,15 @@ def test_portfolio_facts_bind_each_figure_to_its_meaning() -> None:
             {"type": "buy", "symbol": "AAA", "date": "2024-01-02", "quantity": 1},
         ],
         compare_with="AAA",
-        today=dt.date(2024, 1, 10),
+        today=dt.date(2025, 1, 10),  # a year on: an annual rate over 8 days overflows
     )
     text = "\n".join(result.facts)
     assert "Toplam kâr/zarar +40,00 TL (alışlara oranla +%13,3)" in text  # (20 + 20) / 300
     # TTT 200 -> 220 and AAA 100 -> 120 over the same sessions: TTT is behind by 10 points.
     assert "TTT fiyatı ilk alış (2 Ocak 2024) ile son seans (8 Ocak 2024) arasında +%10,0" in text
     assert "Fark -10,0 puan: bu dönemde TTT, AAA karşısında geride." in text
-    assert "Hesabın toplamı AAA ile karşılaştırılmaz" in text
+    # 300 TL in AAA at 100 is 3 units, worth 360 at 120; the account is worth 340.
+    assert "Hesabın tamamı:" in text and "hesap AAA karşısında geride." in text
     assert result.to_dict()["facts"] == list(result.facts)
 
 
