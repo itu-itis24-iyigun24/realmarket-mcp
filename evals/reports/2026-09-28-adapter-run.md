@@ -43,7 +43,12 @@ question answered with the previous question's portfolio.
 3. **Dividends not entered, summed by the model.** The account-level fact now states their
    total along with the result including them.
 
-## Still open
+## Afterwards: assets in different currencies
 
-- `compare_assets` puts assets in different currencies side by side as percentages; the
-  fact notes the currencies, but a model can still name a winner across them.
+`compare_assets` now measures assets priced in different currencies in one (TRY when one of
+them is in TRY) and ranks them there; without a rate it ranks nothing across currencies. The
+real-return fact giving an asset's return in dollars now names the asset: Haiku had read
+"XU100 in dollars, -0.87%" as the dollar's own return. Re-run of the two affected questions
+(KCHOL or gold; gold, the dollar and BIST 100): Sonnet 2 / 2, Haiku 6 / 6 after the second
+fix (gold +32.0% in TL, the dollar +17.8%, BIST 100 +16.8%; gold +311.9% in TL against
+KCHOL's +71.9% over three years, the same figure `compare_real_return` gives).
