@@ -146,6 +146,20 @@ def test_cli_writes_a_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     assert report["cases"][0]["calls"][0]["tool"] == "get_price_summary"
 
 
+def test_cli_passes_the_reply_timeout_to_the_model_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: dict[str, Any] = {}
+
+    def client(*_a: Any, **kwargs: Any) -> Any:
+        seen.update(kwargs)
+        return careful_model
+
+    monkeypatch.setattr(qualify, "openai_chat", client)
+    qualify.main(["--base-url", "http://x/v1", "--model", "m", "--timeout", "300"])
+    assert seen["timeout"] == 300.0
+    qualify.main(["--base-url", "http://x/v1", "--model", "m"])
+    assert seen["timeout"] == 120.0
+
+
 def test_an_unreachable_model_server_stops_the_run(monkeypatch: pytest.MonkeyPatch) -> None:
     asked: list[str] = []
 

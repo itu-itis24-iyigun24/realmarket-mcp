@@ -822,11 +822,24 @@ def main(argv: list[str] | None = None) -> int:
         default=0.0,
         help="minimum seconds between requests, for rate-limited free tiers (e.g. 6)",
     )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=120.0,
+        help="seconds to wait for one model reply (default 120); raise it for a slow local "
+        "model that reasons at length over large tool results",
+    )
     args = parser.parse_args(argv)
     if args.live and not args.cases:
         parser.error("--live needs --cases: the built-in questions are about the synthetic ORNEK")
     api_key = os.environ.get(args.api_key_env, "") if args.api_key_env else None
-    chat = openai_chat(args.base_url, args.model, api_key=api_key or None, interval=args.interval)
+    chat = openai_chat(
+        args.base_url,
+        args.model,
+        api_key=api_key or None,
+        timeout=args.timeout,
+        interval=args.interval,
+    )
     cases = load_cases(args.cases) if args.cases else CASES
     try:
         print(f"Testing {args.model}: {len(cases)} cases, at most {args.max_minutes:g} minutes.")
