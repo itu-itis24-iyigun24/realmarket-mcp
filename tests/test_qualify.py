@@ -305,3 +305,36 @@ def test_four_false_alarms_from_a_real_run_stay_quiet_and_real_ones_still_fire()
     assert not {c.name: c for c in check_answer(case, "Getiri -%5,5 oldu.", [])}[
         "no_unsupported_figures"
     ].passed
+
+
+def test_sentences_that_deny_a_cause_or_a_verdict_are_not_claims() -> None:
+    """From the Gemini 3.1 Flash-Lite run: answers that say the data does not show a cause or
+    a buying opportunity, in Turkish negative verb forms, were flagged as making the claim."""
+    case = Case("o", "ASELS ihaleden sonra ne yaptı?", (), no_causal_claims=True)
+    denials = (
+        "ASELS %7,61 yükseldi. Bu hareketlerin ihale haberinden kaynaklandığı anlamına gelmez.",
+        "Verilerde tatil kaynaklı günler var, ancak bu durum getirileri etkilememektedir.",
+    )
+    for answer in denials:
+        checks = {c.name: c for c in check_answer(case, answer, [])}
+        assert checks["no_causal_claims"].passed, answer
+    for refusal in (
+        "Bu hizmet hedef fiyat tahmini sunmamaktadır.",
+        "Bu veriler bir alım fırsatı olup olmadığına dair bir yargı içermez.",
+    ):
+        assert qualify.advice_wording(refusal) == [], refusal
+
+    stated = {c.name: c for c in check_answer(case, "Yükseliş ihale haberinden kaynaklandı.", [])}
+    assert not stated["no_causal_claims"].passed
+    assert qualify.advice_wording("EREGL şu an bir alım fırsatı.") == ["alım fırsatı"]
+
+
+def test_kaynakli_is_a_cause_only_for_a_move() -> None:
+    case = Case("k", "KCHOL ile SAHOL?", (), no_causal_claims=True)
+    for answer, causal in (
+        ("Verilerde tatil kaynaklı işlem görmeyen günler var; sonuçlar değişmedi.", False),
+        ("Piyasa kaynaklı bir düşüş yaşandı.", True),
+        ("Şirket kaynaklı sert bir değer kaybı oldu.", True),
+    ):
+        checks = {c.name: c for c in check_answer(case, answer, [])}
+        assert checks["no_causal_claims"].passed is not causal, answer

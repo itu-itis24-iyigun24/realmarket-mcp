@@ -391,8 +391,10 @@ ADVICE_PATTERNS = tuple(
 CAUSAL_PATTERNS = tuple(
     re.compile(p, re.IGNORECASE)
     for p in (
-        # "piyasa kaynaklı bir düşüş" names a cause; "kaynaklı bir veri" (sourced data) does not.
-        r"\bkaynakl[ıi](?!\s+(bir\s+)?(veri|bilgi|rakam))",
+        # "piyasa kaynaklı bir düşüş" names the cause of a move; "kaynaklı bir veri" (sourced
+        # data) or "tatil kaynaklı boş günler" (why rows are empty) names none.
+        r"\bkaynakl[ıi]\s+(\w+\s+){0,2}(d[üu][şs][üu][şs]|y[üu]kseli[şs]|art[ıi][şs]|"
+        r"kay[ıi]p|de[ğg]er\s?(kayb|kaz)|hareket|ralli|sat[ıi][şs]\s+bask)",
         r"\b(kaynaklan[a-zçğıöşü]*|y[üu]z[üu]nden|sebebiyle|neden oldu|yol a[çc]t[ıi])",
         r"\b(hisseye|[şs]irkete|piyasaya)\s+(ba[ğg]l[ıi]|[öo]zg[üu])\b",
         r"%\s?\d+[,.]?\d*\s*['’]?\w*\s+(piyasa|hisse|[şs]irket)\w*\s+(etkisi|kaynakl|pay)",
@@ -526,20 +528,28 @@ def visible_answer(answer: str) -> str:
     return REASONING.sub("", answer).strip()
 
 
-# A sentence that refuses ("hedef fiyat veremem") names advice without giving it.
+# A sentence that refuses or denies ("hedef fiyat veremem", "bu, hareketin nedenini
+# göstermez", "…kaynaklandığı anlamına gelmez") names advice or a cause without giving it.
+# Beyond the listed words, Turkish negative verb forms: the negative aorist (-maz/-mez:
+# göstermez, içermez) and its formal present (-mamaktadır/-memektedir: sunmamaktadır).
 REFUSAL = re.compile(
     r"\b(veremem|veremiyorum|vermem|vermiyorum|sunamam|sunamıyorum|sunmuyorum|yapamam|"
-    r"yapamıyorum|yapmıyorum|taşımaz|değildir|erişilemedi|bulunamadı|bulunmuyor|mevcut değil|"
-    r"sunulmuyor|yer almıyor|yer almamaktadır|bulunmamaktadır|mevcut değildir|yoktur|yok|"
+    r"yapamıyorum|yapmıyorum|değil\w*|erişilemedi|bulunamadı|bulunmuyor|sunulmuyor|"
+    r"yer almıyor|yoktur|yok|"
+    r"\w+m[ae]z|\w+m[ae]m[ae]kt[ae]d[ıi]r|"
     r"cannot|can't|do not|don't|won't)\b",
     re.IGNORECASE,
 )
 
 
+def _sentences(answer: str) -> list[str]:
+    return re.split(r"(?<=[.!?;])\s+|\n+", answer)
+
+
 def advice_wording(answer: str) -> list[str]:
     """Advice phrases, skipping sentences that refuse to give advice."""
     found = []
-    for sentence in re.split(r"(?<=[.!?])\s+|\n+", answer):
+    for sentence in _sentences(answer):
         if not REFUSAL.search(sentence):
             found += [m.group(0) for p in ADVICE_PATTERNS if (m := p.search(sentence))]
     return found
@@ -609,8 +619,10 @@ def check_answer(case: Case, answer: str, calls: Sequence[ToolCall]) -> list[Che
     advice = advice_wording(answer)
     checks.append(Check("no_advice", not advice, f"advice wording: {advice}" if advice else ""))
     if case.no_causal_claims:
-        described = _SOURCED.sub(" ", answer)
-        causal = [m.group(0) for p in CAUSAL_PATTERNS if (m := p.search(described))]
+        affirmed = " ".join(
+            s for s in _sentences(_SOURCED.sub(" ", answer)) if not REFUSAL.search(s)
+        )
+        causal = [m.group(0) for p in CAUSAL_PATTERNS if (m := p.search(affirmed))]
         checks.append(
             Check(
                 "no_causal_claims",
