@@ -60,6 +60,12 @@ Elinizde bir veri API'si varsa iş büyük ölçüde bir biçim çevirisidir.
 | `/peers` | Hayır | Sektör kıyası: "ucuz mu?" diye soran müşteriye hüküm yerine şirketin PD/DD'sini benzerleriyle yan yana verir |
 | `/news` | Hayır | KAP bildirimleri ve haberler |
 
+Hangi isteğe bağlı uçları sunduğunuzu `/meta` içinde `endpoints` alanıyla bildirin
+(ör. `["financials", "peers"]`). realmarket modele yalnızca verisini sunduğunuz araçları
+gösterir: `financials` yoksa değerleme ve finansal tablo araçları, `news` yoksa haber aracı
+listede olmaz. F/K, PD/DD ya da haberleri modelinize kendi platformunuzdan veriyorsanız bu
+uçları hiç yazmanıza gerek yoktur.
+
 Başlangıç noktası: `examples/adapter/serve_files.py` (yalnızca standart kütüphane; dosyadan
 okuyan kısımları kendi kaynağınıza yönlendirirsiniz).
 
@@ -70,7 +76,8 @@ REALMARKET_HTTP_TOKEN=... realmarket-adapter-check --url https://veri.kurum.inte
 ```
 
 Her uç için GEÇTİ / UYARI / KALDI / ATLANDI raporu verir; atlanan isteğe bağlı bir parça,
-hangi özelliğin çalışmayacağını söyler. Test aracı, realmarket'in çalışırken kullandığı kodla
+hangi özelliğin çalışmayacağını söyler. `/meta`'da bildirip sunmadığınız bir uç KALDI,
+sunup bildirmediğiniz bir uç UYARI olarak görünür. Test aracı, realmarket'in çalışırken kullandığı kodla
 aynı kodu kullanır: burada geçen üretimde de çalışır.
 
 ### 3. realmarket'i çalıştırın
@@ -94,12 +101,19 @@ realmarket-mcp --transport http --host 127.0.0.1 --port 8000
   realmarket OECD enflasyonuna, AB şirket raporlarına (ESEF) ve GDELT haberlerine bağlanmaz;
   bir bölgenin enflasyonu için kaynak ayarlanmamışsa (ör. ABD hisseleri için ABD enflasyonu)
   ilgili araç bunu söyleyerek durur. `on` bu kaynakları açar.
+
+Adaptörle çalışırken realmarket, soruyu soranın kurumun müşterisi olduğunu varsayar:
+`check_setup` aracı modele gösterilmez; ayarlanmamış bir veri istendiğinde model müşteriye
+"bu hizmette yok" der, ayar ya da kaynak adı söylemez. Hangi ayarın eksik olduğu sunucu
+kaydına (log) uyarı olarak yazılır.
 - `REALMARKET_AUDIT_LOG`: her araç çağrısının denetim kaydı (bkz. `integration.md`).
 - Anahtarlar yalnızca ortam ayarlarında durur; hiçbir cevapta ya da kayıtta yazılmaz.
 
 ### 4. Modeli bağlayın ve sınayın
 
-Modelinizi MCP istemcisiyle `http://127.0.0.1:8000/mcp` adresine bağlayın. Sunucu, kullanım
+Modelinizi MCP istemcisiyle `http://127.0.0.1:8000/mcp` adresine bağlayın. Araç listesi
+sunucu açılırken adaptörün `/meta` cevabından belirlenir; `endpoints` alanını değiştirirseniz
+realmarket'i yeniden başlatın. Sunucu, kullanım
 talimatlarını bağlantı sırasında gönderir; bunları modelin bağlamında tutun. Canlıya
 almadan önce modelinizi sınayın:
 

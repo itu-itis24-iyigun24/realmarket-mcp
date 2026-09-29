@@ -63,6 +63,9 @@ Fetch = Callable[[str, Mapping[str, str]], bytes]
 URL_ENV = "REALMARKET_HTTP_URL"
 TOKEN_ENV = "REALMARKET_HTTP_TOKEN"
 API_VERSION = 1
+# The optional endpoints an adapter can declare in /meta "endpoints". A declared list decides
+# which tools the server offers; an adapter that declares none gets every tool, as before.
+OPTIONAL_ENDPOINTS = frozenset({"financials", "peers", "news"})
 META_CACHE_SECONDS = 3600
 SOURCE = "the data adapter"
 
@@ -112,6 +115,9 @@ class HttpAdapterProvider:
         self.gold_usd_symbol = str(meta["gold_usd_symbol"])
         self._fx_pattern = str(meta["fx_symbol"])
         self._benchmarks = {str(k).upper(): str(v) for k, v in meta.get("benchmarks", {}).items()}
+        declared = meta.get("endpoints")
+        # None: the adapter does not say which optional endpoints it serves.
+        self.endpoints: frozenset[str] | None = None if declared is None else frozenset(declared)
         if meta.get("attribution"):
             register_attribution(self.name, str(meta["attribution"]))
 
@@ -142,6 +148,12 @@ class HttpAdapterProvider:
                 raise _bad(f"/meta has no {key}")
         if "{base}" not in meta["fx_symbol"] or "{quote}" not in meta["fx_symbol"]:
             raise _bad("/meta fx_symbol must contain {base} and {quote}")
+        endpoints = meta.get("endpoints")
+        if endpoints is not None and (
+            not isinstance(endpoints, list)
+            or not all(isinstance(e, str) and e in OPTIONAL_ENDPOINTS for e in endpoints)
+        ):
+            raise _bad(f"/meta endpoints must list only: {', '.join(sorted(OPTIONAL_ENDPOINTS))}")
         _meta_cache[self._base] = (time.monotonic(), meta)
         return meta
 
@@ -334,6 +346,7 @@ class HttpAdapterNewsProvider:
                     "The data adapter does not serve news.",
                     "News comes from the adapter's optional /news endpoint (docs/adapter-api.md);"
                     " ask whoever runs the adapter, or set REALMARKET_NEWS_PROVIDER=gdelt.",
+                    setting=True,
                 ) from None
             raise
         try:

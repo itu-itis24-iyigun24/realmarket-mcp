@@ -623,11 +623,11 @@ class ToolRunner:
     def __init__(self) -> None:
         import anyio
 
-        from realmarket_mcp.server import INSTRUCTIONS, build_server
+        from realmarket_mcp.server import build_server, instructions
 
         self._anyio = anyio
         self._server = build_server()
-        self.instructions = INSTRUCTIONS
+        self.instructions = instructions()
         listed = anyio.run(self._server.list_tools)
         self.tools: list[Message] = [
             {

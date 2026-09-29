@@ -229,6 +229,7 @@ def test_adapter_check_reports_each_endpoint() -> None:
     results = adapter_check.run_checks(lambda: provider(FakeAdapter()), "THYAO", today=today)
     status = {r.name: r.status for r in results}
     assert status["/meta"] == status["/search"] == "PASS"
+    assert status["/meta endpoints"] == "WARN"  # not declared: every tool is offered
     assert status["/bars"] == "WARN"  # served, but with a missing close
     assert status["/bars exchange rate"] == "WARN"  # the fake serves THYAO bars only
     assert status["price summary"] == "FAIL"  # two bars, one usable: a real finding
@@ -253,6 +254,19 @@ def test_adapter_check_reports_each_endpoint() -> None:
     )
     assert [(r.name, r.status) for r in bad_meta] == [("/meta", "FAIL")]
     assert "failed" in adapter_check.render(bad_meta)
+
+
+def test_adapter_check_matches_served_endpoints_with_the_declaration() -> None:
+    from realmarket_mcp import adapter_check
+
+    # Declares news it does not serve; serves peers it does not declare.
+    fake = FakeAdapter(**{"/meta": {**META, "endpoints": ["news"]}, "/peers": PEERS})
+    results = adapter_check.run_checks(lambda: provider(fake), "THYAO", today=dt.date(2026, 9, 27))
+    by_name = {r.name: r for r in results}
+    assert by_name["/meta endpoints"].status == "PASS"
+    assert by_name["/news"].status == "FAIL" and "declared" in by_name["/news"].detail
+    assert by_name["/peers"].status == "WARN" and "not declared" in by_name["/peers"].detail
+    assert by_name["/financials"].status == "SKIP"  # neither declared nor served
 
 
 def test_a_fund_served_by_the_adapter_works_like_any_asset() -> None:

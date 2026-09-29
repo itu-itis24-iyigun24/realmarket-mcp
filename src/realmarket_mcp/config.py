@@ -61,7 +61,42 @@ def require_foreign_sources(source: str, env: Mapping[str, str] | None = None) -
             "This deployment uses only the firm's data adapter and the sources its operator "
             f"configured. The operator can allow sources abroad with {FOREIGN_SOURCES_ENV}=on.",
             {"source": source},
+            setting=True,
         )
+
+
+def firm_mode(env: Mapping[str, str] | None = None) -> bool:
+    """The server runs inside a firm's service (the data adapter is its price source): the
+    person asking is the firm's customer, who cannot change the server's settings."""
+    return price_provider_choice(env) == "http"
+
+
+# Tools that only work when the adapter serves an optional endpoint.
+ENDPOINT_TOOLS = {"financials": ("get_financials", "get_valuation"), "news": ("get_news",)}
+
+
+def hidden_tools(env: Mapping[str, str], served: frozenset[str] | None) -> set[str]:
+    """Tools a firm's deployment does not offer: those whose data the firm does not provide
+    through this server (it may give them to its model some other way), and check_setup, which
+    is for whoever runs the server, not the firm's customer. ``served`` is the adapter's
+    declared optional endpoints; None (not declared) hides nothing on that account."""
+    if not firm_mode(env):
+        return set()
+    hidden = {"check_setup"}
+    if not foreign_sources_allowed(env):
+        hidden.add("find_official_filer")
+    news = news_provider_choice(env)
+    if news == "none" or (news == "http" and served is not None and "news" not in served):
+        hidden.update(ENDPOINT_TOOLS["news"])
+    # An SEC e-mail the operator set still serves US companies' statements.
+    if served is not None and "financials" not in served and sec.contact_from(env) is None:
+        hidden.update(ENDPOINT_TOOLS["financials"])
+    return hidden
+
+
+def adapter_endpoints() -> frozenset[str] | None:
+    """The optional endpoints the configured adapter declares (reads its /meta)."""
+    return _http_adapter("1970-01-01T00:00:00Z").endpoints
 
 
 def news_provider_choice(env: Mapping[str, str] | None = None) -> str:
@@ -214,6 +249,7 @@ def load_price_provider(*, retrieved_at: str) -> PriceProvider:
         f"Unknown price provider {choice!r}.",
         f"Set {PROVIDER_ENV} to one of: yahoo, http, fixture.",
         {"provider": choice},
+        setting=True,
     )
 
 
@@ -372,6 +408,7 @@ def load_news_provider(retrieved_at: str = "") -> NewsProvider:
         f"Set {NEWS_PROVIDER_ENV}=gdelt (or http, for the data adapter's news) in the MCP "
         "server's environment to enable news search.",
         {"provider": choice},
+        setting=True,
     )
 
 
@@ -391,6 +428,7 @@ def load_financials_provider(
             ErrorCode.UNSUPPORTED,
             f"Unknown financials provider {choice!r}.",
             f"Set {FINANCIALS_PROVIDER_ENV} to one of: auto, sec, price.",
+            setting=True,
         )
     from realmarket_mcp.providers import esef
 
@@ -453,5 +491,6 @@ def _price_financials(retrieved_at: str, *, us_symbol: bool = False) -> Financia
             ErrorCode.UNSUPPORTED,
             f"The {provider.name} provider has no financial statements.",
             f"Set {PROVIDER_ENV}=yahoo, or {sec.CONTACT_ENV} for US companies.",
+            setting=True,
         )
     return cast(FinancialsProvider, provider)

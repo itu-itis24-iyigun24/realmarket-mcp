@@ -2,15 +2,25 @@
 
 ## Unreleased
 
+- **A firm's deployment offers only what the firm provides.** The adapter's `/meta` may list
+  the optional endpoints it serves (`"endpoints": ["financials", "peers", "news"]`); with the
+  adapter, realmarket then leaves out the tools whose data is not served (`get_financials`
+  and `get_valuation` without `financials`, `get_news` without `news`), since the firm may
+  give its model those figures from its own platform. `check_setup` and, with sources abroad
+  off, `find_official_filer` are not offered either. The server instructions no longer tell
+  the model to name a setting; a setting error reaches the model as "this service does not
+  provide this data" and the operator's fix goes to the server log. `realmarket-adapter-check`
+  fails an endpoint declared but not served and warns about one served but not declared or
+  a `/meta` without the list. An adapter without `endpoints` keeps every tool, as before.
 - **No sources abroad by default with the data adapter.** With
   `REALMARKET_PRICE_PROVIDER=http`, the server no longer reaches keyless sources abroad on its
   own: inflation no longer falls back to the OECD (or FRED's public CSV), ESEF reports and
   `find_official_filer` are refused, and news defaults to the adapter's `/news` instead of
   GDELT. A firm's deployment then contacts only its adapter and the sources it configures
   (an EVDS key, a CPI file, a FRED key, an SEC e-mail, a named news provider). A tool that
-  needs a source nobody configured stops and names the setting. `REALMARKET_FOREIGN_SOURCES`
-  (`on`/`off`) overrides the default in either direction; `check_setup` reports it. Nothing
-  changes without the adapter.
+  needs a source nobody configured stops (the entry above says what the model is told).
+  `REALMARKET_FOREIGN_SOURCES` (`on`/`off`) overrides the default in either direction;
+  `check_setup` reports it. Nothing changes without the adapter.
 - The Turkish integration guide describes the test results as they were (a 119-question
   test set written the way customers ask, not customers' questions; Haiku 115 of 119 on
   reading), says that the customer's question and portfolio go to the firm's model, quotes

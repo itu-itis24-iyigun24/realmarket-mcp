@@ -30,7 +30,8 @@ Describes the source. realmarket reads it once and caches it for an hour.
   "attribution": "Source: ACME Market Data, licensed to Example Securities.",
   "gold_usd_symbol": "XAUUSD",
   "fx_symbol": "{base}{quote}",
-  "benchmarks": {"TRY": "XU100"}
+  "benchmarks": {"TRY": "XU100"},
+  "endpoints": ["financials", "peers"]
 }
 ```
 
@@ -42,6 +43,15 @@ Describes the source. realmarket reads it once and caches it for an hour.
 | `gold_usd_symbol` | yes | Symbol of gold priced in US dollars per troy ounce |
 | `fx_symbol` | yes | Pattern for exchange rates: units of `{quote}` per one `{base}` (e.g. `USDTRY` = TRY per USD) |
 | `benchmarks` | no | Default index per currency, used by `get_event_reaction` |
+| `endpoints` | no, but recommended | The optional endpoints the adapter serves: any of `financials`, `peers`, `news` (an empty list is valid) |
+
+**`endpoints` decides which tools the model is offered.** realmarket reads it when it starts:
+without `financials` it offers no `get_financials` or `get_valuation`, without `news` no
+`get_news` (unless the operator set another news source or an SEC e-mail). The firm may give
+its model those figures some other way, and a tool that is not offered cannot be called by
+mistake. An adapter that leaves `endpoints` out gets every tool, as before this field existed,
+and those whose endpoint it does not serve fail when called; the checker warns about it. The
+list is read once, so restart realmarket after changing it.
 
 ## `GET /search?q=<text>&limit=<n>`
 
@@ -221,7 +231,9 @@ The adapter is ready to connect.
 ```
 
 Required: `/meta`, `/search`, `/bars`. A missing exchange rate, gold or benchmark series is a
-warning: the comparisons that need it are skipped. The exit code is 1 when a required check
+warning: the comparisons that need it are skipped. An optional endpoint declared in `/meta`
+but not served fails (its tools would be offered and fail); one served but not declared is a
+warning (its tools are not offered). The exit code is 1 when a required check
 fails.
 
 ## Trying it by hand
@@ -231,5 +243,6 @@ python examples/adapter/serve_files.py --root tests/fixtures/basic --port 8765  
 REALMARKET_PRICE_PROVIDER=http REALMARKET_HTTP_URL=http://127.0.0.1:8765 realmarket-mcp
 ```
 
-Then ask the client to run `check_setup` and `check_data_quality` on a few symbols. A response
+Then ask the client to run `check_data_quality` and `get_price_summary` on a few symbols
+(`check_setup` is not offered with the adapter: it is for whoever runs a personal install). A response
 that breaks this contract produces an error naming the endpoint and the problem.

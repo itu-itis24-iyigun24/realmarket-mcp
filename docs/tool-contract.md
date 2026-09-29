@@ -109,6 +109,11 @@ Every error carries a `hint` that tells the caller the next concrete step — th
 the variable to set, the range to try. A hint of "try again later" is only acceptable for
 retryable codes.
 
+With the data adapter (a firm's deployment), the person asking cannot change settings: an
+error caused by a setting (`missing_api_key`, or a source that is off or not configured)
+keeps its code and message, but its hint tells the model to say the data is not available
+here, without naming settings or sources; the original hint goes to the server log.
+
 ## 5. Determinism and caching
 
 - Results depend only on arguments and the data version. No wall-clock values in `data`;

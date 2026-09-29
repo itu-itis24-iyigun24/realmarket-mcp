@@ -7,7 +7,8 @@ HTTP layer. Run it, then point realmarket at it:
     REALMARKET_PRICE_PROVIDER=http REALMARKET_HTTP_URL=http://127.0.0.1:8765 realmarket-mcp
 
 File layout under --root (the same as realmarket's test fixtures):
-    meta.json                 optional; the /meta body (defaults to META below)
+    meta.json                 optional; the /meta body (defaults to META below, with
+                              "endpoints" listing the optional files present)
     assets.json               [{"symbol", "name", "asset_class", "currency", "exchange",
                                 "adjustment"?}]
     bars/<SYMBOL>.csv         date,open,high,low,close,volume[,price_close]   (empty = missing)
@@ -41,6 +42,17 @@ META = {
     "fx_symbol": "{base}{quote}",
     "benchmarks": {"TRY": "IDX"},
 }
+
+
+def default_meta() -> dict[str, Any]:
+    """META, declaring the optional endpoints whose files exist: realmarket offers only the
+    tools whose data the adapter serves."""
+    present = {
+        "financials": (ROOT / "financials").is_dir(),
+        "peers": (ROOT / "peers").is_dir(),
+        "news": (ROOT / "news.json").is_file(),
+    }
+    return {**META, "endpoints": [name for name, there in present.items() if there]}
 
 
 def load_assets() -> list[dict[str, Any]]:
@@ -111,7 +123,8 @@ class Handler(BaseHTTPRequestHandler):
         if url.path == "/meta":
             meta = ROOT / "meta.json"
             return self._send(
-                200, json.loads(meta.read_text(encoding="utf-8")) if meta.exists() else META
+                200,
+                json.loads(meta.read_text(encoding="utf-8")) if meta.exists() else default_meta(),
             )
         if url.path == "/search":
             needle = q.get("q", "").casefold()

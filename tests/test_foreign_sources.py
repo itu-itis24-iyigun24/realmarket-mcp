@@ -6,13 +6,11 @@ import datetime as dt
 import json
 from collections.abc import Mapping
 
-import anyio
 import pytest
 
 from realmarket_mcp import config, facts
 from realmarket_mcp.contract import ErrorCode, ToolError
 from realmarket_mcp.providers import cpi
-from realmarket_mcp.server import build_server
 
 STAMP = "2024-02-01T00:00:00Z"
 FIRM = {config.PROVIDER_ENV: "http", "REALMARKET_HTTP_URL": "https://data.firm.internal/v1"}
@@ -99,16 +97,3 @@ def test_setup_reports_sources_abroad_as_off() -> None:
     bare = config.describe_setup(FIRM)
     assert any("REALMARKET_CPI_CSV_TR" in m and "OECD" not in m for m in bare["missing"])  # type: ignore[attr-defined]
     assert "Yurt dışı" not in " ".join(facts.setup(config.describe_setup({})))
-
-
-def test_find_official_filer_is_refused_over_the_protocol(monkeypatch: pytest.MonkeyPatch) -> None:
-    for name, value in FIRM.items():
-        monkeypatch.setenv(name, value)
-
-    async def run() -> object:
-        return await build_server().call_tool("find_official_filer", {"name": "ASML"})
-
-    result = anyio.run(run)
-    payload = json.loads(result.content[0].text)  # type: ignore[attr-defined]
-    assert result.is_error  # type: ignore[attr-defined]
-    assert payload["error"]["code"] == "unsupported"

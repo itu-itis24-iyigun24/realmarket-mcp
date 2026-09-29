@@ -27,11 +27,11 @@ from typing import Any
 import anyio
 
 from realmarket_mcp import qualify
-from realmarket_mcp.server import INSTRUCTIONS, build_server
+from realmarket_mcp.server import build_server, instructions
 
 
 def describe_tools() -> str:
-    lines = ["SERVER INSTRUCTIONS:", INSTRUCTIONS]
+    lines = ["SERVER INSTRUCTIONS:", instructions()]
     for tool in anyio.run(build_server().list_tools):
         schema = json.dumps(tool.input_schema, ensure_ascii=False)
         lines += [f"## {tool.name}", tool.description or "", f"parameters: {schema}", ""]

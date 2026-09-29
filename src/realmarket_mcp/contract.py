@@ -189,6 +189,9 @@ class ToolError(Exception):
     message: str
     hint: str
     details: Mapping[str, Any] = field(default_factory=dict)
+    # The failure is a server setting (a source that is off or not configured), not the
+    # request. missing_api_key always is. Not serialized: it decides who the hint is for.
+    setting: bool = field(default=False, compare=False)
 
     def __post_init__(self) -> None:
         if not self.message or not self.hint:
@@ -201,6 +204,10 @@ class ToolError(Exception):
     @property
     def retryable(self) -> bool:
         return self.code in RETRYABLE_CODES
+
+    @property
+    def is_setting(self) -> bool:
+        return self.setting or self.code is ErrorCode.MISSING_API_KEY
 
     def to_dict(self) -> dict[str, Any]:
         return {

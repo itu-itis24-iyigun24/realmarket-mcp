@@ -97,13 +97,25 @@ system prompt in production too; the test uses them.
 | `REALMARKET_EVDS_API_KEY` | Turkish CPI (current) and TL deposit rates |
 | `REALMARKET_SEC_CONTACT` | official US company statements (the firm's contact e-mail) |
 | `REALMARKET_NEWS_PROVIDER=http` | news from the adapter's `/news` endpoint (KAP, Foreks or another licensed feed; the default with the adapter); `none` turns news off |
-| `REALMARKET_FOREIGN_SOURCES=on` | allow keyless sources abroad (OECD and FRED's public CSV for inflation, ESEF, GDELT). Off by default with the adapter: the server then reaches only the adapter and the sources set here, and a tool that needs an unconfigured source (US inflation for a US share, say) stops and names the setting |
+| `REALMARKET_FOREIGN_SOURCES=on` | allow keyless sources abroad (OECD and FRED's public CSV for inflation, ESEF, GDELT). Off by default with the adapter: the server then reaches only the adapter and the sources set here, and a tool that needs an unconfigured source (US inflation for a US share, say) stops; the setting it needs goes to the server log |
 | `REALMARKET_AUDIT_LOG=/var/log/realmarket/audit.jsonl` | audit log, one line per tool call (below) |
 | `REALMARKET_AUDIT_FULL=1` | also store each full response in the audit log |
 
 `realmarket-qualify` (below) tests the firm's model before rollout.
 
-`check_setup` reports what is configured, without showing values.
+### What the firm's customer sees
+
+With the adapter, realmarket assumes the person asking is the firm's customer, who cannot
+change the server's settings:
+
+- The model is offered only the tools whose data this deployment provides (the adapter's
+  `/meta` `endpoints`, see `adapter-api.md`). The firm may give its model valuation ratios,
+  news or foreign data from its own platform; realmarket does not stand in the way.
+- `check_setup` is not offered; `realmarket-adapter-check` and the server log are the
+  operator's tools.
+- When a tool needs data that is not configured (US inflation for a US share, say), the model
+  is told the service does not provide it and to say so, without naming settings or sources.
+  The operator's fix (the setting to add) is written to the server log as a warning.
 
 ## Audit log
 

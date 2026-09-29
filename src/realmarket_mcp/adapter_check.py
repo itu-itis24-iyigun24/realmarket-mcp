@@ -24,7 +24,11 @@ from dataclasses import dataclass
 from realmarket_mcp import quality, tools
 from realmarket_mcp.contract import ErrorCode, Severity, ToolError
 from realmarket_mcp.providers import http_adapter
-from realmarket_mcp.providers.http_adapter import HttpAdapterNewsProvider, HttpAdapterProvider
+from realmarket_mcp.providers.http_adapter import (
+    OPTIONAL_ENDPOINTS,
+    HttpAdapterNewsProvider,
+    HttpAdapterProvider,
+)
 
 PASS, WARN, FAIL, SKIP = "PASS", "WARN", "FAIL", "SKIP"
 
@@ -53,6 +57,15 @@ def run_checks(
         record("/meta", FAIL, f"{error.message} {error.hint}")
         return results
     record("/meta", PASS, f"source {adapter.name}")
+    if adapter.endpoints is None:
+        record(
+            "/meta endpoints",
+            WARN,
+            "not declared: realmarket offers every tool, including those whose endpoint the "
+            "adapter does not serve; list the optional endpoints you serve",
+        )
+    else:
+        record("/meta endpoints", PASS, f"declared: {sorted(adapter.endpoints) or 'none'}")
 
     query = symbol or "a"
     try:
@@ -153,7 +166,30 @@ def run_checks(
         record("/news", PASS, f"{len(news)} article(s) in the last 30 days")
     except ToolError as error:
         record("/news", SKIP if error.code is ErrorCode.UNSUPPORTED else FAIL, error.message)
-    return results
+    return _match_declaration(results, adapter.endpoints)
+
+
+def _match_declaration(results: list[Check], declared: frozenset[str] | None) -> list[Check]:
+    """An optional endpoint's check against what /meta declares: declared but not served
+    fails (its tools would be offered and fail); served but not declared is a warning (its
+    tools are not offered)."""
+    if declared is None:
+        return results
+    matched = []
+    for check in results:
+        name = check.name.removeprefix("/")
+        if name in OPTIONAL_ENDPOINTS:
+            if name in declared and check.status == SKIP:
+                check = Check(check.name, FAIL, f"declared in /meta but not served: {check.detail}")
+            elif name not in declared and check.status in {PASS, WARN}:
+                check = Check(
+                    check.name,
+                    WARN,
+                    f"served but not declared in /meta, so its tools are not offered: "
+                    f"{check.detail}",
+                )
+        matched.append(check)
+    return matched
 
 
 def render(results: list[Check]) -> str:
