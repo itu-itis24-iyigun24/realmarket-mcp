@@ -1,4 +1,4 @@
-# Model check, 29 September 2026: Gemini Flash-Lite models on the 119 questions
+# Model check, 29 September 2026: Gemini Flash-Lite and Gemma 4 on the 119 questions
 
 **Question.** realmarket's earlier checks used Claude models (Haiku, Sonnet). A firm may run
 another vendor's model, and often its smallest one. Does a small non-Claude model use the
@@ -87,8 +87,43 @@ Known limit: a model relaying the tools' exact price/dividend split of a return 
 from the price, %7,95 from dividends", "…kaynaklanmıştır") is flagged although it is arithmetic
 the tool states. Read such a failure before counting it.
 
+## An open model: Gemma 4 26B (A4B), through Google's API
+
+Gemma is an open-weights model a firm could run on its own hardware, which matters where
+customer data must not leave the firm. Here it was reached through Google's free API, with
+the same setup, and a `--timeout` option added to the checker so a slow reply is not cut off
+at 120 seconds.
+
+**The run was stopped after 61 of the 119 questions**, because the serving, not the model,
+failed: 13 of the 61 never got a reply (Google's API gave no answer within 300 seconds,
+returned "internal error" or dropped the connection), mostly right after a large tool result
+(real return, financial statements, comparisons). Each such question took about twenty
+minutes of retries.
+
+| | Gemma 4 26B, 48 answered questions |
+|---|---|
+| Content correct (every check but the one below) | 44 / 48 |
+| Reasoning written into the answer | 47 / 48 |
+| Advice, a cause for a move, a cheap/dear verdict | 0 |
+
+The four content failures are not errors: the same two alternative tool choices as the Gemini
+models, and two cases of the checker limit described above (the tool's own price/dividend
+split, and a quality flag's accounting note). The finding that matters is the other one:
+Gemma writes its reasoning into the answer text as a `<thought>` block, which a customer
+would see. `realmarket-qualify` fails every such answer (`no_reasoning_in_answer`) by
+design. A firm running this model must turn reasoning output off in its model server or
+strip the block before the answer leaves its backend (`docs/integration.md`, "Showing
+answers to customers").
+
+Gemma 4 31B passed 2 of 7 on the synthetic check, with the same reasoning leak and three
+cases lost to the same capacity errors; it was not run on the full set.
+
+**Conclusion for Gemma:** its answers follow the tools as well as the Gemini models' do; it
+needs its reasoning stripped, and it needs serving that can take a long tool result.
+Google's free endpoint is not that. Re-run it on another host or on the firm's hardware.
+
 ## Not yet tested
 
-Other small models a firm might run (Llama, Qwen, GPT mini models), and a model served on
-the firm's own hardware. The checker takes any OpenAI-compatible endpoint, so each is one
+Other small models a firm might run (Llama, Qwen, GPT mini models), Gemma on reliable
+serving, and a model on the firm's own hardware. The checker takes any OpenAI-compatible endpoint, so each is one
 command once a key or a server is available.

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **More models checked** (`evals/reports/2026-09-29-gemini-flash-lite.md`): Gemini 3.1
+  Flash-Lite 118 of 119 correct on reading; the open Gemma 4 26B 44 of 48 answered questions
+  correct in content, but it writes its reasoning into the answer (a `<thought>` block a
+  firm must strip), and Google's free endpoint failed to answer 13 of 61 questions, so that
+  run was stopped. `realmarket-qualify` takes `--timeout` for slow model servers.
 - **First non-Claude model check.** Gemini 3.5 Flash-Lite answered the 119 questions through
   the data adapter in the firm's mode: 118 of 119 correct on reading, no advice, no cause for
   a move, no verdict (`evals/reports/2026-09-29-gemini-flash-lite.md`). `realmarket-qualify`
