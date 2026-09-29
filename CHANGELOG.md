@@ -8,6 +8,9 @@
   on an address other than 127.0.0.1 without a token is refused at startup, unless
   `--allow-unauthenticated` says a gateway authenticates every request itself, and a token
   shorter than 32 characters is refused. stdio (desktop clients) is unchanged.
+- `examples/demo/`: the sales demo page for brokerages (Turkish), built from recorded,
+  unedited model answers on a fictional dataset served through the example adapter in the
+  firm's mode, with the scripts to record and rebuild it.
 - `docs/pilot-protokolu.md`: a six-week pilot protocol in Turkish (scope, phases, roles,
   success criteria, data, cost and exit).
 - `docs/uyum-dosyasi.md`: a compliance brief in Turkish for brokerages' legal and compliance

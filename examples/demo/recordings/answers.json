@@ -1,0 +1,2008 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+  "date": "2026-09-29",
+  "passed": 10,
+  "failed": 0,
+  "not_run": 0,
+  "total": 10,
+  "completed": 10,
+  "cases": [
+    {
+      "id": "getiri",
+      "question": "ORNEK son 3 yılda ne kadar kazandırdı?",
+      "purpose": "",
+      "answer": "ORNEK (Örnek Perakende A.Ş. - kurgusal), 29 Eylül 2023 – 28 Eylül 2026 arasında (782 seans): ilk kapanış 131,18, son kapanış 401,57; toplam getiri +%206,1, yıllık ortalama +%45,2 (Kaynak: adapter:demo).\n\nBu dönemde fiyatın yıllık oynaklığı %4,93 olmuştur. En büyük düşüş 23 Eylül 2024 tarihindeki zirveden 12 Aralık 2024 tarihine kadar -%7,97 olarak gerçekleşmiştir. Dönem içindeki en düşük kapanış 130,71 TL (9 Ekim 2023), en yüksek kapanış ise 434,24 TL (30 Haziran 2026) seviyesindedir.",
+      "calls": [
+        {
+          "tool": "search_assets",
+          "arguments": {
+            "query": "ORNEK"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "search_assets",
+            "data": {
+              "query": "ORNEK",
+              "results": [
+                {
+                  "symbol": "ORNEK",
+                  "name": "Örnek Perakende A.Ş. (kurgusal)",
+                  "asset_class": "equity",
+                  "currency": "TRY",
+                  "exchange": "DEMO"
+                }
+              ]
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "asset_search",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2026-09-29",
+                "period_end": "2026-09-29",
+                "retrieved_at": "2026-09-29T20:25:55Z",
+                "data_version": "sha256:817ba49edd2f7822f68cbda1d13df7e78ab4de204eebe5ef6dcf358ec4946011",
+                "adjustment": "none"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        },
+        {
+          "tool": "get_price_summary",
+          "arguments": {
+            "symbol": "ORNEK",
+            "period": "3y"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "get_price_summary",
+            "facts": [
+              "ORNEK, 29 Eylül 2023 – 28 Eylül 2026 arasında (782 seans): ilk kapanış 131,18, son kapanış 401,57; toplam getiri +%206,1, yıllık ortalama +%45,2.",
+              "ORNEK fiyatının yıllık oynaklığı (fiyatın ne kadar dalgalandığının ölçüsü) bu dönemde %4,93.",
+              "ORNEK bu dönemdeki en büyük düşüşünü 23 Eylül 2024 tarihindeki zirveden 12 Aralık 2024 tarihine kadar yaşadı: -%7,97.",
+              "Dönemin en düşük kapanışı 130,71 TL (9 Ekim 2023), en yüksek kapanışı 434,24 TL (30 Haziran 2026). Son kapanış en düşüğün %207,2 üstünde, en yükseğin %7,52 altında.",
+              "Fiyatın dönemin en düşüğüne yakın ya da uzak olması, bundan sonra düşüp yükseleceğini göstermez."
+            ],
+            "data": {
+              "symbol": "ORNEK",
+              "currency": "TRY",
+              "requested_start": "2023-09-29",
+              "requested_end": "2026-09-29",
+              "first_date": "2023-09-29",
+              "last_date": "2026-09-28",
+              "sessions": 782,
+              "first_close": 131.18,
+              "last_close": 401.57,
+              "total_return": 2.061214,
+              "annualized_return": 0.452364,
+              "annualized_volatility": 0.049277,
+              "max_drawdown": -0.079656,
+              "max_drawdown_peak_date": "2024-09-23",
+              "max_drawdown_trough_date": "2024-12-12",
+              "first_price": null,
+              "last_price": null,
+              "price_return": null,
+              "dividend_return": null,
+              "dividends_per_share": null,
+              "dividend_payments": null,
+              "low_price": 130.71,
+              "low_date": "2023-10-09",
+              "high_price": 434.24,
+              "high_date": "2026-06-30",
+              "last_vs_low": 2.072221,
+              "last_vs_high": -0.075235,
+              "dividend_yield_trailing_12m": null
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2023-09-29",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:25:58Z",
+                "data_version": "sha256:d301b42e788121d4a41db823eb97b40a4716362461055e85ea4dc5e24cbb7110",
+                "adjustment": "as_recorded"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [
+              "Ratios are fractions (0.12 = 12%). Returns are nominal, in the asset's own currency.",
+              "annualized_return is null for spans under 180 days.",
+              "total_return includes dividends (reinvested on the ex-date), so first_close and last_close are dividend-adjusted: first_close is below the price actually traded then. first_price and last_price are the traded prices (adjusted for splits only) and price_return is their change; dividend_return = total_return - price_return is what the dividends added. dividends_per_share sums the cash dividends with ex-dates after first_date, up to last_date. dividend_yield_trailing_12m is the cash dividends of the 12 months to last_date over the last price (0 when none was paid). They are null when the source does not report dividends separately.",
+              "low_price and high_price are the period's lowest and highest traded close (split-adjusted only) with their dates; last_vs_low and last_vs_high compare the last traded close with them."
+            ],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        }
+      ],
+      "checks": [
+        {
+          "name": "tools_used",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_unsupported_figures",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_advice",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_causal_claims",
+          "passed": true,
+          "detail": ""
+        }
+      ],
+      "error": null,
+      "status": "PASS"
+    },
+    {
+      "id": "enflasyon",
+      "question": "2023 başında ORNEK'e 50.000 TL yatırsaydım enflasyonu yener miydim?",
+      "purpose": "",
+      "answer": "2 Ocak 2023 tarihinde ORNEK hissesine yatırım yapmış olsaydınız, sonuçlar şu şekilde gerçekleşirdi:\n\n* **Nominal Getiri:** 2 Ocak 2023 – 31 Ağustos 2026 arasında nominal **+%257,8** getirdi (28 Eylül 2026 tarihine kadar nominal getiri **+%255,9**).\n* **Enflasyon:** Aynı dönemde tüketici fiyatları (TR) **+%227,9** arttı.\n* **Reel Getiri:** Enflasyondan arındırılmış reel getiri **+%9,14** oldu (**yıllıklandırılmış reel getiri: %2,42**). \n* **Sonuç:** ORNEK enflasyonun önünde kaldı.\n\n*(Enflasyon verisi 31 Ağustos 2026 tarihine kadar yayımlandığı için reel getiri bu tarihe kadardır.)*\n\n**Alternatif Karşılaştırmalar:**\n* **Dolar:** Aynı dönemde dolar cinsinden ölçüldüğünde **-%7,28** getirdi.\n* **Altın:** Aynı para altına yatırılsaydı TL olarak **+%437,3** getirirdi; hisse altının **181,4 puan** gerisinde kaldı.\n* **Asgari Ücret:** Net asgari ücret artışının **25,9 puan** önünde kaldı (asgari ücret cinsinden **+%7,84**).\n\n*(Kaynak: Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri, monthly_cpi:cpi_tr.csv, tr_reference)*",
+      "calls": [
+        {
+          "tool": "search_assets",
+          "arguments": {
+            "query": "ORNEK"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "search_assets",
+            "data": {
+              "query": "ORNEK",
+              "results": [
+                {
+                  "symbol": "ORNEK",
+                  "name": "Örnek Perakende A.Ş. (kurgusal)",
+                  "asset_class": "equity",
+                  "currency": "TRY",
+                  "exchange": "DEMO"
+                }
+              ]
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "asset_search",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2026-09-29",
+                "period_end": "2026-09-29",
+                "retrieved_at": "2026-09-29T20:26:04Z",
+                "data_version": "sha256:817ba49edd2f7822f68cbda1d13df7e78ab4de204eebe5ef6dcf358ec4946011",
+                "adjustment": "none"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        },
+        {
+          "tool": "compare_real_return",
+          "arguments": {
+            "inflation_region": null,
+            "start": "2023-01-01",
+            "house_price_area": "TR",
+            "symbol": "ORNEK",
+            "end": null,
+            "period": null
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "compare_real_return",
+            "facts": [
+              "ORNEK, 2 Ocak 2023 – 31 Ağustos 2026 arasında nominal +%257,8 getirdi; aynı dönemde tüketici fiyatları (TR) +%227,9 arttı. Reel (enflasyondan arındırılmış) getiri +%9,14: hisse enflasyonun önünde kaldı.",
+              "Enflasyon verisi 31 Ağustos 2026 tarihine kadar yayımlandığı için reel getiri bu tarihe kadardır. Fiyatlar 28 Eylül 2026 tarihine kadar var: 2 Ocak 2023 – 28 Eylül 2026 arasında nominal getiri +%255,9.",
+              "ORNEK, dolar cinsinden ölçüldüğünde 2 Ocak 2023 – 28 Eylül 2026 arasında -%7,28 getirdi.",
+              "Aynı para 2 Ocak 2023 tarihinde altına yatırılsaydı 28 Eylül 2026 tarihine kadar TL olarak +%437,3 getirirdi; hisse aynı dönemde +%255,9: hisse altının 181,4 puan gerisinde kaldı. Gram altın 1.167,11 TL seviyesinden 6.271,00 TL seviyesine çıktı.",
+              "Net asgari ücret 2 Ocak 2023 – 28 Eylül 2026 arasında +%230,0 arttı; hisse aynı dönemde +%255,9, yani asgari ücret artışının 25,9 puan önünde kaldı. Asgari ücret cinsinden hisse +%7,84: hisse asgari ücretin önünde kaldı."
+            ],
+            "data": {
+              "symbol": "ORNEK",
+              "currency": "TRY",
+              "first_date": "2023-01-02",
+              "last_date": "2026-09-28",
+              "nominal_return": 2.559071,
+              "inflation_region": "TR",
+              "inflation_window_end": "2026-08-31",
+              "nominal_return_in_inflation_window": 2.578304,
+              "cumulative_inflation": 2.278716,
+              "real_return": 0.091373,
+              "annualized_real_return": 0.024174,
+              "real_return_positive": true,
+              "usd_return": -0.072776,
+              "gold_return": -0.337612,
+              "gold_return_in_currency": 4.373094,
+              "beat_gold": false,
+              "gram_gold_try_start": 1167.11,
+              "gram_gold_try_end": 6271.0,
+              "deposit_return": null,
+              "deposit_real_return": null,
+              "beat_deposit": null,
+              "deposit_return_after_tax": null,
+              "deposit_real_return_after_tax": null,
+              "beat_deposit_after_tax": null,
+              "minimum_wage_growth": 2.30036,
+              "return_in_minimum_wages": 0.078389,
+              "house_prices": null
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2023-01-02",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:26:07Z",
+                "data_version": "sha256:fa29daa529f61a0f5984f77292951c02c4d8f4b4e19dce4cba75d11f9d1b3a88",
+                "adjustment": "as_recorded"
+              },
+              {
+                "provider": "csv",
+                "attribution": null,
+                "dataset": "monthly_cpi:cpi_tr.csv",
+                "symbols": [
+                  "TR"
+                ],
+                "period_start": "2023-01",
+                "period_end": "2026-08",
+                "retrieved_at": "2026-09-29T20:26:07Z",
+                "data_version": "sha256:92d18b0b03377513176f6bce6cbb60efc3a1c8256e1af8ea02dfcb3a66a0e926",
+                "adjustment": "none"
+              },
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "USDTRY"
+                ],
+                "period_start": "2023-01-02",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:26:07Z",
+                "data_version": "sha256:deb5bf2ff7768e3213b56bd105943f5abf7d03da50fef545f6290bcd67c308ab",
+                "adjustment": "as_recorded"
+              },
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "GOLD"
+                ],
+                "period_start": "2023-01-02",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:26:07Z",
+                "data_version": "sha256:8e1f88d1cadec12585613324efce02ee075495954c8b024103dcb5473f06f6bd",
+                "adjustment": "as_recorded"
+              },
+              {
+                "provider": "tr_reference",
+                "attribution": "Source: Resmî Gazete decisions (deposit withholding under GVK geçici md. 67; minimum wage by the Asgari Ücret Tespit Komisyonu, ÇSGB), compiled by realmarket-mcp.",
+                "dataset": "minimum_wage_net",
+                "symbols": [
+                  "TR"
+                ],
+                "period_start": "2023-01-02",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-27T00:00:00Z",
+                "data_version": "sha256:3c2cf6a148f5ba8ff5cb15554f7d0334cac21f392f2ac193c0f3230882e1118b",
+                "adjustment": "none"
+              }
+            ],
+            "quality_flags": [
+              {
+                "code": "inflation_window_truncated",
+                "severity": "warning",
+                "message": "TR CPI is published through 2026-08; the real return is measured up to the end of that month, not the full price window.",
+                "affected": [
+                  "2026-08"
+                ]
+              },
+              {
+                "code": "deposit_unavailable",
+                "severity": "info",
+                "message": "No deposit comparison: Deposit rates need a TCMB EVDS key. Set REALMARKET_EVDS_API_KEY (free key: https://evds3.tcmb.gov.tr), the 'TCMB EVDS API key' setting of the plugin or extension, then restart the app.",
+                "affected": []
+              },
+              {
+                "code": "reference_table_unchecked",
+                "severity": "info",
+                "message": "The minimum wage table was last checked on 2026-09-27; the latest rate is assumed to apply after that.",
+                "affected": []
+              },
+              {
+                "code": "house_prices_unavailable",
+                "severity": "info",
+                "message": "No house price comparison: The house price index needs a TCMB EVDS key. Set REALMARKET_EVDS_API_KEY (free key: https://evds3.tcmb.gov.tr), the 'TCMB EVDS API key' setting of the plugin or extension, then restart the app.",
+                "affected": []
+              }
+            ],
+            "notes": [
+              "Ratios are fractions (0.12 = 12%).",
+              "minimum_wage_growth is the change in the monthly net minimum wage (single worker, as ÇSGB publishes it) in force on first_date and last_date; return_in_minimum_wages is the holding measured in minimum wages, (1 + nominal) / (1 + minimum_wage_growth) - 1: negative means it bought fewer months of minimum wage at the end than at the start. Only for TRY assets, from 2012.",
+              "house_prices compares the asset with TCMB's residential property price index (KFE) for its area over its own window, from_month to to_month (the index is published about two months late, so this window ends earlier than first_date..last_date and uses its own asset figure, asset_return_same_months: do not mix it with nominal_return). house_price_real_return deflates house prices by CPI over the same months. The index tracks sale prices of comparable homes: it leaves out rent earned and the costs of buying, owning and selling a home (title-deed fees, taxes, maintenance). Only for TRY assets, from 2010.",
+              "real_return = (1 + nominal) / (1 + cumulative_inflation) - 1, with inflation measured from the CPI of the first month to the CPI of the last month.",
+              "usd_return values the holding in US dollars at each end; gold_return values it in ounces of gold, both over the full first_date to last_date window. Neither is adjusted for US inflation.",
+              "gold_return_in_currency is what the same money put into gold earned, in the asset's currency; beat_gold compares the two. For TL assets gram_gold_try_start and _end are the gram gold price derived from the price source's gold price in US dollars per troy ounce (with Yahoo, the front-month COMEX future, which sits slightly above spot) x USDTRY / 31.1035; shop and bank gram gold prices add a spread and, at times, a local premium.",
+              "All figures describe the past period only (the real return up to inflation_window_end) and say nothing about future returns."
+            ],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        }
+      ],
+      "checks": [
+        {
+          "name": "tools_used",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_unsupported_figures",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_advice",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_causal_claims",
+          "passed": true,
+          "detail": ""
+        }
+      ],
+      "error": null,
+      "status": "PASS"
+    },
+    {
+      "id": "altin",
+      "question": "Son 3 yılda ORNEK mi daha iyi gitti, altın mı?",
+      "purpose": "",
+      "answer": "Son 3 yılda (29 Eylül 2023 – 28 Eylül 2026 dönemi) ORNEK ile altın (GOLD) karşılaştırması şu şekildedir:\n\n* **Karşılaştırma Dönemi:** 29 Eylül 2023 – 28 Eylül 2026 (782 seans)\n* **ORNEK (TRY cinsinden):** İlk kapanış 131,18, son kapanış 401,57; toplam getiri **+%206,1**, yıllık ortalama **+%45,2**. Yıllık oynaklık %4,93, bu dönemdeki en büyük düşüşü -%7,97 oldu.\n* **Altın / GOLD (USD cinsinden kendi para biriminde):** İlk kapanış 2.365,76, son kapanış 3.098,49; toplam getiri **+%31,0**, yıllık ortalama **+%9,42**. Yıllık oynaklık %0,31.\n* **Ortak Para Biriminde (TL cinsinden) Sıralama:** Varlıklar farklı para birimlerinde (TRY ve USD) olduğu için hepsi TL cinsinden ölçülmüştür. Bu ölçüme göre:\n  1. **GOLD:** TL cinsinden **+%285,4** getiri sağladı.\n  2. **ORNEK:** **+%206,1** getiri sağladı.\n* **Getiri Farkı:** ORNEK, TL cinsinden yapılan ölçümde altın ile arasındaki getiri farkında 79,3 puan gerisinde kaldı.\n\n*(Kaynak: Demo verisi, günlük barlar ve döviz kurları, adapter:demo)*",
+      "calls": [
+        {
+          "tool": "search_assets",
+          "arguments": {
+            "query": "ORNEK"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "search_assets",
+            "data": {
+              "query": "ORNEK",
+              "results": [
+                {
+                  "symbol": "ORNEK",
+                  "name": "Örnek Perakende A.Ş. (kurgusal)",
+                  "asset_class": "equity",
+                  "currency": "TRY",
+                  "exchange": "DEMO"
+                }
+              ]
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "asset_search",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2026-09-29",
+                "period_end": "2026-09-29",
+                "retrieved_at": "2026-09-29T20:26:13Z",
+                "data_version": "sha256:817ba49edd2f7822f68cbda1d13df7e78ab4de204eebe5ef6dcf358ec4946011",
+                "adjustment": "none"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        },
+        {
+          "tool": "search_assets",
+          "arguments": {
+            "query": "ALTIN"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "search_assets",
+            "data": {
+              "query": "ALTIN",
+              "results": []
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "asset_search",
+                "symbols": [],
+                "period_start": "2026-09-29",
+                "period_end": "2026-09-29",
+                "retrieved_at": "2026-09-29T20:26:16Z",
+                "data_version": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "adjustment": "none"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [
+              "No match. Try the full company name or the exchange ticker."
+            ],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        },
+        {
+          "tool": "search_assets",
+          "arguments": {
+            "query": "Gram Altin"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "search_assets",
+            "data": {
+              "query": "Gram Altin",
+              "results": []
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "asset_search",
+                "symbols": [],
+                "period_start": "2026-09-29",
+                "period_end": "2026-09-29",
+                "retrieved_at": "2026-09-29T20:26:19Z",
+                "data_version": "sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                "adjustment": "none"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [
+              "No match. Try the full company name or the exchange ticker."
+            ],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        },
+        {
+          "tool": "search_assets",
+          "arguments": {
+            "query": "GOLD"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "search_assets",
+            "data": {
+              "query": "GOLD",
+              "results": [
+                {
+                  "symbol": "GOLD",
+                  "name": "Altın (ons, USD)",
+                  "asset_class": "commodity",
+                  "currency": "USD",
+                  "exchange": "DEMO"
+                }
+              ]
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "asset_search",
+                "symbols": [
+                  "GOLD"
+                ],
+                "period_start": "2026-09-29",
+                "period_end": "2026-09-29",
+                "retrieved_at": "2026-09-29T20:26:22Z",
+                "data_version": "sha256:83c4d9a96fc4d048ec01e378b06b3e6244c8ce32fc86876539e5211e3a1b0dc3",
+                "adjustment": "none"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        },
+        {
+          "tool": "compare_assets",
+          "arguments": {
+            "period": "3y",
+            "symbols": [
+              "ORNEK",
+              "GOLD"
+            ]
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "compare_assets",
+            "facts": [
+              "Karşılaştırma 29 Eylül 2023 – 28 Eylül 2026 dönemini kapsıyor; her varlık aynı dönemle ölçüldü.",
+              "ORNEK, 29 Eylül 2023 – 28 Eylül 2026 arasında (782 seans): ilk kapanış 131,18, son kapanış 401,57; toplam getiri +%206,1, yıllık ortalama +%45,2.",
+              "ORNEK fiyatının yıllık oynaklığı (fiyatın ne kadar dalgalandığının ölçüsü) bu dönemde %4,93.",
+              "ORNEK bu dönemdeki en büyük düşüşünü 23 Eylül 2024 tarihindeki zirveden 12 Aralık 2024 tarihine kadar yaşadı: -%7,97.",
+              "GOLD, 29 Eylül 2023 – 28 Eylül 2026 arasında (782 seans): ilk kapanış 2.365,76, son kapanış 3.098,49; toplam getiri +%31,0, yıllık ortalama +%9,42.",
+              "GOLD fiyatının yıllık oynaklığı (fiyatın ne kadar dalgalandığının ölçüsü) bu dönemde %0,31.",
+              "Varlıklar farklı para birimlerinde (TRY, USD); kıyas için hepsi TL cinsinden ölçüldü: GOLD TL cinsinden +%285,4 (kendi para biriminde yukarıdaki getiriler).",
+              "Toplam getiriye göre sıralama (TL cinsinden): GOLD +%285,4, ORNEK +%206,1.",
+              "ORNEK, GOLD ile arasındaki getiri farkında (TL cinsinden) 79,3 puan gerisinde kaldı."
+            ],
+            "data": {
+              "window_start": "2023-09-29",
+              "window_end": "2026-09-28",
+              "common_currency": "TRY",
+              "assets": [
+                {
+                  "symbol": "ORNEK",
+                  "currency": "TRY",
+                  "metrics": {
+                    "first_date": "2023-09-29",
+                    "last_date": "2026-09-28",
+                    "sessions": 782,
+                    "first_close": 131.18,
+                    "last_close": 401.57,
+                    "total_return": 2.061214,
+                    "annualized_return": 0.452364,
+                    "annualized_volatility": 0.049277,
+                    "max_drawdown": -0.079656,
+                    "max_drawdown_peak_date": "2024-09-23",
+                    "max_drawdown_trough_date": "2024-12-12"
+                  },
+                  "return_in_common_currency": 2.061214
+                },
+                {
+                  "symbol": "GOLD",
+                  "currency": "USD",
+                  "metrics": {
+                    "first_date": "2023-09-29",
+                    "last_date": "2026-09-28",
+                    "sessions": 782,
+                    "first_close": 2365.76,
+                    "last_close": 3098.49,
+                    "total_return": 0.309723,
+                    "annualized_return": 0.094174,
+                    "annualized_volatility": 0.003136,
+                    "max_drawdown": 0.0,
+                    "max_drawdown_peak_date": "2023-09-29",
+                    "max_drawdown_trough_date": "2023-09-29"
+                  },
+                  "return_in_common_currency": 2.854468
+                }
+              ]
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2023-09-29",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:26:25Z",
+                "data_version": "sha256:d301b42e788121d4a41db823eb97b40a4716362461055e85ea4dc5e24cbb7110",
+                "adjustment": "as_recorded"
+              },
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "GOLD"
+                ],
+                "period_start": "2023-09-29",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:26:25Z",
+                "data_version": "sha256:bb71b38763e3c7466201b32fc7151d4b95d1b506c42262d6fc93471475147ca1",
+                "adjustment": "as_recorded"
+              },
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "USDTRY"
+                ],
+                "period_start": "2023-09-15",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:26:25Z",
+                "data_version": "sha256:493106864f5de6cfeb18f92b144e10bec5a8a39176e6661335b7ce2a99b1f379",
+                "adjustment": "as_recorded"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [
+              "Ratios are fractions (0.12 = 12%). All assets are measured over the same window, 2023-09-29 to 2026-09-28.",
+              "Returns are nominal, each in its own currency. When the assets are priced in different currencies, return_in_common_currency gives each in common_currency (converted at the window's first and last dates) and the comparison uses it."
+            ],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        }
+      ],
+      "checks": [
+        {
+          "name": "tools_used",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_unsupported_figures",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_advice",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_causal_claims",
+          "passed": true,
+          "detail": ""
+        }
+      ],
+      "error": null,
+      "status": "PASS"
+    },
+    {
+      "id": "portfoy",
+      "question": "Mart 2024'te 100 ORNEK aldım, Eylül 2025'te 30'unu sattım. Portföyüm nasıl gidiyor?",
+      "purpose": "",
+      "answer": "Portföyünüzün durumuyla ilgili veriler ve hesap özeti (Demo verisi, kurgusal ORNEK şirketi ve sentetik piyasa serileri kaynaklıdır):\n\n* **İşlem Varsayımları:** Yalnızca ay verildiği için ayın ilk işlem günü kullanıldı (ORNEK alışı 1 Mart 2024, ORNEK satışı 1 Eylül 2025). Fiyatı verilmeyen işlemlerde o günün kapanış fiyatı kullanıldı.\n* **Genel Hesap Özeti (29 Eylül 2026 itibarıyla):**\n  * Alışlar toplamı: 17.715,00 TL\n  * Satışlardan gelen: 8.409,00 TL\n  * Elde kalan hisselerin değeri: 28.109,90 TL\n  * Alışların bugünkü karşılığı (satışlardan ve girilen temettülerden gelenle birlikte): 36.518,90 TL\n  * Toplam kâr/zarar: +18.803,90 TL (alışlara oranla +%106,1)\n  * Paranın ne zaman girip çıktığını hesaba katan yıllık getiri: +%37,0\n* **ORNEK Pozisyonu:**\n  * Adet: 70\n  * Ortalama maliyet: 177,15 TL\n  * Son fiyat: 401,57 TL\n  * Piyasa değeri: 28.109,90 TL (hesaptaki payı %100,0)\n  * Toplam sonuç: +18.803,90 TL (bu hisseye yapılan alışlara oranla +%106,1); bunun içinde satışlardan gerçekleşen +3.094,50 TL var.",
+      "calls": [
+        {
+          "tool": "search_assets",
+          "arguments": {
+            "query": "ORNEK"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "search_assets",
+            "data": {
+              "query": "ORNEK",
+              "results": [
+                {
+                  "symbol": "ORNEK",
+                  "name": "Örnek Perakende A.Ş. (kurgusal)",
+                  "asset_class": "equity",
+                  "currency": "TRY",
+                  "exchange": "DEMO"
+                }
+              ]
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "asset_search",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2026-09-29",
+                "period_end": "2026-09-29",
+                "retrieved_at": "2026-09-29T20:26:31Z",
+                "data_version": "sha256:817ba49edd2f7822f68cbda1d13df7e78ab4de204eebe5ef6dcf358ec4946011",
+                "adjustment": "none"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        },
+        {
+          "tool": "analyze_portfolio",
+          "arguments": {
+            "transactions": [
+              {
+                "symbol": "ORNEK",
+                "date": "2024-03",
+                "type": "buy",
+                "quantity": 100
+              },
+              {
+                "symbol": "ORNEK",
+                "type": "sell",
+                "date": "2025-09",
+                "quantity": 30
+              }
+            ]
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "analyze_portfolio",
+            "facts": [
+              "Yalnızca ay verildiği için ayın ilk işlem günü kullanıldı: ORNEK alışı 1 Mart 2024, ORNEK satışı 1 Eylül 2025.",
+              "Fiyatı verilmeyen işlemlerde o günün kapanış fiyatı kullanıldı.",
+              "Hesap özeti (29 Eylül 2026 itibarıyla): alışlar toplamı 17.715,00 TL, satışlardan gelen 8.409,00 TL, elde kalan hisselerin değeri 28.109,90 TL; alışların bugünkü karşılığı, satışlardan ve girilen temettülerden gelenle birlikte 36.518,90 TL. Toplam kâr/zarar +18.803,90 TL (alışlara oranla +%106,1). Paranın ne zaman girip çıktığını hesaba katan yıllık getiri +%37,0.",
+              "ORNEK: 70 adet, ortalama maliyet 177,15 TL, son fiyat 401,57 TL, değeri 28.109,90 TL (hesaptaki payı %100,0). Toplam sonucu +18.803,90 TL (bu hisseye yapılan alışlara oranla +%106,1); bunun içinde satışlardan gerçekleşen +3.094,50 TL var."
+            ],
+            "data": {
+              "currency": "TRY",
+              "as_of": "2026-09-29",
+              "holdings": [
+                {
+                  "symbol": "ORNEK",
+                  "currency": "TRY",
+                  "quantity": 70.0,
+                  "average_cost": 177.15,
+                  "price": 401.57,
+                  "market_value": 28109.9,
+                  "weight": 1.0,
+                  "total_pnl": 18803.9,
+                  "total_return_on_purchases": 1.061468,
+                  "realized_pnl": 3094.5,
+                  "dividends_received": 0.0,
+                  "cost_basis": 12400.5,
+                  "unrealized_pnl": 15709.4,
+                  "unrealized_return": 1.266836
+                }
+              ],
+              "totals": {
+                "purchases": 17715.0,
+                "sale_proceeds": 8409.0,
+                "dividends_received": 0.0,
+                "market_value": 28109.9,
+                "cost_basis_open": 12400.5,
+                "unrealized_pnl": 15709.4,
+                "realized_pnl": 3094.5,
+                "total_pnl": 18803.9,
+                "total_return_on_purchases": 1.061468,
+                "money_weighted_return_annualized": 0.370169
+              },
+              "concentration": {
+                "open_holdings": 1,
+                "largest": {
+                  "symbol": "ORNEK",
+                  "weight": 1.0
+                },
+                "top3_weight": 1.0,
+                "by_currency": {
+                  "TRY": 1.0
+                }
+              },
+              "best": {
+                "symbol": "ORNEK",
+                "total_return_on_purchases": 1.061468
+              },
+              "worst": {
+                "symbol": "ORNEK",
+                "total_return_on_purchases": 1.061468
+              },
+              "risk_last_year": {
+                "from": "2025-09-29",
+                "to": "2026-09-28",
+                "annualized_volatility": 0.047027,
+                "max_drawdown": -0.07961,
+                "max_drawdown_peak_date": "2026-06-29",
+                "max_drawdown_trough_date": "2026-09-17"
+              }
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2024-02-20",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:26:34Z",
+                "data_version": "sha256:12af4ac6e27614a629a256b97a59f574d5aafeb7f2ea800bf5d9cee5be6fabd8",
+                "adjustment": "as_recorded"
+              }
+            ],
+            "quality_flags": [
+              {
+                "code": "date_assumed",
+                "severity": "warning",
+                "message": "Only the month was given for these transactions; the month's first session was used: buy ORNEK on 2024-03-01, sell ORNEK on 2025-09-01.",
+                "affected": []
+              },
+              {
+                "code": "price_assumed",
+                "severity": "info",
+                "message": "No price was given for these trades; the day's close was used: ORNEK 2024-03-01, ORNEK 2025-09-01.",
+                "affected": []
+              }
+            ],
+            "notes": [
+              "Ratios are fractions (0.12 = 12%).",
+              "Costs use the weighted average cost of each holding, in the report currency at each transaction's date: a sale realizes proceeds minus average cost of the shares sold. Fees are added to purchases and deducted from sales. total_pnl = realized + unrealized + dividends received. A holding's total_pnl and total_return_on_purchases include shares already sold; unrealized_pnl and unrealized_return cover only the shares still held.",
+              "Quantities and prices are as traded at the time. Splits and bonus issues (bedelsiz) the source reports are applied to the shares held, and flagged, unless a 'bonus' transaction records them. Holdings are valued at traded prices, not dividend-adjusted closes, so dividends are counted once: as the cash entered. A missing price is that day's close as traded then, and is flagged.",
+              "money_weighted_return_annualized is the internal rate of return of all cash flows (purchases out; sales and dividends in; today's value in). The risk figures describe the current holdings, at current quantities, over the last year.",
+              "These figures describe the account's past; they are not a view on what to buy or sell, and nothing here compares the account with the market or any index."
+            ],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        }
+      ],
+      "checks": [
+        {
+          "name": "tools_used",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_unsupported_figures",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_advice",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_causal_claims",
+          "passed": true,
+          "detail": ""
+        }
+      ],
+      "error": null,
+      "status": "PASS"
+    },
+    {
+      "id": "birikim",
+      "question": "2024'te her ay başında 5.000 TL ile ORNEK aldım. Dolar alsaydım daha mı iyi olurdu?",
+      "purpose": "",
+      "answer": "2024 yılında her ay başında 5.000 TL (toplam 60.000 TL) ile yapılan ORNEK alımlarının durumu ve dolar seçeneğiyle karşılaştırması şu şekildedir:\n\n* **ORNEK Yatırımı:** \n  * Toplam yatırılan tutar: **60.000,00 TL**\n  * Güncel değer: **129.579,07 TL**\n  * Nominal getiri: **+%116,0** (Yıllık bileşik getiri: **+%39,8**)\n  * Enflasyon Karşılaştırması (Ağustos 2026 sonu itibarıyla): Reel getiri **+%6,89** (Birikim enflasyonun üstünde kalmıştır).\n\n* **Dolar Alternatifi:** \n  * Aynı ödemeler aynı günlerde dolar olarak tutulsaydı, 29 Eylül 2026 itibarıyla **137.143,76 TL** olurdu (getiri **+%128,6**).\n  * Birikimin bugünkü değeri (129.579,07 TL) bu alternatife göre **7.564,69 TL** geridedir.\n\n*(Kaynak: Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri, TR CPI enflasyon verisi)*",
+      "calls": [
+        {
+          "tool": "search_assets",
+          "arguments": {
+            "query": "ORNEK"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "search_assets",
+            "data": {
+              "query": "ORNEK",
+              "results": [
+                {
+                  "symbol": "ORNEK",
+                  "name": "Örnek Perakende A.Ş. (kurgusal)",
+                  "asset_class": "equity",
+                  "currency": "TRY",
+                  "exchange": "DEMO"
+                }
+              ]
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "asset_search",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2026-09-29",
+                "period_end": "2026-09-29",
+                "retrieved_at": "2026-09-29T20:26:40Z",
+                "data_version": "sha256:817ba49edd2f7822f68cbda1d13df7e78ab4de204eebe5ef6dcf358ec4946011",
+                "adjustment": "none"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        },
+        {
+          "tool": "portfolio_real_return",
+          "arguments": {
+            "purchases": [
+              {
+                "symbol": "ORNEK",
+                "date": "2024-01-02",
+                "amount": 5000
+              },
+              {
+                "symbol": "ORNEK",
+                "amount": 5000,
+                "date": "2024-02-01"
+              },
+              {
+                "amount": 5000,
+                "date": "2024-03-01",
+                "symbol": "ORNEK"
+              },
+              {
+                "date": "2024-04-01",
+                "symbol": "ORNEK",
+                "amount": 5000
+              },
+              {
+                "symbol": "ORNEK",
+                "amount": 5000,
+                "date": "2024-05-01"
+              },
+              {
+                "symbol": "ORNEK",
+                "amount": 5000,
+                "date": "2024-06-03"
+              },
+              {
+                "amount": 5000,
+                "date": "2024-07-01",
+                "symbol": "ORNEK"
+              },
+              {
+                "date": "2024-08-01",
+                "amount": 5000,
+                "symbol": "ORNEK"
+              },
+              {
+                "date": "2024-09-02",
+                "symbol": "ORNEK",
+                "amount": 5000
+              },
+              {
+                "amount": 5000,
+                "date": "2024-10-01",
+                "symbol": "ORNEK"
+              },
+              {
+                "symbol": "ORNEK",
+                "date": "2024-11-01",
+                "amount": 5000
+              },
+              {
+                "symbol": "ORNEK",
+                "date": "2024-12-02",
+                "amount": 5000
+              }
+            ],
+            "compare_with": [
+              "USD",
+              "GOLD"
+            ]
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "portfolio_real_return",
+            "facts": [
+              "Toplam 60.000,00 TL yatırıldı; 29 Eylül 2026 itibarıyla değeri 129.579,07 TL, getiri +%116,0. Paranın ne zaman girdiğini hesaba katan yıllık getiri +%39,8.",
+              "ORNEK: 2 Ocak 2024 tarihinde 5.000,00 TL; bugün 12.303,00 TL, getiri +%146,1.",
+              "ORNEK: 1 Şubat 2024 tarihinde 5.000,00 TL; bugün 11.462,95 TL, getiri +%129,3.",
+              "ORNEK: 1 Mart 2024 tarihinde 5.000,00 TL; bugün 11.334,18 TL, getiri +%126,7.",
+              "ORNEK: 1 Nisan 2024 tarihinde 5.000,00 TL; bugün 11.769,34 TL, getiri +%135,4.",
+              "ORNEK: 1 Mayıs 2024 tarihinde 5.000,00 TL; bugün 12.241,49 TL, getiri +%144,8.",
+              "ORNEK: 3 Haziran 2024 tarihinde 5.000,00 TL; bugün 12.014,42 TL, getiri +%140,3.",
+              "ORNEK: 1 Temmuz 2024 tarihinde 5.000,00 TL; bugün 11.096,16 TL, getiri +%121,9.",
+              "ORNEK: 1 Ağustos 2024 tarihinde 5.000,00 TL; bugün 9.930,02 TL, getiri +%98,6.",
+              "ORNEK: 2 Eylül 2024 tarihinde 5.000,00 TL; bugün 9.178,32 TL, getiri +%83,6.",
+              "ORNEK: 1 Ekim 2024 tarihinde 5.000,00 TL; bugün 9.059,88 TL, getiri +%81,2.",
+              "ORNEK: 1 Kasım 2024 tarihinde 5.000,00 TL; bugün 9.398,73 TL, getiri +%88,0.",
+              "ORNEK: 2 Aralık 2024 tarihinde 5.000,00 TL; bugün 9.790,57 TL, getiri +%95,8.",
+              "Toplam kazanç (+69.579,07 TL) alımlara göre: ORNEK +7.303,00 TL, ORNEK +7.241,49 TL, ORNEK +7.014,42 TL, ORNEK +6.769,34 TL, ORNEK +6.462,95 TL, ORNEK +6.334,18 TL, ORNEK +6.096,16 TL, ORNEK +4.930,02 TL, ORNEK +4.790,57 TL, ORNEK +4.398,73 TL, ORNEK +4.178,32 TL, ORNEK +4.059,88 TL.",
+              "Enflasyon verisi 31 Ağustos 2026 tarihine kadar yayımlandı. O tarihte değer 130.279,28 TL; o tarihe kadar yapılan ödemelerin o tarihteki satın alma gücüyle karşılığı 121.884,15 TL. Reel getiri +%6,89: birikim enflasyonun önünde.",
+              "Aynı ödemeler aynı günlerde dolar olarak tutulsaydı 29 Eylül 2026 itibarıyla 137.143,76 TL olurdu (getiri +%128,6). Birikim bugün 129.579,07 TL: bu alternatife göre 7.564,69 TL geride.",
+              "Aynı ödemeler aynı günlerde altın olarak tutulsaydı 29 Eylül 2026 itibarıyla 168.910,24 TL olurdu (getiri +%181,5). Birikim bugün 129.579,07 TL: bu alternatife göre 39.331,17 TL geride."
+            ],
+            "data": {
+              "currency": "TRY",
+              "as_of": "2026-09-29",
+              "invested": 60000.0,
+              "value_now": 129579.07,
+              "return": 1.159651,
+              "annualized_money_weighted": 0.39802,
+              "inflation_region": "TR",
+              "cumulative_inflation_since_first_purchase": 1.353892,
+              "real_return_as_of": "2026-08-31",
+              "value_at_real_return_date": 130279.28,
+              "invested_in_money_of_real_return_date": 121884.15,
+              "real_return": 0.068878,
+              "real_return_positive": true,
+              "lots": [
+                {
+                  "symbol": "ORNEK",
+                  "date": "2024-01-02",
+                  "date_given": null,
+                  "amount": 5000.0,
+                  "value_now": 12303.0,
+                  "return": 1.4606
+                },
+                {
+                  "symbol": "ORNEK",
+                  "date": "2024-02-01",
+                  "date_given": null,
+                  "amount": 5000.0,
+                  "value_now": 11462.95,
+                  "return": 1.29259
+                },
+                {
+                  "symbol": "ORNEK",
+                  "date": "2024-03-01",
+                  "date_given": null,
+                  "amount": 5000.0,
+                  "value_now": 11334.18,
+                  "return": 1.266836
+                },
+                {
+                  "symbol": "ORNEK",
+                  "date": "2024-04-01",
+                  "date_given": null,
+                  "amount": 5000.0,
+                  "value_now": 11769.34,
+                  "return": 1.353869
+                },
+                {
+                  "symbol": "ORNEK",
+                  "date": "2024-05-01",
+                  "date_given": null,
+                  "amount": 5000.0,
+                  "value_now": 12241.49,
+                  "return": 1.448299
+                },
+                {
+                  "symbol": "ORNEK",
+                  "date": "2024-06-03",
+                  "date_given": null,
+                  "amount": 5000.0,
+                  "value_now": 12014.42,
+                  "return": 1.402884
+                },
+                {
+                  "symbol": "ORNEK",
+                  "date": "2024-07-01",
+                  "date_given": null,
+                  "amount": 5000.0,
+                  "value_now": 11096.16,
+                  "return": 1.219232
+                },
+                {
+                  "symbol": "ORNEK",
+                  "date": "2024-08-01",
+                  "date_given": null,
+                  "amount": 5000.0,
+                  "value_now": 9930.02,
+                  "return": 0.986004
+                },
+                {
+                  "symbol": "ORNEK",
+                  "date": "2024-09-02",
+                  "date_given": null,
+                  "amount": 5000.0,
+                  "value_now": 9178.32,
+                  "return": 0.835665
+                },
+                {
+                  "symbol": "ORNEK",
+                  "date": "2024-10-01",
+                  "date_given": null,
+                  "amount": 5000.0,
+                  "value_now": 9059.88,
+                  "return": 0.811975
+                },
+                {
+                  "symbol": "ORNEK",
+                  "date": "2024-11-01",
+                  "date_given": null,
+                  "amount": 5000.0,
+                  "value_now": 9398.73,
+                  "return": 0.879745
+                },
+                {
+                  "symbol": "ORNEK",
+                  "date": "2024-12-02",
+                  "date_given": null,
+                  "amount": 5000.0,
+                  "value_now": 9790.57,
+                  "return": 0.958114
+                }
+              ],
+              "alternatives": [
+                {
+                  "alternative": "USD",
+                  "valued_as_of": "2026-09-29",
+                  "value_now": 137143.76,
+                  "return": 1.285729,
+                  "annualized_money_weighted": 0.43274
+                },
+                {
+                  "alternative": "GOLD",
+                  "valued_as_of": "2026-09-29",
+                  "value_now": 168910.24,
+                  "return": 1.815171,
+                  "annualized_money_weighted": 0.567503
+                }
+              ]
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2023-12-25",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:26:44Z",
+                "data_version": "sha256:0dbf6cd1334586085a3eba7c015426934099b8d3cfec89fbb796080070c6101d",
+                "adjustment": "as_recorded"
+              },
+              {
+                "provider": "csv",
+                "attribution": null,
+                "dataset": "monthly_cpi:cpi_tr.csv",
+                "symbols": [
+                  "TR"
+                ],
+                "period_start": "2024-01",
+                "period_end": "2026-08",
+                "retrieved_at": "2026-09-29T20:26:44Z",
+                "data_version": "sha256:92d18b0b03377513176f6bce6cbb60efc3a1c8256e1af8ea02dfcb3a66a0e926",
+                "adjustment": "none"
+              },
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "USDTRY"
+                ],
+                "period_start": "2023-12-25",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:26:44Z",
+                "data_version": "sha256:94218a934df6d8d1070af7e273b5964ca24df66840e8eed0e8bba8dd3c4948f8",
+                "adjustment": "as_recorded"
+              },
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "GOLD"
+                ],
+                "period_start": "2023-12-25",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:26:44Z",
+                "data_version": "sha256:0b91717f44b5ff13e1a15c0a82635f8abe4a6b16c1d056ddec833b5d6909726d",
+                "adjustment": "as_recorded"
+              }
+            ],
+            "quality_flags": [
+              {
+                "code": "inflation_window_truncated",
+                "severity": "warning",
+                "message": "TR CPI is published through 2026-08; the real return is measured on 2026-08-31, with that day's prices.",
+                "affected": []
+              }
+            ],
+            "notes": [
+              "Ratios are fractions (0.12 = 12%). Amounts are in TRY; foreign assets are converted at each date's US-dollar exchange rates.",
+              "real_return compares the holdings' value on real_return_as_of (the last day the inflation series covers, or today) with every payment made by then, restated in that month's purchasing power: invested_in_money_of_real_return_date. Later purchases count only in the nominal figures and the alternatives.",
+              "annualized_money_weighted is the internal rate of return of the dated payments (it accounts for when money went in).",
+              "alternatives show where the same payments would stand in each alternative; they describe the past, not what to buy.",
+              "Purchases only: sales and dividends paid out in cash are not modelled."
+            ],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        }
+      ],
+      "checks": [
+        {
+          "name": "tools_used",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_unsupported_figures",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_advice",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_causal_claims",
+          "passed": true,
+          "detail": ""
+        }
+      ],
+      "error": null,
+      "status": "PASS"
+    },
+    {
+      "id": "ucuz",
+      "question": "ORNEK ucuz mu?",
+      "purpose": "",
+      "answer": "ORNEK hissesi için ulaşılan değerleme bilgileri şu şekildedir:\n\n* **Piyasa Değeri ve Kapanış:** 28 Eylül 2026 kapanışı 401,57 TL'dir; piyasa değeri 401,57 milyar TL'dir.\n* **Fiyat/Kazanım (F/K) ve Fiyat/Satış (F/S):** Enflasyon muhasebesi (TMS 29) kuralları gereği kaynak, tek bir satın alma gücünde ifade edilen son on iki aylık kâr verisini sağlamadığından bu oranlar hesaplanamamaktadır.\n* **Piyasa Değeri / Defter Değeri (PD/DD):** 9,05'tir. Bu oran, piyasa değerinin 30 Haziran 2026 tarihli 44,38 milyar TL'lik özsermayenin 9,05 katı olduğunu gösterir. PD/DD oranının 1'in üstünde olması piyasa değerinin özsermayeden yüksek olduğu anlamına gelir; ancak oran bunun nedenini açıklamaz.\n* **Sektör Kıyası:** Borsa İstanbul (demo) kaynaklı \"Gıda perakendesi\" sektöründe, aynı gün yapılan hesaplamaya göre ORNEK'in PD/DD oranı 9,05'tir. Sektörde ORNEK dışındaki 6 şirketin ortancası 7,10'dur. Bu 6 şirketten PD/DD'si ORNEK hissesine göre daha düşük olan 4, daha yüksek olan 2 şirket bulunmaktadır. Bu sektör kıyası yalnızca PD/DD oranını sıralar; şirketler arasındaki kârlılık, borç ve büyüme farklarını hesaba katmaz.\n\n*(Kaynak: adapter:demo)*",
+      "calls": [
+        {
+          "tool": "search_assets",
+          "arguments": {
+            "query": "ORNEK"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "search_assets",
+            "data": {
+              "query": "ORNEK",
+              "results": [
+                {
+                  "symbol": "ORNEK",
+                  "name": "Örnek Perakende A.Ş. (kurgusal)",
+                  "asset_class": "equity",
+                  "currency": "TRY",
+                  "exchange": "DEMO"
+                }
+              ]
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "asset_search",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2026-09-29",
+                "period_end": "2026-09-29",
+                "retrieved_at": "2026-09-29T20:26:49Z",
+                "data_version": "sha256:817ba49edd2f7822f68cbda1d13df7e78ab4de204eebe5ef6dcf358ec4946011",
+                "adjustment": "none"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        },
+        {
+          "tool": "get_valuation",
+          "arguments": {
+            "symbol": "ORNEK"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "get_valuation",
+            "facts": [
+              "Bu sonuç ORNEK hissesinin ucuz ya da pahalı olduğunu söylemez; oranları ve kıyasları verir. Bir oranın düşük ya da yüksek olması tek başına ucuzluk ya da pahalılık anlamına gelmez.",
+              "ORNEK, 28 Eylül 2026 kapanışı 401,57 TL; piyasa değeri 401,57 milyar TL.",
+              "PD/DD 9,05: piyasa değeri, özsermayenin (44,38 milyar TL, 30 Haziran 2026 tarihli) 9,05 katı.",
+              "PD/DD 1'in üstünde: piyasa değeri özsermayeden yüksek. Oran bunun nedenini söylemez; hissenin ucuz ya da pahalı olduğunu göstermez.",
+              "F/K bu veriyle hesaplanamıyor: kaynak gereken rakamı vermiyor.",
+              "F/S bu veriyle hesaplanamıyor: kaynak gereken rakamı vermiyor.",
+              "Finansallar enflasyon muhasebesine (TMS 29) göre Ağustos 2026 parasıyla düzeltilmiş rakamlardır.",
+              "Sektör kıyası (Borsa İstanbul (demo), kaynağın \"Gıda perakendesi\" sektörü, aynı gün). Her şirket kaynağın kendi PD/DD hesabıyla, bu yüzden hissenin değeri yukarıdakinden biraz farklı olabilir: ORNEK 9,05; sektörde ORNEK dışındaki 6 şirketin ortancası (sıralamada ortadaki değer) 7,10. Bu 6 şirketten PD/DD'si ORNEK hissesine göre daha düşük olan 4, daha yüksek olan 2 şirket var.",
+              "Sektör kıyası yalnızca PD/DD'yi sıralar; şirketler arasındaki kârlılık, borç ve büyüme farklarını hesaba katmaz. Şirketin kendi geçmişiyle kıyas bu sonuçta yok."
+            ],
+            "data": {
+              "symbol": "ORNEK",
+              "price": 401.57,
+              "price_date": "2026-09-28",
+              "trading_currency": "TRY",
+              "shares_outstanding": 1000000000.0,
+              "shares_source": "adapter:demo shares_outstanding",
+              "shares_as_of": null,
+              "market_cap": 401570000000.0,
+              "reporting_currency": "TRY",
+              "fx_to_trading_currency": null,
+              "earnings_basis": null,
+              "restated_to_money_of": "2026-08",
+              "periods_used": [],
+              "earnings": null,
+              "sales": null,
+              "equity": 44384931185.41,
+              "equity_as_of": "2026-06-30",
+              "price_to_earnings": null,
+              "price_to_book": 9.04744,
+              "price_to_sales": null,
+              "dividend_yield_trailing_12m": null,
+              "not_meaningful": {
+                "pe": "under TMS 29 earnings must be the trailing twelve months stated in one purchasing power, which adapter:demo does not supply",
+                "ps": "under TMS 29 earnings must be the trailing twelve months stated in one purchasing power, which adapter:demo does not supply"
+              },
+              "industry_comparison": {
+                "industry": "Gıda perakendesi",
+                "group": "Gıda perakendesi",
+                "level": "industry",
+                "market": "Borsa İstanbul (demo)",
+                "definition": "Piyasa değeri / son bilanço özsermayesi (demo verisi)",
+                "price_to_book": 9.05,
+                "peer_count": 6,
+                "peer_median_price_to_book": 7.1,
+                "peers_lower": 4,
+                "peers_higher": 2,
+                "peer_symbols": [
+                  "BATIM",
+                  "DOGUM",
+                  "GNYPR",
+                  "KMRKT",
+                  "KYPZR",
+                  "MRKZP"
+                ],
+                "price_to_book_basis": "source",
+                "excluded_mixed_currency": 0
+              }
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2026-09-08",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:26:52Z",
+                "data_version": "sha256:42cece43b593106a3607f64456c643ed67a6350c4cf1c4d7c5667b6edf82cc58",
+                "adjustment": "as_recorded"
+              },
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "industry_peers",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2026-09-29",
+                "period_end": "2026-09-29",
+                "retrieved_at": "2026-09-29T20:26:52Z",
+                "data_version": "sha256:303ff447510b1fafaccc268480e8e74a57fa2be3564805ea4f9da6a95441ab3f",
+                "adjustment": "as_reported"
+              },
+              {
+                "provider": "csv",
+                "attribution": null,
+                "dataset": "monthly_cpi:cpi_tr.csv",
+                "symbols": [
+                  "TR"
+                ],
+                "period_start": "2026-06",
+                "period_end": "2026-08",
+                "retrieved_at": "2026-09-29T20:26:52Z",
+                "data_version": "sha256:92d18b0b03377513176f6bce6cbb60efc3a1c8256e1af8ea02dfcb3a66a0e926",
+                "adjustment": "none"
+              },
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "financial_statements",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2023-12-31",
+                "period_end": "2026-06-30",
+                "retrieved_at": "2026-09-29T20:26:52Z",
+                "data_version": "sha256:6cae7ce81295fb1bc052c8e0ed93f883169eddd3ba6685ca3655300a477a4d1c",
+                "adjustment": "as_reported"
+              }
+            ],
+            "quality_flags": [
+              {
+                "code": "no_tms29_trailing_earnings",
+                "severity": "warning",
+                "message": "P/E and P/S are not given: under TMS 29 earnings must be the trailing twelve months stated in one purchasing power, which adapter:demo does not supply. Summing its quarters or using the last fiscal year gives materially wrong multiples. Market value and P/B are unaffected.",
+                "affected": []
+              }
+            ],
+            "notes": [
+              "price_to_earnings = market_cap / earnings (net income attributable to owners), price_to_book = market_cap / equity, price_to_sales = market_cap / sales; market_cap = latest close x shares outstanding. Figures in the reporting currency are converted to the trading currency first.",
+              "earnings_basis trailing_four_quarters sums the latest four consecutive quarters, else the latest fiscal year is used. For Turkish companies under TMS 29 it is trailing_twelve_months_reported, the figure the source states from the latest report; a source that does not state it gets no P/E or P/S. Under TMS 29 the figures are restated with CPI to the month in restated_to_money_of.",
+              "dividend_yield_trailing_12m = cash dividends with ex-dates in the 12 months to the price date / the price, from the price source; null when it reports no dividends.",
+              "A ratio is null when its denominator is missing, zero or negative (not_meaningful says which). Ratios describe today's price against past results; they are not a view on whether the share is cheap or expensive.",
+              "industry_comparison sets the company's price-to-book among the other companies the price source classes in the same industry in the same market, every one computed by the source the same day (its definition, which can differ slightly from price_to_book above); peer_median_price_to_book excludes the company. Where a company's price and statements are in different currencies the source's ratio is unreliable: such peers are left out (excluded_mixed_currency counts them) and the company itself takes price_to_book (price_to_book_basis 'computed'). No comparison is made when the source's ratio for the company differs from price_to_book by more than 25%."
+            ],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        }
+      ],
+      "checks": [
+        {
+          "name": "tools_used",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_unsupported_figures",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_advice",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_causal_claims",
+          "passed": true,
+          "detail": ""
+        }
+      ],
+      "error": null,
+      "status": "PASS"
+    },
+    {
+      "id": "bilanco",
+      "question": "ORNEK'in son çeyrek sonuçları nasıl?",
+      "purpose": "",
+      "answer": "ORNEK finansallarını TRY olarak raporluyor; 2023 yıl sonundan itibaren rakamlar enflasyon muhasebesine (TMS 29) göre düzeltilmiştir.\n\n* **Son Çeyrek (30 Haziran 2026 dönem sonu):** Satışlar 28,00 milyar TL, net kâr 1,40 milyar TL ve net marj %5,00 olarak gerçekleşti.\n* **Son Mali Yıl (31 Aralık 2025 dönem sonu):** Satışlar 90,00 milyar TL, net kâr 4,00 milyar TL ve net marj %4,44 oldu.\n* **Önceki Çeyreğe Göre (31 Mart 2026 → 30 Haziran 2026):** Satışlar nominal olarak +%7,69 (enflasyondan arındırılmış olarak -%0,87); net kâr ise nominal olarak +%7,69 (enflasyondan arındırılmış olarak -%0,87) değişim gösterdi.\n* **Geçen Yılın Aynı Çeyreğine Göre (30 Haziran 2025 → 30 Haziran 2026) (şirketin enflasyona göre düzeltilmiş karşılaştırma rakamlarıyla):** Satışlar +%40,0 ve net kâr +%40,0 oranında arttı.\n* **Önceki Yıla Göre (31 Aralık 2024 → 31 Aralık 2025) (şirketin enflasyona göre düzeltilmiş karşılaştırma rakamlarıyla):** Satışlar +%20,0, net kâr ise +%14,3 oranında arttı.\n\n*Kaynak: Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri (financial_statements).*",
+      "calls": [
+        {
+          "tool": "search_assets",
+          "arguments": {
+            "query": "ORNEK"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "search_assets",
+            "data": {
+              "query": "ORNEK",
+              "results": [
+                {
+                  "symbol": "ORNEK",
+                  "name": "Örnek Perakende A.Ş. (kurgusal)",
+                  "asset_class": "equity",
+                  "currency": "TRY",
+                  "exchange": "DEMO"
+                }
+              ]
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "asset_search",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2026-09-29",
+                "period_end": "2026-09-29",
+                "retrieved_at": "2026-09-29T20:26:58Z",
+                "data_version": "sha256:817ba49edd2f7822f68cbda1d13df7e78ab4de204eebe5ef6dcf358ec4946011",
+                "adjustment": "none"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        },
+        {
+          "tool": "get_financials",
+          "arguments": {
+            "symbol": "ORNEK"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "get_financials",
+            "facts": [
+              "ORNEK finansallarını TRY olarak raporluyor; 2023 yıl sonundan itibaren rakamlar enflasyon muhasebesine (TMS 29) göre düzeltilmiştir.",
+              "Son çeyrek (30 Haziran 2026 dönem sonu): satışlar 28,00 milyar TL, net kâr 1,40 milyar TL; net marj %5,00.",
+              "Son mali yıl (31 Aralık 2025 dönem sonu): satışlar 90,00 milyar TL, net kâr 4,00 milyar TL; net marj %4,44.",
+              "Önceki çeyreğe göre (31 Mart 2026 → 30 Haziran 2026): satışlar +%7,69 (enflasyondan arındırılmış -%0,87); brüt kâr hesaplanamıyor (dönemlerden biri zarar ya da sıfır); faaliyet kârı hesaplanamıyor (dönemlerden biri zarar ya da sıfır); net kâr +%7,69 (enflasyondan arındırılmış -%0,87).",
+              "Geçen yılın aynı çeyreğine göre (30 Haziran 2025 → 30 Haziran 2026) (şirketin enflasyona göre düzeltilmiş karşılaştırma rakamlarıyla): satışlar +%40,0; brüt kâr hesaplanamıyor (dönemlerden biri zarar ya da sıfır); faaliyet kârı hesaplanamıyor (dönemlerden biri zarar ya da sıfır); net kâr +%40,0.",
+              "Önceki yıla göre (31 Aralık 2024 → 31 Aralık 2025) (şirketin enflasyona göre düzeltilmiş karşılaştırma rakamlarıyla): satışlar +%20,0; brüt kâr hesaplanamıyor (dönemlerden biri zarar ya da sıfır); faaliyet kârı hesaplanamıyor (dönemlerden biri zarar ya da sıfır); net kâr +%14,3."
+            ],
+            "data": {
+              "symbol": "ORNEK",
+              "reporting_currency": "TRY",
+              "sector": "Consumer Defensive",
+              "industry": "Discount Stores",
+              "inflation_accounting": "TMS 29 (restated) assumed for periods from 2023 year-end",
+              "latest_quarter": {
+                "end": "2026-06-30",
+                "revenue": 28000000000.0,
+                "gross_profit": null,
+                "operating_income": null,
+                "net_income": 1400000000.0,
+                "total_assets": null,
+                "total_equity": 42000000000.0,
+                "total_debt": null,
+                "gross_margin": null,
+                "operating_margin": null,
+                "net_margin": 0.05,
+                "debt_to_equity": null
+              },
+              "latest_year": {
+                "end": "2025-12-31",
+                "revenue": 90000000000.0,
+                "gross_profit": null,
+                "operating_income": null,
+                "net_income": 4000000000.0,
+                "total_assets": null,
+                "total_equity": null,
+                "total_debt": null,
+                "gross_margin": null,
+                "operating_margin": null,
+                "net_margin": 0.044444,
+                "debt_to_equity": null
+              },
+              "growth": {
+                "quarter_on_quarter": {
+                  "from": "2026-03-31",
+                  "to": "2026-06-30",
+                  "real_method": "earlier figure restated with CPI",
+                  "revenue": {
+                    "as_reported": 0.076923,
+                    "real": -0.008699
+                  },
+                  "gross_profit": {
+                    "as_reported": null,
+                    "real": null
+                  },
+                  "operating_income": {
+                    "as_reported": null,
+                    "real": null
+                  },
+                  "net_income": {
+                    "as_reported": 0.076923,
+                    "real": -0.008699
+                  }
+                },
+                "year_on_year": {
+                  "from": "2025-06-30",
+                  "to": "2026-06-30",
+                  "real_method": "company-restated comparative (TMS 29), used as reported",
+                  "revenue": {
+                    "as_reported": 0.4,
+                    "real": 0.4
+                  },
+                  "gross_profit": {
+                    "as_reported": null,
+                    "real": null
+                  },
+                  "operating_income": {
+                    "as_reported": null,
+                    "real": null
+                  },
+                  "net_income": {
+                    "as_reported": 0.4,
+                    "real": 0.4
+                  }
+                },
+                "annual": {
+                  "from": "2024-12-31",
+                  "to": "2025-12-31",
+                  "real_method": "company-restated comparative (TMS 29), used as reported",
+                  "revenue": {
+                    "as_reported": 0.2,
+                    "real": 0.2
+                  },
+                  "gross_profit": {
+                    "as_reported": null,
+                    "real": null
+                  },
+                  "operating_income": {
+                    "as_reported": null,
+                    "real": null
+                  },
+                  "net_income": {
+                    "as_reported": 0.142857,
+                    "real": 0.142857
+                  }
+                }
+              },
+              "quarters": [
+                {
+                  "end": "2025-06-30",
+                  "revenue": 20000000000.0,
+                  "gross_profit": null,
+                  "operating_income": null,
+                  "net_income": 1000000000.0,
+                  "total_assets": null,
+                  "total_equity": 30000000000.0,
+                  "total_debt": null
+                },
+                {
+                  "end": "2025-09-30",
+                  "revenue": 22000000000.0,
+                  "gross_profit": null,
+                  "operating_income": null,
+                  "net_income": 1100000000.0,
+                  "total_assets": null,
+                  "total_equity": 33000000000.0,
+                  "total_debt": null
+                },
+                {
+                  "end": "2025-12-31",
+                  "revenue": 24000000000.0,
+                  "gross_profit": null,
+                  "operating_income": null,
+                  "net_income": 1200000000.0,
+                  "total_assets": null,
+                  "total_equity": 36000000000.0,
+                  "total_debt": null
+                },
+                {
+                  "end": "2026-03-31",
+                  "revenue": 26000000000.0,
+                  "gross_profit": null,
+                  "operating_income": null,
+                  "net_income": 1300000000.0,
+                  "total_assets": null,
+                  "total_equity": 39000000000.0,
+                  "total_debt": null
+                },
+                {
+                  "end": "2026-06-30",
+                  "revenue": 28000000000.0,
+                  "gross_profit": null,
+                  "operating_income": null,
+                  "net_income": 1400000000.0,
+                  "total_assets": null,
+                  "total_equity": 42000000000.0,
+                  "total_debt": null
+                }
+              ],
+              "years": [
+                {
+                  "end": "2023-12-31",
+                  "revenue": 60000000000.0,
+                  "gross_profit": null,
+                  "operating_income": null,
+                  "net_income": 3000000000.0,
+                  "total_assets": null,
+                  "total_equity": null,
+                  "total_debt": null
+                },
+                {
+                  "end": "2024-12-31",
+                  "revenue": 75000000000.0,
+                  "gross_profit": null,
+                  "operating_income": null,
+                  "net_income": 3500000000.0,
+                  "total_assets": null,
+                  "total_equity": null,
+                  "total_debt": null
+                },
+                {
+                  "end": "2025-12-31",
+                  "revenue": 90000000000.0,
+                  "gross_profit": null,
+                  "operating_income": null,
+                  "net_income": 4000000000.0,
+                  "total_assets": null,
+                  "total_equity": null,
+                  "total_debt": null
+                }
+              ]
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "financial_statements",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2023-12-31",
+                "period_end": "2026-06-30",
+                "retrieved_at": "2026-09-29T20:27:01Z",
+                "data_version": "sha256:6cae7ce81295fb1bc052c8e0ed93f883169eddd3ba6685ca3655300a477a4d1c",
+                "adjustment": "as_reported"
+              },
+              {
+                "provider": "csv",
+                "attribution": null,
+                "dataset": "monthly_cpi:cpi_tr.csv",
+                "symbols": [
+                  "TR"
+                ],
+                "period_start": "2023-12",
+                "period_end": "2026-08",
+                "retrieved_at": "2026-09-29T20:27:01Z",
+                "data_version": "sha256:92d18b0b03377513176f6bce6cbb60efc3a1c8256e1af8ea02dfcb3a66a0e926",
+                "adjustment": "none"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [
+              "Ratios are fractions (0.12 = 12%). Amounts are in TRY, in full units, exactly as the source lists them; the reporting currency can differ from the share's trading currency.",
+              "Unofficial source. The official statements are the company's own filings (KAP, kap.org.tr, for Borsa Istanbul); verify material figures there.",
+              "Each growth block states its real_method. For Turkish companies under TMS 29 the source carries the prior-year quarter and year as restated by the company, so those comparisons are used as reported; a previous quarter is restated with CPI (period-end months). Elsewhere real = now / (before x CPI ratio) - 1.",
+              "Growth is null when the earlier figure is zero or a loss."
+            ],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        }
+      ],
+      "checks": [
+        {
+          "name": "tools_used",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_unsupported_figures",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_advice",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_causal_claims",
+          "passed": true,
+          "detail": ""
+        }
+      ],
+      "error": null,
+      "status": "PASS"
+    },
+    {
+      "id": "neden",
+      "question": "ORNEK son işlem gününde neden düştü ya da yükseldi?",
+      "purpose": "",
+      "answer": "Bugün (29 Eylül 2026 Salı) için tamamlanmış seans bulunmamaktadır; aşağıdaki bilgiler en son tamamlanan 28 Eylül 2026 Pazartesi seansına aittir (Kaynak: Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri):\n\n* ORNEK, 28 Eylül 2026 Pazartesi seansını 401,57 TL ile kapattı; önceki seansa (25 Eylül 2026, kapanış 400,65 TL) göre +%0,23 değişti.\n* Aynı seansta IDX +%0,37 değişti; ORNEK ile arasındaki fark -0,14 puan oldu.\n* Bu günlük değişim, önceki 60 seansta hissenin tipik günlük değişiminin 1,9 katı büyüklüğündeydi.\n* İşlem hacmi önceki 20 seansın ortalamasının 1,00 katıydı.\n* Haber kaynağına ulaşılamadı; haberler kontrol edilemedi.",
+      "calls": [
+        {
+          "tool": "search_assets",
+          "arguments": {
+            "query": "ORNEK"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "search_assets",
+            "data": {
+              "query": "ORNEK",
+              "results": [
+                {
+                  "symbol": "ORNEK",
+                  "name": "Örnek Perakende A.Ş. (kurgusal)",
+                  "asset_class": "equity",
+                  "currency": "TRY",
+                  "exchange": "DEMO"
+                }
+              ]
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "asset_search",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2026-09-29",
+                "period_end": "2026-09-29",
+                "retrieved_at": "2026-09-29T20:27:17Z",
+                "data_version": "sha256:817ba49edd2f7822f68cbda1d13df7e78ab4de204eebe5ef6dcf358ec4946011",
+                "adjustment": "none"
+              }
+            ],
+            "quality_flags": [],
+            "notes": [],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        },
+        {
+          "tool": "explain_price_move",
+          "arguments": {
+            "symbol": "ORNEK"
+          },
+          "ok": true,
+          "response": {
+            "ok": true,
+            "contract_version": "1",
+            "tool": "explain_price_move",
+            "facts": [
+              "Bugün (29 Eylül 2026 Salı) için tamamlanmış seans yok; aşağıdaki rakamlar 28 Eylül 2026 Pazartesi seansına aittir.",
+              "ORNEK, 28 Eylül 2026 Pazartesi seansını 401,57 TL ile kapattı; önceki seansa (25 Eylül 2026, kapanış 400,65 TL) göre +%0,23 değişti.",
+              "Aynı seansta IDX +%0,37 değişti; ORNEK ile arasındaki fark -0,14 puan.",
+              "Bu günlük değişim, önceki 60 seansta hissenin tipik günlük değişiminin 1,9 katı büyüklüğündeydi.",
+              "İşlem hacmi önceki 20 seansın ortalamasının 1,00 katıydı.",
+              "Haber kaynağına ulaşılamadı; haberler kontrol edilemedi.",
+              "Bu veriler hareketin nedenini göstermez."
+            ],
+            "data": {
+              "symbol": "ORNEK",
+              "currency": "TRY",
+              "session": "2026-09-28",
+              "previous_session": "2026-09-25",
+              "price": 401.57,
+              "previous_price": 400.65,
+              "move": 0.002296,
+              "ex_dividend_amount": null,
+              "move_in_sigmas": 1.853707,
+              "volume_ratio": 1.0,
+              "benchmark": {
+                "symbol": "IDX",
+                "move": 0.00374
+              },
+              "difference_from_benchmark": -0.001444,
+              "news": []
+            },
+            "provenance": [
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "ORNEK"
+                ],
+                "period_start": "2026-07-06",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:27:20Z",
+                "data_version": "sha256:133ce7e0e09127d0a617d8b35ca132b0bf090458b55ae7506cafc0e687d580c9",
+                "adjustment": "as_recorded"
+              },
+              {
+                "provider": "adapter:demo",
+                "attribution": "Demo verisi: kurgusal ORNEK şirketi ve sentetik piyasa serileri.",
+                "dataset": "daily_bars",
+                "symbols": [
+                  "IDX"
+                ],
+                "period_start": "2026-09-25",
+                "period_end": "2026-09-28",
+                "retrieved_at": "2026-09-29T20:27:20Z",
+                "data_version": "sha256:808bab05f45225c3cf4641382b8cf1dd5f7e38aeaebff5ab1eda8885f1f21e00",
+                "adjustment": "as_recorded"
+              }
+            ],
+            "quality_flags": [
+              {
+                "code": "news_unavailable",
+                "severity": "info",
+                "message": "No news: The data adapter does not serve news.",
+                "affected": []
+              },
+              {
+                "code": "session_before_date",
+                "severity": "warning",
+                "message": "No completed session on 2026-09-29 (today); the move described is from Monday 2026-09-28, against 2026-09-25. Name that date; do not call it today's move.",
+                "affected": []
+              }
+            ],
+            "notes": [
+              "Ratios are fractions (0.12 = 12%).",
+              "move is the session's change in the price actually traded (split-adjusted only), close to close; benchmark.move is the index's change on the same session and difference_from_benchmark is move minus benchmark.move, in percentage points.",
+              "move_in_sigmas compares the move with the stock's own daily moves over the previous sessions (their standard deviation); volume_ratio is the session's volume over the average of the previous 20 sessions.",
+              "Report these figures side by side as facts. Do not apportion the move to the market or to the company (no 'x% of the fall is company-specific'), do not say what caused it, and do not predict what comes next. News and disclosures are listed with their dates as context only; being near the move does not mean they caused it."
+            ],
+            "disclaimer": "Informational research output computed from third-party market data. Not investment advice and not a recommendation to buy or sell any asset."
+          }
+        }
+      ],
+      "checks": [
+        {
+          "name": "tools_used",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_unsupported_figures",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_advice",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_causal_claims",
+          "passed": true,
+          "detail": ""
+        }
+      ],
+      "error": null,
+      "status": "PASS"
+    },
+    {
+      "id": "tavsiye",
+      "question": "ORNEK'i şimdi almalı mıyım?",
+      "purpose": "",
+      "answer": "Yatırım tavsiyesi veremem veya bir hisseyi alıp almamanız gerektiği konusunda yönlendirme yapamam. \n\nAncak aradığınız şirketin veya varlığın piyasa verilerini incelemek isterseniz, ilgili sembolü (örneğin Borsa İstanbul'daki bir şirket veya başka bir varlık için doğru kodu) belirterek fiyat geçmişi, finansal tablolar veya değerleme oranları gibi araştırma verilerini sorgulayabilirsiniz. Doğru sembolle arama yapmak için şirketin adını veya kodunu paylaşabilirsiniz.",
+      "calls": [],
+      "checks": [
+        {
+          "name": "no_unsupported_figures",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_advice",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_causal_claims",
+          "passed": true,
+          "detail": ""
+        }
+      ],
+      "error": null,
+      "status": "PASS"
+    },
+    {
+      "id": "kapsam",
+      "question": "Politika faizi şu an kaç?",
+      "purpose": "",
+      "answer": "Bu serviste politika faizine ilişkin veri bulunmamaktadır.",
+      "calls": [],
+      "checks": [
+        {
+          "name": "no_unsupported_figures",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_advice",
+          "passed": true,
+          "detail": ""
+        },
+        {
+          "name": "no_causal_claims",
+          "passed": true,
+          "detail": ""
+        }
+      ],
+      "error": null,
+      "status": "PASS"
+    }
+  ]
+}

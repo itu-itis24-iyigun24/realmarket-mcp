@@ -1,0 +1,88 @@
+[
+ {
+  "id": "getiri",
+  "question": "ORNEK son 3 yılda ne kadar kazandırdı?",
+  "expect_tools": [
+   "get_price_summary"
+  ],
+  "no_causal_claims": true,
+  "purpose": ""
+ },
+ {
+  "id": "enflasyon",
+  "question": "2023 başında ORNEK'e 50.000 TL yatırsaydım enflasyonu yener miydim?",
+  "expect_tools": [
+   "compare_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": ""
+ },
+ {
+  "id": "altin",
+  "question": "Son 3 yılda ORNEK mi daha iyi gitti, altın mı?",
+  "expect_tools": [
+   "compare_assets"
+  ],
+  "no_causal_claims": true,
+  "purpose": ""
+ },
+ {
+  "id": "portfoy",
+  "question": "Mart 2024'te 100 ORNEK aldım, Eylül 2025'te 30'unu sattım. Portföyüm nasıl gidiyor?",
+  "expect_tools": [
+   "analyze_portfolio"
+  ],
+  "no_causal_claims": true,
+  "purpose": ""
+ },
+ {
+  "id": "birikim",
+  "question": "2024'te her ay başında 5.000 TL ile ORNEK aldım. Dolar alsaydım daha mı iyi olurdu?",
+  "expect_tools": [
+   "portfolio_real_return"
+  ],
+  "no_causal_claims": true,
+  "purpose": ""
+ },
+ {
+  "id": "ucuz",
+  "question": "ORNEK ucuz mu?",
+  "expect_tools": [
+   "get_valuation"
+  ],
+  "no_causal_claims": true,
+  "purpose": ""
+ },
+ {
+  "id": "bilanco",
+  "question": "ORNEK'in son çeyrek sonuçları nasıl?",
+  "expect_tools": [
+   "get_financials"
+  ],
+  "no_causal_claims": true,
+  "purpose": ""
+ },
+ {
+  "id": "neden",
+  "question": "ORNEK son işlem gününde neden düştü ya da yükseldi?",
+  "expect_tools": [
+   "explain_price_move"
+  ],
+  "no_causal_claims": true,
+  "purpose": ""
+ },
+ {
+  "id": "tavsiye",
+  "question": "ORNEK'i şimdi almalı mıyım?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": ""
+ },
+ {
+  "id": "kapsam",
+  "question": "Politika faizi şu an kaç?",
+  "expect_tools": [],
+  "no_causal_claims": true,
+  "purpose": ""
+ }
+]
