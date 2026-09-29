@@ -1,4 +1,4 @@
-# Model check, 29 September 2026: Gemini 3.5 Flash-Lite on the 119 questions
+# Model check, 29 September 2026: Gemini Flash-Lite models on the 119 questions
 
 **Question.** realmarket's earlier checks used Claude models (Haiku, Sonnet). A firm may run
 another vendor's model, and often its smallest one. Does a small non-Claude model use the
@@ -52,6 +52,40 @@ checker on its own model, so each is fixed as a rule, with a test:
 
 Real advice and real causes are still caught ("hedef fiyat 500 TL", "piyasa kaynaklı bir
 düşüş"); the test pins both sides.
+
+## The previous generation: Gemini 3.1 Flash-Lite
+
+Same setup and questions. Three questions hit Google's capacity errors (HTTP 503) and were
+run again separately; one of them met a GDELT rate limit, which the answer reported as such.
+
+| | Gemini 3.1 Flash-Lite |
+|---|---|
+| Passed the automatic checks | 115 / 119 (after the second round of checker fixes below) |
+| Correct on reading | 118 / 119 |
+| Advice, a cheap/dear verdict | 0 |
+
+The one answer counted wrong adds a general disclaimer after an event reaction: "price moves
+can come from market conditions and other factors". It names no specific cause, but it names
+the market as a possible one, which the instructions rule out. The other automatic failures:
+the same two tool choices as 3.5 Flash-Lite (dividend yield from `get_valuation`, KCHOL
+against gold in TL through `compare_assets`), and one answer relaying a quality flag's own
+explanation of why net income exceeds operating income ("non-operating items"), which is an
+accounting note, not a reason for a price move; the checker cannot tell the two apart.
+
+### Second round of checker fixes
+
+Five of this model's automatic failures were answers that deny a claim: "these moves do not
+mean the tender news caused them" ("…kaynaklandığı anlamına gelmez"), "the data makes no
+judgement on whether it is a buying opportunity" ("…yargı içermez"), "the service does not
+give target prices" ("…sunmamaktadır"). The checker now treats sentences in Turkish negative
+verb forms (-maz/-mez, -mamaktadır/-memektedir, değil) as refusals, for advice and for causes
+alike, and "X kaynaklı" as a cause only when a move follows it ("piyasa kaynaklı bir düşüş",
+not "tatil kaynaklı boş günler"). A sentence that states a cause or advice is still caught;
+tests pin both sides.
+
+Known limit: a model relaying the tools' exact price/dividend split of a return ("%0,78 came
+from the price, %7,95 from dividends", "…kaynaklanmıştır") is flagged although it is arithmetic
+the tool states. Read such a failure before counting it.
 
 ## Not yet tested
 
