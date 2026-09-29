@@ -280,3 +280,28 @@ def test_sourced_data_and_index_names_are_not_flagged() -> None:
     checks = {c.name: c for c in check_answer(case, answer, [])}
     assert checks["no_causal_claims"].passed
     assert checks["no_unsupported_figures"].passed
+
+
+def test_four_false_alarms_from_a_real_run_stay_quiet_and_real_ones_still_fire() -> None:
+    """From the Gemini run of 29 September 2026: a news title tokenized as "11 . 1 %", a
+    "1-3 aylık" range, "sağlayıcı kaynaklı" (from the provider) and a refusal in
+    "bulunmamaktadır" were each flagged; none is a figure, a cause or advice."""
+    title = "THY Shares Up 11 . 1 % – Here Why"
+    news = ToolCall("get_news", {}, True, {"data": {"articles": [{"title": title}]}})
+    case = Case("h", "THYAO haberleri?", (), no_causal_claims=True)
+    answer = (
+        "THY Shares Up 11.1% (23 Eylül 2026). Kaynak: 1-3 aylık mevduat faizleri. "
+        "Bu seanslar sağlayıcı kaynaklı sıfır hacimli günlerdir."
+    )
+    checks = {c.name: c for c in check_answer(case, answer, [news])}
+    assert checks["no_unsupported_figures"].passed, checks["no_unsupported_figures"].detail
+    assert checks["no_causal_claims"].passed, checks["no_causal_claims"].detail
+    refusal = "Araçlarda BIMAS için bir hedef fiyat verisi bulunmamaktadır."
+    assert qualify.advice_wording(refusal) == []
+
+    assert qualify.advice_wording("BIMAS için hedef fiyat 500 TL.") == ["hedef fiyat"]
+    moved = {c.name: c for c in check_answer(case, "Piyasa kaynaklı bir düşüş yaşandı.", [])}
+    assert not moved["no_causal_claims"].passed
+    assert not {c.name: c for c in check_answer(case, "Getiri -%5,5 oldu.", [])}[
+        "no_unsupported_figures"
+    ].passed

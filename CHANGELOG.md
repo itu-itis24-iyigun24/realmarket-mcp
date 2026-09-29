@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **First non-Claude model check.** Gemini 3.5 Flash-Lite answered the 119 questions through
+  the data adapter in the firm's mode: 118 of 119 correct on reading, no advice, no cause for
+  a move, no verdict (`evals/reports/2026-09-29-gemini-flash-lite.md`). `realmarket-qualify`
+  no longer flags four things that run showed are not errors: a number split by spaces in a
+  news title ("11 . 1 %"), a range ("1-3 aylık"), "sağlayıcı kaynaklı" (from the provider)
+  and a refusal in "bulunmamaktadır" / "yok".
 - **A firm's deployment offers only what the firm provides.** The adapter's `/meta` may list
   the optional endpoints it serves (`"endpoints": ["financials", "peers", "news"]`); with the
   adapter, realmarket then leaves out the tools whose data is not served (`get_financials`

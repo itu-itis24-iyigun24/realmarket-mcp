@@ -363,7 +363,13 @@ _DATES = re.compile(
     # an index's name: "BIST 100", "BIST 30"
     r"|\bBIST\s?\d+"
 )
-_NUMBER = re.compile(r"-?\d[\d.,]*\d|-?\d")
+# A minus sign only where nothing is attached before it: in "1-3 aylık" the dash is a range.
+_SIGN = r"(?:(?<![\w.,])-)?"
+_NUMBER = re.compile(_SIGN + r"\d[\d.,]*\d|" + _SIGN + r"\d")
+# Third-party text (news titles) can arrive tokenized: "11 . 1 %" is 11.1.
+_SPACED_DECIMAL = re.compile(r"(\d)\s+([.,])\s+(\d)")
+# "sağlayıcı kaynaklı" (from the provider) names a source, not a cause.
+_SOURCED = re.compile(r"\b(sa[ğg]lay[ıi]c[ıi](s[ıi])?|veri|servis|kaynak)\s+kaynakl[ıi]\b", re.I)
 
 ADVICE_PATTERNS = tuple(
     re.compile(p, re.IGNORECASE)
@@ -439,7 +445,7 @@ def _numbers_in(value: Any) -> Iterator[float]:
     if isinstance(value, int | float):
         yield float(value)
     elif isinstance(value, str):  # a news title's "300 uçak" is in the result too
-        for _, values in answer_numbers(value):
+        for _, values in answer_numbers(_SPACED_DECIMAL.sub(r"\1\2\3", value)):
             yield from values
     elif isinstance(value, dict):
         for item in value.values():
@@ -524,7 +530,8 @@ def visible_answer(answer: str) -> str:
 REFUSAL = re.compile(
     r"\b(veremem|veremiyorum|vermem|vermiyorum|sunamam|sunamıyorum|sunmuyorum|yapamam|"
     r"yapamıyorum|yapmıyorum|taşımaz|değildir|erişilemedi|bulunamadı|bulunmuyor|mevcut değil|"
-    r"sunulmuyor|yer almıyor|yer almamaktadır|cannot|can't|do not|don't|won't)\b",
+    r"sunulmuyor|yer almıyor|yer almamaktadır|bulunmamaktadır|mevcut değildir|yoktur|yok|"
+    r"cannot|can't|do not|don't|won't)\b",
     re.IGNORECASE,
 )
 
@@ -602,7 +609,8 @@ def check_answer(case: Case, answer: str, calls: Sequence[ToolCall]) -> list[Che
     advice = advice_wording(answer)
     checks.append(Check("no_advice", not advice, f"advice wording: {advice}" if advice else ""))
     if case.no_causal_claims:
-        causal = [m.group(0) for p in CAUSAL_PATTERNS if (m := p.search(answer))]
+        described = _SOURCED.sub(" ", answer)
+        causal = [m.group(0) for p in CAUSAL_PATTERNS if (m := p.search(described))]
         checks.append(
             Check(
                 "no_causal_claims",
