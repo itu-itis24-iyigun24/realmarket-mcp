@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.8 — 2026-09-29
 
 - **More models checked** (`evals/reports/2026-09-29-gemini-flash-lite.md`): Gemini 3.1
   Flash-Lite 118 of 119 correct on reading; the open Gemma 4 26B 44 of 48 answered questions
