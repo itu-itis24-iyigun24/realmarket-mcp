@@ -24,6 +24,13 @@ hiçbir cevapta tavsiye, fiyat hareketine neden gösterme ya da ucuz/pahalı hü
 (`evals/reports/2026-09-28-full-run-2.md`). Sonuç kurumun modeline ve verisine göre değişir;
 kurum kendi modelini 4. adımdaki araçla sınamalıdır.
 
+## Pilot kapsamı
+
+Pilot, Borsa İstanbul hisseleri, BIST endeksleri, yatırım fonları, döviz ve altın içindir;
+getiriler TL cinsinden ve TÜFE'ye göre ölçülür. ABD ve diğer yurt dışı hisseler pilotun
+dışındadır: adaptör bunları sunmaz, sunsa bile yurt dışı enflasyon kaynağı ayarlanmadığı
+için reel getiri araçları "bu hizmette yok" der.
+
 ## Mimari
 
 ```
