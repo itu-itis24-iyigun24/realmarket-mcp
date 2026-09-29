@@ -162,6 +162,7 @@ Süreler kaba tahmindir; kurumun veri kaynağının hazırlığına göre deği�
 
 Ürünün ne yapıp ne yapmadığı, veri akışı, denetim kaydı ve test sonuçları tek belgede:
 [`uyum-dosyasi.md`](uyum-dosyasi.md).
+Pilotun süresi, aşamaları ve başarı ölçütleri: [`pilot-protokolu.md`](pilot-protokolu.md).
 
 ## Kurumda kalan sorumluluklar
 

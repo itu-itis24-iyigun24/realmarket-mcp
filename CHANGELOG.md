@@ -8,6 +8,8 @@
   on an address other than 127.0.0.1 without a token is refused at startup, unless
   `--allow-unauthenticated` says a gateway authenticates every request itself, and a token
   shorter than 32 characters is refused. stdio (desktop clients) is unchanged.
+- `docs/pilot-protokolu.md`: a six-week pilot protocol in Turkish (scope, phases, roles,
+  success criteria, data, cost and exit).
 - `docs/uyum-dosyasi.md`: a compliance brief in Turkish for brokerages' legal and compliance
   teams. The Turkish integration guide states the pilot's scope (Borsa Istanbul, funds,
   currencies and gold; foreign shares excluded).
