@@ -149,6 +149,11 @@ realmarket-qualify --base-url <modelinizin OpenAI uyumlu adresi> --model <model>
 
 Süreler kaba tahmindir; kurumun veri kaynağının hazırlığına göre değişir.
 
+## Hukuk ve uyum birimleri için
+
+Ürünün ne yapıp ne yapmadığı, veri akışı, denetim kaydı ve test sonuçları tek belgede:
+[`uyum-dosyasi.md`](uyum-dosyasi.md).
+
 ## Kurumda kalan sorumluluklar
 
 - Verinin lisansı ve doğruluğu (realmarket veriyi denetler ama kaynağın yerine geçmez). Borsa
