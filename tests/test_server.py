@@ -205,16 +205,24 @@ def test_check_setup_says_what_replaces_a_missing_source() -> None:
 def test_transport_option(monkeypatch: pytest.MonkeyPatch) -> None:
     import realmarket_mcp.server as server_module
 
-    runs: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+    runs: list[tuple[Any, ...]] = []
 
     class Recorder:
-        def run(self, *args: Any, **kwargs: Any) -> None:
-            runs.append((args, kwargs))
+        def run(self, *args: Any) -> None:
+            runs.append(("stdio", *args))
 
+        def streamable_http_app(self, *, host: str) -> str:
+            return f"app@{host}"
+
+    def serve(self: Any, port: int) -> None:
+        runs.append(("http", self.app, self.host, port))
+
+    monkeypatch.delenv("REALMARKET_SERVER_TOKEN", raising=False)
     monkeypatch.setattr(server_module, "build_server", Recorder)
+    monkeypatch.setattr(server_module._HttpApp, "run", serve)
     server_module.main([])
     server_module.main(["--transport", "http", "--port", "9000"])
-    assert runs == [((), {}), (("streamable-http",), {"host": "127.0.0.1", "port": 9000})]
+    assert runs == [("stdio",), ("http", "app@127.0.0.1", "127.0.0.1", 9000)]
 
 
 def test_an_unknown_argument_is_refused_not_ignored(fixture_env: None) -> None:

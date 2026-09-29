@@ -37,11 +37,17 @@ customer ─ firm's app ─ firm's LLM ─ MCP client ─ realmarket (MCP server
 2. **realmarket server.** Run it centrally with the Streamable HTTP transport:
 
    ```bash
-   realmarket-mcp --transport http --host 127.0.0.1 --port 8000     # endpoint: /mcp
+   export REALMARKET_SERVER_TOKEN=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+   realmarket-mcp --transport http --host 0.0.0.0 --port 8000       # endpoint: /mcp
    ```
 
-   The endpoint has no authentication of its own. Keep it on an internal interface and put it
-   behind the firm's API gateway, which authenticates the application calling it.
+   With `REALMARKET_SERVER_TOKEN` set, every request must carry `Authorization: Bearer
+   <token>`, and any other gets 401 before it reaches the tools; give the token only to the
+   system that runs the model. It authenticates that system, not the firm's customer. Serving
+   beyond 127.0.0.1 without a token is refused at startup unless `--allow-unauthenticated` is
+   passed (for a gateway that authenticates every request itself). A token shorter than 32
+   characters is refused. Keep the endpoint on an internal network behind the firm's gateway
+   either way.
 3. **Model and MCP client.** Any model that supports tool calling can use realmarket through an
    MCP client; the server is not tied to Claude. The server sends usage instructions at
    connection time (cite provenance, lead with quality flags, no recommendations) and ships
@@ -97,6 +103,7 @@ system prompt in production too; the test uses them.
 | `REALMARKET_EVDS_API_KEY` | Turkish CPI (current) and TL deposit rates |
 | `REALMARKET_SEC_CONTACT` | official US company statements (the firm's contact e-mail) |
 | `REALMARKET_NEWS_PROVIDER=http` | news from the adapter's `/news` endpoint (KAP, Foreks or another licensed feed; the default with the adapter); `none` turns news off |
+| `REALMARKET_SERVER_TOKEN` | bearer token every HTTP request must carry (at least 32 characters); required to serve beyond 127.0.0.1 |
 | `REALMARKET_FOREIGN_SOURCES=on` | allow keyless sources abroad (OECD and FRED's public CSV for inflation, ESEF, GDELT). Off by default with the adapter: the server then reaches only the adapter and the sources set here, and a tool that needs an unconfigured source (US inflation for a US share, say) stops; the setting it needs goes to the server log |
 | `REALMARKET_AUDIT_LOG=/var/log/realmarket/audit.jsonl` | audit log, one line per tool call (below) |
 | `REALMARKET_AUDIT_FULL=1` | also store each full response in the audit log |

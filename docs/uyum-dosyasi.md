@@ -115,8 +115,12 @@ uygulaması saklar.
 
 ## 6. Güvenlik
 
-- **Ağ erişimi:** realmarket iç ağda, kurumun API geçidinin arkasında çalıştırılmalıdır.
-  Kimlik doğrulama, erişim sınırı ve trafik kaydı geçidin görevidir.
+- **Erişim:** realmarket'e yalnızca gizli anahtarı (`REALMARKET_SERVER_TOKEN`) bilen sistem
+  bağlanabilir. Anahtarı taşımayan istek araçlara ulaşmadan reddedilir. Anahtarlar sabit
+  zamanlı karşılaştırılır; 32 karakterden kısa anahtar kabul edilmez. Anahtar yoksa sunucu
+  dış ağa açılmayı reddeder. Bu, müşteriyi değil kurumun kendi sistemini doğrular.
+- **Ağ:** realmarket yine de iç ağda, kurumun API geçidinin arkasında çalıştırılmalıdır.
+  Erişim sınırı ve trafik kaydı geçidin görevidir.
 - **Anahtarlar:** yalnızca ortam ayarlarında tutulur; hiçbir cevapta ya da kayıtta yer almaz.
   Adaptör anahtarı yalnızca `Authorization` başlığında gönderilir ve yönlendirmelerde
   aktarılmaz.
@@ -166,7 +170,8 @@ uygulaması saklar.
 - Müşteri ekranında asistanın yapay zekâ olduğunun ve cevabın yatırım danışmanlığı olmadığının
   belirtilmesi; cevaplardaki kaynakların gösterilmesi.
 - Veri lisansları ve verinin doğruluğu.
-- API geçidi, kimlik doğrulama, erişim sınırları ve izleme.
+- Sunucu anahtarının üretilmesi, saklanması ve yenilenmesi; API geçidi, erişim sınırları ve
+  izleme.
 - Denetim kaydının ve modelin son cevaplarının saklanması, erişimi ve imhası.
 
 ## 10. Açık kaynak ve süreklilik

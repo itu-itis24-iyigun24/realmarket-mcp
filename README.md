@@ -147,6 +147,7 @@ For Claude Code: `claude mcp add realmarket -e REALMARKET_PRICE_PROVIDER=yahoo -
 | `REALMARKET_FRED_API_KEY` | *Optional.* US CPI through the FRED API (free key at fred.stlouisfed.org) |
 | `REALMARKET_CPI_CSV_<REGION>` | Your own monthly CPI file for any region (`month,cpi_index`), e.g. `REALMARKET_CPI_CSV_TR` |
 | `REALMARKET_NEWS_PROVIDER` | `gdelt` (default, free, no key), `http` (the data adapter's news; the default with the adapter) or `none` |
+| `REALMARKET_SERVER_TOKEN` | HTTP transport only: a bearer token every request must carry (at least 32 characters); required to serve on an address other than 127.0.0.1 |
 | `REALMARKET_FOREIGN_SOURCES` | `on`/`off`: whether keyless sources abroad (OECD and FRED's public CSV for inflation, ESEF, GDELT) are used without being configured. On by default; **off by default with the data adapter**, so a firm's deployment reaches only its adapter and the sources it sets |
 | `REALMARKET_FIXTURE_DIR` | Directory for the `fixture` provider |
 

@@ -94,8 +94,16 @@ REALMARKET_PRICE_PROVIDER=http \
 REALMARKET_HTTP_URL=https://veri.kurum.internal/realmarket/v1 \
 REALMARKET_HTTP_TOKEN=... \
 REALMARKET_EVDS_API_KEY=... \
-realmarket-mcp --transport http --host 127.0.0.1 --port 8000
+REALMARKET_SERVER_TOKEN=... \
+realmarket-mcp --transport http --host 0.0.0.0 --port 8000
 ```
+
+- `REALMARKET_SERVER_TOKEN`: realmarket'e bağlanan sistemin anahtarı. Anahtarı taşımayan her
+  istek reddedilir (401). Yalnızca modelinizi çalıştıran sisteme verin. En az 32 karakter
+  olmalıdır; üretmek için:
+  `python -c "import secrets; print(secrets.token_urlsafe(32))"`. Bu anahtar müşterinin
+  kimliğini değil, kurumun kendi sisteminin kimliğini doğrular. Anahtar olmadan sunucu
+  yalnızca aynı makineden (127.0.0.1) erişilebilir biçimde başlar.
 
 - `REALMARKET_EVDS_API_KEY`: TCMB EVDS anahtarı (enflasyon, mevduat, konut). Anahtar ücretsiz
   alınır; ancak EVDS'nin kullanım koşulları, verinin kaynak gösterilerek kullanılabileceğini
@@ -130,8 +138,9 @@ realmarket-qualify --base-url <modelinizin OpenAI uyumlu adresi> --model <model>
 
 ## Güvenlik
 
-- realmarket'in MCP ucunun kendi kimlik doğrulaması yoktur: iç ağda tutun ve kurumun API
-  geçidinin arkasına koyun.
+- realmarket'in MCP ucu bir anahtarla korunur (`REALMARKET_SERVER_TOKEN`): anahtarı
+  taşımayan istek araçlara ulaşmadan reddedilir. Anahtar olmadan sunucu dış ağa açılmayı
+  reddeder. Yine de iç ağda ve kurumun API geçidinin arkasında tutun.
 - Adaptöre giden anahtar yalnızca `Authorization` başlığında gönderilir, yönlendirmelerde
   aktarılmaz, kaydedilmez.
 - Adaptörden gelen her cevap sıkı doğrulanır; bozuk veri onarılmaz, uç ve sorun adıyla hataya

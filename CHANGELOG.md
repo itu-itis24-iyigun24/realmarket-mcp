@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **A token in front of the HTTP endpoint.** With `REALMARKET_SERVER_TOKEN` set,
+  `realmarket-mcp --transport http` answers only requests carrying `Authorization: Bearer
+  <token>` (compared in constant time); any other gets 401 before reaching the tools. Serving
+  on an address other than 127.0.0.1 without a token is refused at startup, unless
+  `--allow-unauthenticated` says a gateway authenticates every request itself, and a token
+  shorter than 32 characters is refused. stdio (desktop clients) is unchanged.
+- `docs/uyum-dosyasi.md`: a compliance brief in Turkish for brokerages' legal and compliance
+  teams. The Turkish integration guide states the pilot's scope (Borsa Istanbul, funds,
+  currencies and gold; foreign shares excluded).
+
 ## 0.1.8 — 2026-09-29
 
 - **More models checked** (`evals/reports/2026-09-29-gemini-flash-lite.md`): Gemini 3.1

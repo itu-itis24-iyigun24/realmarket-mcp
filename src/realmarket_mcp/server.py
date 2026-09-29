@@ -809,22 +809,54 @@ Report rules:
 
 def main(argv: list[str] | None = None) -> None:
     """stdio by default (a desktop or IDE client starts the server); --transport http serves
-    MCP over Streamable HTTP for a central deployment. The HTTP endpoint has no authentication
-    of its own: keep it on 127.0.0.1 or put it behind the operator's gateway."""
+    MCP over Streamable HTTP for a central deployment, behind a bearer token when
+    REALMARKET_SERVER_TOKEN is set (see ``http_auth``)."""
     import argparse
+
+    from realmarket_mcp import http_auth
 
     parser = argparse.ArgumentParser(prog="realmarket-mcp", description="realmarket MCP server")
     parser.add_argument("--transport", choices=("stdio", "http"), default="stdio")
     parser.add_argument("--host", default="127.0.0.1", help="HTTP only; default 127.0.0.1")
     parser.add_argument("--port", type=int, default=8000, help="HTTP only; default 8000")
+    parser.add_argument(
+        "--allow-unauthenticated",
+        action="store_true",
+        help=f"HTTP only: serve beyond 127.0.0.1 without {http_auth.TOKEN_ENV}, for a gateway "
+        "that authenticates every request itself",
+    )
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.WARNING)
     config.dropped_at_startup[:] = drop_unset_values(os.environ)
-    server = build_server()
-    if args.transport == "http":
-        server.run("streamable-http", host=args.host, port=args.port)
-    else:
-        server.run()
+    if args.transport != "http":
+        build_server().run()
+        return
+    try:
+        token = http_auth.server_token()
+        http_auth.check_exposure(args.host, token, allow_unauthenticated=args.allow_unauthenticated)
+    except http_auth.AuthConfigError as error:
+        parser.exit(2, f"realmarket-mcp: {error}\n")
+    http_app(build_server(), args.host, token).run(args.port)
+
+
+class _HttpApp:
+    def __init__(self, app: Any, host: str) -> None:
+        self.app, self.host = app, host
+
+    def run(self, port: int) -> None:  # pragma: no cover - binds a socket
+        import uvicorn
+
+        uvicorn.run(self.app, host=self.host, port=port, log_level="warning")
+
+
+def http_app(server: MCPServer, host: str, token: str | None) -> _HttpApp:
+    """The Streamable HTTP app at /mcp, behind the bearer token when one is set."""
+    from realmarket_mcp import http_auth
+
+    app: Any = server.streamable_http_app(host=host)
+    if token:
+        app = http_auth.BearerTokenMiddleware(app, token)
+    return _HttpApp(app, host)
 
 
 if __name__ == "__main__":
