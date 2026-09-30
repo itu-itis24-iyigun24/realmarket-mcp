@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.9 — 2026-09-30
 
 - **A token in front of the HTTP endpoint.** With `REALMARKET_SERVER_TOKEN` set,
   `realmarket-mcp --transport http` answers only requests carrying `Authorization: Bearer
