@@ -1,87 +1,92 @@
 # realmarket-mcp
 
-An open-source [Model Context Protocol](https://modelcontextprotocol.io) server that lets
-Claude and other LLMs research markets from **verified, sourced numbers**.
+Claude'un ve diğer büyük dil modellerinin (LLM) piyasaları **doğrulanmış ve kaynağı belli
+rakamlarla** araştırmasını sağlayan açık kaynak bir
+[Model Context Protocol](https://modelcontextprotocol.io) sunucusu.
 
-> **Status: alpha (MVP).** Price, real-return, data-quality and US financial-statement tools are
-> verified against the live Yahoo, SEC EDGAR, OECD, FRED, TCMB EVDS and GDELT services. KAP
-> company disclosures are not included (KAP's terms require MKK's written permission); use it
-> alongside [kapmcp](#using-it-with-kapmcp-kap-disclosures-and-financial-statements) for those.
+> **Durum: alfa (MVP).** Fiyat, reel getiri, veri kalitesi ve ABD finansal tablo araçları canlı
+> Yahoo, SEC EDGAR, OECD, FRED, TCMB EVDS ve GDELT servislerine karşı doğrulandı. KAP şirket
+> bildirimleri dahil değildir (KAP'ın kullanım koşulları MKK'nın yazılı iznini şart koşar);
+> bunlar için [kapmcp](#kapmcp-ile-birlikte-kullanmak-kap-bildirimleri-ve-finansal-tablolar) ile
+> birlikte kullanın.
 
-## Why
+## Neden
 
-Ask an LLM how an asset performed and it will often answer from memory or estimate. For
-anyone saving in a high-inflation currency, the next question — *did it actually beat
-inflation?* — is even harder to answer reliably. realmarket-mcp gives the model tools that
-compute these figures in code and return them with their sources:
+Bir dil modeline bir varlığın nasıl performans gösterdiğini sorduğunuzda çoğu zaman ezberden ya
+da tahminle cevap verir. Yüksek enflasyonlu bir para biriminde birikim yapan biri için sonraki
+soruyu, yani *gerçekten enflasyonu yendi mi?* sorusunu güvenilir biçimde cevaplamak daha da
+zordur. realmarket-mcp modele bu rakamları kodla hesaplayan ve kaynaklarıyla birlikte döndüren
+araçlar verir:
 
-- **Real returns**: nominal return vs. inflation in the asset's own currency, and the same
-  return measured in US dollars and in gold.
-- **Data-quality checks**: gaps, split and redenomination seams, placeholder bars — flagged
-  next to the numbers they affect, never silently "fixed".
-- **Provenance on every number**: provider, period, retrieval time and a content hash of the
-  exact data used.
-- **Deterministic results**: the same data and arguments give the same answer, whichever
-  model asks.
+- **Reel getiri**: nominal getiri ile varlığın kendi para birimindeki enflasyonun kıyası; aynı
+  getirinin ABD doları ve altın cinsinden ölçümü.
+- **Veri kalitesi kontrolleri**: boşluklar, bölünme ve sıfır atma (redenominasyon) kaynaklı
+  kopukluklar, yer tutucu barlar. Bunlar etkiledikleri rakamların yanında işaretlenir, hiçbir
+  zaman sessizce "düzeltilmez".
+- **Her rakamda kaynak bilgisi**: sağlayıcı, dönem, verinin alındığı zaman ve kullanılan verinin
+  tam içerik özeti (hash).
+- **Deterministik sonuçlar**: aynı veri ve aynı argümanlar, soran model hangisi olursa olsun aynı
+  cevabı verir.
 
-## Tools
+## Araçlar
 
-| Tool | What it answers |
+| Araç | Neyi cevaplar |
 |---|---|
-| `search_assets` | "What is the symbol for Turkish Airlines?" |
-| `get_price_summary` | "How did it do over the last year?" — return, annualized return, volatility, max drawdown, how much of the return came from dividends, and the trailing dividend yield |
-| `compare_real_return` | "Did it beat inflation?" — nominal vs real return, plus the same holding in US dollars, in gold (and gram gold in TL), in minimum wages, and (TL assets) against a TL deposit account before and after withholding tax and against house prices |
-| `compare_assets` | "How do these compare?" — 2 to 10 assets over one common window |
-| `check_data_quality` | "Can I trust this data?" — gaps, placeholder bars, suspicious jumps, stale data |
-| `explain_price_move` | "Why did it fall today?" — the facts around the session: the stock's move next to the index's, how unusual the move and volume were, ex-dividend days, and that day's news or disclosures, without naming a cause |
-| `analyze_portfolio` | "How is my portfolio doing?" — from the account's buys, sells, dividends and bonus issues: each holding's cost, value, weight, realized and unrealized profit; totals, money-weighted return, concentration, best and worst holding, and last year's volatility and drawdown |
-| `portfolio_real_return` | "Did my savings keep up with inflation?" — dated purchases valued today, money-weighted return, real return, and the same payments replayed into USD, gold, a TL deposit (also after withholding tax), housing or an index |
-| `get_event_reaction` | "How did the stock react to that announcement?" — 1/5/20-session return vs the index, plus pre-event drift |
-| `get_financials` | "How did the last quarter go?" — revenue, profit, margins, leverage and growth in real terms; US companies from their official SEC filings, Turkish inflation accounting (TMS 29) handled, data errors flagged |
-| `get_valuation` | "Is it priced high relative to its earnings?" — market value, P/E, P/B and P/S, with currency conversion and Turkish inflation accounting handled |
-| `find_official_filer` | "What is ASML's identifier for its official reports?" — European and UK companies in the ESEF annual-report index, with their LEI |
-| `check_setup` | "Is everything configured?" — which data sources are on, and which settings are missing |
-| `get_news` | "What was in the news about it?" — recent article listings with publisher, date and link |
+| `search_assets` | "Türk Hava Yolları'nın sembolü ne?" |
+| `get_price_summary` | "Son bir yılda nasıl gitti?": getiri, yıllıklandırılmış getiri, oynaklık, en büyük düşüş, getirinin ne kadarının temettüden geldiği ve son dönem temettü verimi |
+| `compare_real_return` | "Enflasyonu yendi mi?": nominal ve reel getiri; aynı yatırımın ABD doları, altın (ve TL cinsinden gram altın) ve asgari ücret cinsinden karşılığı; TL varlıklar için stopaj öncesi ve sonrası TL mevduatla ve konut fiyatlarıyla kıyas |
+| `compare_assets` | "Bunlar birbirine göre nasıl?": ortak bir dönemde 2 ile 10 arası varlık |
+| `check_data_quality` | "Bu veriye güvenebilir miyim?": boşluklar, yer tutucu barlar, şüpheli sıçramalar, güncel olmayan veri |
+| `explain_price_move` | "Bugün neden düştü?": seansın etrafındaki olgular: hissenin hareketi ile endeksin hareketi yan yana, hareketin ve işlem hacminin ne kadar olağandışı olduğu, temettü dağıtım (hak kullanım) günleri ve o günün haberleri ya da bildirimleri; bir neden göstermeden |
+| `analyze_portfolio` | "Portföyüm nasıl gidiyor?": hesabın alımları, satımları, temettüleri ve bedelsizlerinden her varlığın maliyeti, değeri, ağırlığı, gerçekleşmiş ve gerçekleşmemiş kârı; toplamlar, para ağırlıklı getiri, yoğunlaşma, en iyi ve en kötü varlık, son bir yılın oynaklığı ve en büyük düşüşü |
+| `portfolio_real_return` | "Birikimim enflasyona yetişti mi?": tarihli alımların bugünkü değeri, para ağırlıklı getiri, reel getiri ve aynı ödemelerin USD, altın, TL mevduat (stopaj sonrası dahil), konut ya da bir endekse yatırılmış olsaydı ne olacağı |
+| `get_event_reaction` | "Hisse o açıklamaya nasıl tepki verdi?": endekse göre 1/5/20 seanslık getiri ve olaydan önceki seyir |
+| `get_financials` | "Son çeyrek nasıl geçti?": reel olarak hasılat, kâr, marjlar, borçluluk ve büyüme; ABD şirketleri resmî SEC başvurularından, Türkiye'deki enflasyon muhasebesi (TMS 29) hesaba katılarak, veri hataları işaretlenerek |
+| `get_valuation` | "Kazancına göre pahalı mı fiyatlanıyor?": piyasa değeri, F/K, PD/DD ve F/S; kur çevrimi ve Türkiye'deki enflasyon muhasebesi hesaba katılarak |
+| `find_official_filer` | "ASML'nin resmî raporlarındaki kimliği ne?": ESEF yıllık rapor dizinindeki Avrupa ve Birleşik Krallık şirketleri, LEI kodlarıyla |
+| `check_setup` | "Her şey ayarlı mı?": hangi veri kaynaklarının açık olduğu ve hangi ayarların eksik olduğu |
+| `get_news` | "Onunla ilgili haberlerde ne vardı?": yayıncı, tarih ve bağlantıyla son haber listesi |
 
-It also ships three report prompts (`single_asset_report`, `real_return_report`,
-`comparison_report`) and a `realmarket://methodology` resource with every formula.
+Sunucu ayrıca üç rapor istemi (`single_asset_report`, `real_return_report`,
+`comparison_report`) ve tüm formülleri içeren bir `realmarket://methodology` kaynağı sunar.
 
-## Install
+## Kurulum
 
-### As a Claude plugin (Claude Code and Cowork)
+### Claude eklentisi olarak (Claude Code ve Cowork)
 
-Requires [uv](https://docs.astral.sh/uv/getting-started/installation/), which runs the server
-without a separate Python setup.
+Sunucuyu ayrı bir Python kurulumu olmadan çalıştıran
+[uv](https://docs.astral.sh/uv/getting-started/installation/) gerekir.
 
 ```bash
 claude plugin marketplace add itu-itis24-iyigun24/realmarket-mcp
 claude plugin install realmarket@realmarket
 ```
 
-Then run `/plugin configure realmarket@realmarket` (or pass `--config KEY=VALUE` to the install
-command) to fill in the settings. All are optional:
+Ardından ayarları doldurmak için `/plugin configure realmarket@realmarket` komutunu çalıştırın
+(ya da kurulum komutuna `--config KEY=VALUE` verin). Hepsi isteğe bağlıdır:
 
-| Setting | What it does |
+| Ayar | Ne yapar |
 |---|---|
-| `use_yahoo` | Tick to enable prices, FX, gold and non-US statements from Yahoo Finance (unofficial; see below). Off by default. |
-| `sec_contact` | Your e-mail, for official SEC financial statements of US companies |
-| `evds_api_key` | Most current Turkish CPI (TCMB EVDS); stored masked |
-| `fred_api_key` | US CPI through the FRED API; stored masked, not needed |
+| `use_yahoo` | İşaretlenirse Yahoo Finance'ten fiyatlar, döviz, altın ve ABD dışı finansal tablolar gelir (resmî değil; aşağıya bakın). Varsayılan olarak kapalı. |
+| `sec_contact` | ABD şirketlerinin resmî SEC finansal tabloları için e-posta adresiniz |
+| `evds_api_key` | En güncel Türkiye TÜFE'si (TCMB EVDS); maskeli saklanır |
+| `fred_api_key` | FRED API üzerinden ABD TÜFE'si; maskeli saklanır, gerekli değildir |
 
-The plugin also adds a `market-research` skill that tells Claude how to use the tools and
-report their sources.
+Eklenti ayrıca Claude'a araçları nasıl kullanacağını ve kaynaklarını nasıl bildireceğini anlatan
+bir `market-research` becerisi (skill) ekler.
 
-### As a Claude Desktop extension (.mcpb)
+### Claude Desktop uzantısı olarak (.mcpb)
 
-1. Download `realmarket-<version>.mcpb` from the
-   [latest release](https://github.com/itu-itis24-iyigun24/realmarket-mcp/releases/latest).
-2. In Claude Desktop open **Settings → Extensions → Advanced settings → Install Extension…** and
-   choose the downloaded file.
-3. Fill in the same settings as above (tick **Use Yahoo Finance** for prices), then quit Claude
-   Desktop completely — from the system tray / menu bar, not just the window — and reopen it.
+1. `realmarket-<version>.mcpb` dosyasını
+   [son sürümden](https://github.com/itu-itis24-iyigun24/realmarket-mcp/releases/latest) indirin.
+2. Claude Desktop'ta **Settings → Extensions → Advanced settings → Install Extension…** yolunu
+   açın ve indirdiğiniz dosyayı seçin.
+3. Yukarıdaki ayarların aynısını doldurun (fiyatlar için **Use Yahoo Finance** kutusunu
+   işaretleyin), sonra Claude Desktop'tan tamamen çıkın (yalnızca pencereyi kapatmak yetmez;
+   sistem tepsisinden / menü çubuğundan çıkın) ve yeniden açın.
 
-Claude Desktop installs the Python dependencies itself with uv, pinned by the bundle's
-`uv.lock`; no Python setup is needed. To build the file from source:
+Claude Desktop Python bağımlılıklarını uv ile kendisi kurar; sürümleri paketin `uv.lock`
+dosyası sabitler. Python kurulumu gerekmez. Dosyayı kaynak koddan derlemek için:
 
 ```bash
 python scripts/build_mcpb.py
@@ -89,34 +94,35 @@ npx -y @anthropic-ai/mcpb validate build/mcpb/manifest.json
 npx -y @anthropic-ai/mcpb pack build/mcpb dist/realmarket-<version>.mcpb
 ```
 
-### Troubleshooting
+### Sorun giderme
 
-- **Ask Claude to run `check_setup`.** It lists which sources the server will use and which
-  settings are missing, without showing any values.
-- **After installing a new version of the extension,** open its settings and check them:
-  Claude Desktop may not carry the previous values over (for example, **Use Yahoo Finance** may
-  be unticked again).
-- **"No price data source is configured" after changing a setting:** settings reach the server
-  only when it starts. Quit the app completely (system tray on Windows, menu bar on macOS) and
-  reopen it, then start a new chat.
-- **Turkish real returns stop at an earlier month:** without a TCMB EVDS key, Turkish inflation
-  comes from the OECD, which lags TÜİK's releases. Add the key in the settings.
-- **Still failing:** the server log is in `%APPDATA%\Claude\logs` (Windows) or
-  `~/Library/Logs/Claude` (macOS), in a file whose name contains `realmarket`. Remove any API
-  key or e-mail from it before sharing it in an issue.
+- **Claude'dan `check_setup` aracını çalıştırmasını isteyin.** Sunucunun hangi kaynakları
+  kullanacağını ve hangi ayarların eksik olduğunu, hiçbir değeri göstermeden listeler.
+- **Uzantının yeni bir sürümünü kurduktan sonra** ayarlarını açıp kontrol edin: Claude Desktop
+  önceki değerleri taşımayabilir (örneğin **Use Yahoo Finance** yeniden işaretsiz olabilir).
+- **Bir ayarı değiştirdikten sonra "No price data source is configured" hatası:** ayarlar
+  sunucuya yalnızca sunucu başlarken ulaşır. Uygulamadan tamamen çıkın (Windows'ta sistem
+  tepsisi, macOS'ta menü çubuğu), yeniden açın ve yeni bir sohbet başlatın.
+- **Türkiye reel getirileri daha eski bir ayda kalıyor:** TCMB EVDS anahtarı yoksa Türkiye
+  enflasyonu OECD'den gelir ve OECD, TÜİK'in yayımlarının gerisinden gelir. Anahtarı ayarlara
+  ekleyin.
+- **Hâlâ çalışmıyorsa:** sunucu kaydı Windows'ta `%APPDATA%\Claude\logs`, macOS'ta
+  `~/Library/Logs/Claude` klasöründe, adında `realmarket` geçen dosyadadır. Bir issue'da
+  paylaşmadan önce içindeki API anahtarlarını ve e-posta adreslerini silin.
 
-### As a plain MCP server (any MCP client)
+### Sade bir MCP sunucusu olarak (her MCP istemcisi)
 
-Requires Python 3.11+.
+Python 3.11+ gerekir.
 
 ```bash
 pip install "realmarket-mcp[yahoo] @ git+https://github.com/itu-itis24-iyigun24/realmarket-mcp"
 ```
 
-## Configure a client
+## İstemciyi yapılandırma
 
-All configuration is environment variables in the client's MCP server entry. Example for
-Claude Desktop (`claude_desktop_config.json`) or any client using the same format:
+Tüm yapılandırma, istemcinin MCP sunucu tanımındaki ortam değişkenleriyle yapılır. Claude
+Desktop (`claude_desktop_config.json`) ya da aynı biçimi kullanan herhangi bir istemci için
+örnek:
 
 ```json
 {
@@ -134,129 +140,132 @@ Claude Desktop (`claude_desktop_config.json`) or any client using the same forma
 }
 ```
 
-For Claude Code: `claude mcp add realmarket -e REALMARKET_PRICE_PROVIDER=yahoo -- realmarket-mcp`.
+Claude Code için: `claude mcp add realmarket -e REALMARKET_PRICE_PROVIDER=yahoo -- realmarket-mcp`.
 
-| Variable | Purpose |
+| Değişken | Amaç |
 |---|---|
-| `REALMARKET_PRICE_PROVIDER` | `yahoo`, `http` (your own data adapter, see below), or `fixture` for offline test data |
-| `REALMARKET_HTTP_URL`, `REALMARKET_HTTP_TOKEN` | Base URL and optional bearer token of your data adapter |
-| `REALMARKET_USE_YAHOO` | `true` enables Yahoo when `REALMARKET_PRICE_PROVIDER` is not set (the plugin and extension checkbox) |
-| `REALMARKET_SEC_CONTACT` | *Optional.* Your e-mail address, which the SEC requires in every automated request. With it, US companies' financial statements come from their official SEC filings (no key or sign-up) |
-| `REALMARKET_FINANCIALS_PROVIDER` | `auto` (default: SEC for US tickers when the contact is set, else the price provider), `sec` or `price` |
-| `REALMARKET_EVDS_API_KEY` | *Optional.* Turkish CPI from TCMB EVDS, the most current source (free key at evds3.tcmb.gov.tr) |
-| `REALMARKET_FRED_API_KEY` | *Optional.* US CPI through the FRED API (free key at fred.stlouisfed.org) |
-| `REALMARKET_CPI_CSV_<REGION>` | Your own monthly CPI file for any region (`month,cpi_index`), e.g. `REALMARKET_CPI_CSV_TR` |
-| `REALMARKET_NEWS_PROVIDER` | `gdelt` (default, free, no key), `http` (the data adapter's news; the default with the adapter) or `none` |
-| `REALMARKET_SERVER_TOKEN` | HTTP transport only: a bearer token every request must carry (at least 32 characters); required to serve on an address other than 127.0.0.1 |
-| `REALMARKET_FOREIGN_SOURCES` | `on`/`off`: whether keyless sources abroad (OECD and FRED's public CSV for inflation, ESEF, GDELT) are used without being configured. On by default; **off by default with the data adapter**, so a firm's deployment reaches only its adapter and the sources it sets |
-| `REALMARKET_FIXTURE_DIR` | Directory for the `fixture` provider |
+| `REALMARKET_PRICE_PROVIDER` | `yahoo`, `http` (kendi veri servisiniz (adaptör); aşağıya bakın) ya da çevrimdışı test verisi için `fixture` |
+| `REALMARKET_HTTP_URL`, `REALMARKET_HTTP_TOKEN` | Adaptörünüzün temel adresi ve isteğe bağlı bearer anahtarı |
+| `REALMARKET_USE_YAHOO` | `REALMARKET_PRICE_PROVIDER` ayarlanmamışsa `true` Yahoo'yu açar (eklentideki ve uzantıdaki onay kutusu budur) |
+| `REALMARKET_SEC_CONTACT` | *İsteğe bağlı.* E-posta adresiniz; SEC bunu her otomatik istekte ister. Bu ayar varsa ABD şirketlerinin finansal tabloları resmî SEC başvurularından gelir (anahtar ya da üyelik gerekmez) |
+| `REALMARKET_FINANCIALS_PROVIDER` | `auto` (varsayılan: iletişim adresi ayarlıysa ABD sembolleri için SEC, değilse fiyat sağlayıcısı), `sec` ya da `price` |
+| `REALMARKET_EVDS_API_KEY` | *İsteğe bağlı.* TCMB EVDS'den Türkiye TÜFE'si; en güncel kaynak (ücretsiz anahtar: evds3.tcmb.gov.tr) |
+| `REALMARKET_FRED_API_KEY` | *İsteğe bağlı.* FRED API üzerinden ABD TÜFE'si (ücretsiz anahtar: fred.stlouisfed.org) |
+| `REALMARKET_CPI_CSV_<REGION>` | Herhangi bir bölge için kendi aylık TÜFE dosyanız (`month,cpi_index`), ör. `REALMARKET_CPI_CSV_TR` |
+| `REALMARKET_NEWS_PROVIDER` | `gdelt` (varsayılan, ücretsiz, anahtarsız), `http` (adaptörün haberleri; adaptörle çalışırken varsayılan) ya da `none` |
+| `REALMARKET_SERVER_TOKEN` | Yalnızca HTTP taşıması için: her isteğin taşıması gereken bearer anahtarı (en az 32 karakter); 127.0.0.1 dışındaki bir adreste hizmet vermek için zorunludur |
+| `REALMARKET_FOREIGN_SOURCES` | `on`/`off`: yurt dışındaki anahtarsız kaynakların (enflasyon için OECD ve FRED'in herkese açık CSV'si, ESEF, GDELT) ayarlanmadan kullanılıp kullanılmayacağı. Varsayılan olarak açık; **adaptörle çalışırken varsayılan olarak kapalı**, böylece bir kurumun kurulumu yalnızca kendi adaptörüne ve kendi ayarladığı kaynaklara bağlanır |
+| `REALMARKET_FIXTURE_DIR` | `fixture` sağlayıcısının klasörü |
 
-**No key is required.** Without keys, inflation comes from the OECD's public API (US, Türkiye
-and other OECD members), with FRED's public CSV as a US fallback. The OECD's Türkiye series currently ends at 2025-12, so
-without an EVDS key Turkish real returns stop there and say so; set the EVDS key for current data.
+**Hiçbir anahtar zorunlu değildir.** Anahtar olmadan enflasyon OECD'nin herkese açık API'sinden
+gelir (ABD, Türkiye ve diğer OECD üyeleri); ABD için yedek kaynak FRED'in herkese açık CSV'sidir.
+OECD'nin Türkiye serisi şu anda 2025-12'de bitiyor; bu yüzden EVDS anahtarı olmadan Türkiye reel
+getirileri orada durur ve bunu belirtir. Güncel veri için EVDS anahtarını ayarlayın.
 
-### About the Yahoo Finance provider
+### Yahoo Finance sağlayıcısı hakkında
 
-`yahoo` uses the community [`yfinance`](https://github.com/ranaroussi/yfinance) library, which
-reads Yahoo Finance's public web endpoints. It is **not an official API**, and **Yahoo's Terms
-of Service prohibit accessing or collecting data from its services by automated means, for any
-purpose, without Yahoo's express prior permission** — they contain no exception for personal
-use. The endpoints also change without notice, and some histories contain errors (which is why
-`check_data_quality` exists). realmarket-mcp is not affiliated with or endorsed by Yahoo; Yahoo
-is a trademark of its owner. The provider is off unless you select it; by selecting it you take
-responsibility for your use under Yahoo's terms, and you must not redistribute the data. Data may be delayed or
-wrong, and the interface may break without notice. Symbols follow Yahoo's conventions:
-`THYAO.IS` (Borsa Istanbul), `XU100.IS`, `USDTRY=X`, `GC=F` (gold).
+`yahoo`, Yahoo Finance'in herkese açık web uçlarını okuyan topluluk kütüphanesi
+[`yfinance`](https://github.com/ranaroussi/yfinance)'i kullanır. Bu **resmî bir API değildir** ve
+**Yahoo'nun Hizmet Koşulları, Yahoo'nun açık ve önceden verilmiş izni olmadan, hangi amaçla
+olursa olsun, hizmetlerine otomatik yollarla erişilmesini ya da hizmetlerinden otomatik yollarla
+veri toplanmasını yasaklar**; koşullarda kişisel kullanım için bir istisna yoktur. Uçlar da
+haber verilmeden değişir ve bazı fiyat geçmişlerinde hatalar vardır (`check_data_quality` bu
+yüzden var). realmarket-mcp'nin Yahoo ile bir bağlantısı yoktur ve Yahoo tarafından
+desteklenmez; Yahoo, sahibinin ticari markasıdır. Sağlayıcı siz seçmedikçe kapalıdır; seçerek
+Yahoo'nun koşulları kapsamındaki kullanımınızın sorumluluğunu üstlenirsiniz ve veriyi yeniden
+dağıtamazsınız. Veri gecikmeli ya da hatalı olabilir, arayüz haber verilmeden bozulabilir.
+Semboller Yahoo'nun yazımını izler: `THYAO.IS` (Borsa İstanbul), `XU100.IS`, `USDTRY=X`,
+`GC=F` (altın).
 
-### Financial statement sources
+### Finansal tablo kaynakları
 
-| Market | Source | Official |
+| Piyasa | Kaynak | Resmî mi |
 |---|---|---|
-| US-listed companies filing US GAAP (10-Q / 10-K, and 20-F filers such as ASML) | SEC EDGAR XBRL API, with `REALMARKET_SEC_CONTACT` | yes |
-| European and UK listed companies (ESEF, IFRS), by LEI — except Germany and Ireland | filings.xbrl.org, no settings needed | yes |
-| Everything else, incl. Borsa Istanbul | Yahoo Finance (`REALMARKET_PRICE_PROVIDER=yahoo`) | no; verify in the company's filings (KAP for Borsa Istanbul) |
+| US GAAP ile raporlayan ABD'de işlem gören şirketler (10-Q / 10-K ve ASML gibi 20-F verenler) | SEC EDGAR XBRL API, `REALMARKET_SEC_CONTACT` ile | evet |
+| Avrupa ve Birleşik Krallık'ta işlem gören şirketler (ESEF, UFRS), LEI ile; Almanya ve İrlanda hariç | filings.xbrl.org, ayar gerekmez | evet |
+| Diğer her şey, Borsa İstanbul dahil | Yahoo Finance (`REALMARKET_PRICE_PROVIDER=yahoo`) | hayır; şirketin resmî raporlarından doğrulayın (Borsa İstanbul için KAP) |
 
-US tickers use Yahoo's spelling (`AAPL`, `BRK-B`); a CIK such as `CIK0000320193` also works.
-For a European company, `find_official_filer` returns candidates with their LEI; passing the LEI
-as the symbol gives the annual (and, where the company files them there, quarterly) figures
-from its official ESEF reports, in IFRS — which can differ from what the same company reports
-under US GAAP to the SEC. filings.xbrl.org does not hold German or Irish reports.
-When the SEC has no statements for a company (IFRS filers such as TSM) or does not list the
-ticker, the price provider's statements are used instead, and the result's provenance names
-the source.
-Fourth-quarter income figures are derived as annual minus nine months, because companies do not
-file them separately, and the result lists which quarters were derived. SEC data is public; the
-SEC asks automated clients to stay under 10 requests per second and to identify themselves.
+ABD sembolleri Yahoo'nun yazımını kullanır (`AAPL`, `BRK-B`); `CIK0000320193` gibi bir CIK de
+çalışır. Bir Avrupa şirketi için `find_official_filer` adayları LEI kodlarıyla döndürür; LEI'yi
+sembol olarak verdiğinizde şirketin resmî ESEF raporlarından, UFRS'ye göre yıllık (şirket
+oraya çeyreklik rapor da veriyorsa çeyreklik) rakamlar gelir. Bunlar aynı şirketin SEC'e US GAAP
+ile bildirdiklerinden farklı olabilir. filings.xbrl.org Alman ve İrlandalı şirketlerin
+raporlarını tutmaz. SEC'te bir şirketin tabloları yoksa (TSM gibi UFRS ile raporlayanlar) ya da
+SEC sembolü listelemiyorsa fiyat sağlayıcısının tabloları kullanılır ve sonucun kaynak bilgisi
+kaynağı belirtir. Dördüncü çeyrek gelir tablosu rakamları, şirketler bunları ayrıca
+yayımlamadığı için yıllıktan dokuz aylık çıkarılarak türetilir; sonuç hangi çeyreklerin
+türetildiğini listeler. SEC verisi kamuya açıktır; SEC otomatik istemcilerden saniyede 10
+isteğin altında kalmalarını ve kendilerini tanıtmalarını ister.
 
-### CPI sources
+### TÜFE kaynakları
 
-| Region | Without a key | With a key |
+| Bölge | Anahtarsız | Anahtarla |
 |---|---|---|
-| Türkiye | OECD (matches TÜİK; currently ends 2025-12) | TCMB EVDS (current) |
-| United States | OECD (current; FRED's public CSV as fallback) | FRED API (same BLS data) |
-| Other OECD members (e.g. DE, GB) | OECD (current where published) | — |
-| Anything else | `REALMARKET_CPI_CSV_<REGION>` | — |
+| Türkiye | OECD (TÜİK ile aynı; şu anda 2025-12'de bitiyor) | TCMB EVDS (güncel) |
+| Amerika Birleşik Devletleri | OECD (güncel; yedek olarak FRED'in herkese açık CSV'si) | FRED API (aynı BLS verisi) |
+| Diğer OECD üyeleri (ör. DE, GB) | OECD (yayımlandığı yerde güncel) | — |
+| Diğer her yer | `REALMARKET_CPI_CSV_<REGION>` | — |
 
-The OECD's public API allows about 60 downloads per hour, so each series is fetched once and
-reused for six hours; results keep the original retrieval time.
+OECD'nin herkese açık API'si saatte yaklaşık 60 indirmeye izin verir; bu yüzden her seri bir kez
+indirilir ve altı saat boyunca yeniden kullanılır. Sonuçlar ilk alınma zamanını korur.
 
-### TL deposit comparison
+### TL mevduat kıyası
 
-With a TCMB EVDS key, TL results also show what the same money earned in a deposit account:
-a 32-day deposit renewed at each maturity at the weekly weighted average rate TCMB publishes for
-new TL savings deposits of 1-3 months (EVDS `TP.TRYTAS.MT02`; before July 2012, all TL
-deposits, `TP.TRY.MT02`). Figures are **gross of withholding tax
-(stopaj)**, and a real account earns its own bank's rate.
+TCMB EVDS anahtarı varsa TL sonuçları aynı paranın mevduatta ne kazandıracağını da gösterir:
+TCMB'nin 1-3 ay vadeli yeni TL mevduatlar için yayımladığı haftalık ağırlıklı ortalama faizle
+her vade sonunda yenilenen 32 günlük mevduat (EVDS `TP.TRYTAS.MT02`; Temmuz 2012'den önce tüm TL
+mevduatlar, `TP.TRY.MT02`). Rakamlar **stopaj öncesi brüt** rakamlardır; gerçek bir hesap kendi
+bankasının faizini kazanır.
 
-### Your own data, your own model
+### Kendi veriniz, kendi modeliniz
 
-Firms with licensed market data can plug it in through a small HTTP **data adapter**
-([`docs/adapter-api.md`](docs/adapter-api.md), with a runnable example in
-`examples/adapter/`), and run realmarket centrally with `realmarket-mcp --transport http` for
-their own AI assistant — any model with tool calling, not only Claude. An audit log records
-every tool call with the exact data behind it (`REALMARKET_AUDIT_LOG`), and
-`realmarket-qualify` checks that a model uses the tools correctly before it answers customers.
-See [`docs/integration.md`](docs/integration.md).
+Lisanslı piyasa verisi olan kurumlar bu veriyi küçük bir HTTP **adaptörü** üzerinden bağlayabilir
+([`docs/adapter-api.md`](docs/adapter-api.md); çalışan bir örnek `examples/adapter/` altında) ve
+realmarket'i `realmarket-mcp --transport http` ile merkezî olarak kendi yapay zekâ asistanları
+için çalıştırabilir. Model yalnızca Claude olmak zorunda değildir; tool calling destekleyen her
+model olur. Denetim kaydı her araç çağrısını arkasındaki verinin tam haliyle kaydeder
+(`REALMARKET_AUDIT_LOG`); `realmarket-qualify` da bir modelin müşterilere cevap vermeden önce
+araçları doğru kullandığını sınar. Bkz. [`docs/entegrasyon-rehberi.md`](docs/entegrasyon-rehberi.md).
 
-## Data sources, terms and privacy
+## Veri kaynakları, kullanım koşulları ve gizlilik
 
-realmarket-mcp ships no data. It fetches from the services below on your behalf, and **by using
-it you agree to the terms of each service you enable**. Every result's provenance carries the
-credit its source asks for.
+realmarket-mcp hiçbir veriyle birlikte gelmez. Veriyi sizin adınıza aşağıdaki servislerden çeker
+ve **kullanarak açtığınız her servisin koşullarını kabul etmiş olursunuz**. Her sonucun kaynak
+bilgisi, kaynağının istediği atfı taşır.
 
-| Service | Used for | Terms (summary) | Privacy |
+| Servis | Ne için kullanılır | Koşullar (özet) | Gizlilik |
 |---|---|---|---|
-| SEC EDGAR | US financial statements | Public data; identify yourself (contact e-mail), max 10 requests/s | [policy](https://www.sec.gov/about/privacy-information); receives your e-mail |
-| TCMB EVDS | Turkish CPI and TL deposit rates (with key) | May be used and published with reference; not investment advice; users may not be charged for it | [policy](https://evds3.tcmb.gov.tr/igmevdsms-dis/documents/showDocument?docId=22) |
-| FRED | US CPI (API with key; CSV fallback) | [FRED® API Terms of Use](https://fred.stlouisfed.org/docs/api/terms_of_use.html) (API); FRED website terms for the CSV (personal, non-commercial use) | [policy](https://www.stlouisfed.org/about-us/privacy-policy) |
-| OECD | CPI without a key | CC BY 4.0; cite the OECD | [policy](https://www.oecd.org/en/about/privacy.html) |
-| filings.xbrl.org (XBRL International) | Official EU/UK annual reports | Free; "no restrictions on the ways that the data can be used" | [policy](https://www.xbrl.org/the-consortium/about/legal/privacy-policy/); receives only company names and LEIs |
-| GDELT | News listings | Free for any use; cite the GDELT Project with a link | receives only the search text |
-| Yahoo Finance (opt-in) | Prices, FX, gold, non-US statements | Terms prohibit automated access without permission (see above) | [policy](https://legal.yahoo.com/us/en/yahoo/privacy/index.html) |
+| SEC EDGAR | ABD finansal tabloları | Kamuya açık veri; kendinizi tanıtın (iletişim e-postası), saniyede en fazla 10 istek | [politika](https://www.sec.gov/about/privacy-information); e-posta adresinizi alır |
+| TCMB EVDS | Türkiye TÜFE'si ve TL mevduat faizleri (anahtarla) | Kaynak gösterilerek kullanılabilir ve yayımlanabilir; yatırım tavsiyesi değildir; kullanıcılardan bunun için ücret alınamaz | [politika](https://evds3.tcmb.gov.tr/igmevdsms-dis/documents/showDocument?docId=22) |
+| FRED | ABD TÜFE'si (anahtarla API; yedek olarak CSV) | API için [FRED® API Terms of Use](https://fred.stlouisfed.org/docs/api/terms_of_use.html); CSV için FRED web sitesi koşulları (kişisel, ticari olmayan kullanım) | [politika](https://www.stlouisfed.org/about-us/privacy-policy) |
+| OECD | Anahtarsız TÜFE | CC BY 4.0; OECD kaynak gösterilmeli | [politika](https://www.oecd.org/en/about/privacy.html) |
+| filings.xbrl.org (XBRL International) | Resmî AB/Birleşik Krallık yıllık raporları | Ücretsiz; "verinin hangi yollarla kullanılabileceğine dair hiçbir kısıtlama yok" | [politika](https://www.xbrl.org/the-consortium/about/legal/privacy-policy/); yalnızca şirket adlarını ve LEI kodlarını alır |
+| GDELT | Haber listeleri | Her türlü kullanım için ücretsiz; GDELT Project bağlantıyla kaynak gösterilmeli | yalnızca arama metnini alır |
+| Yahoo Finance (isteğe bağlı, siz açarsanız) | Fiyatlar, döviz, altın, ABD dışı finansal tablolar | Koşullar izinsiz otomatik erişimi yasaklar (yukarıya bakın) | [politika](https://legal.yahoo.com/us/en/yahoo/privacy/index.html) |
 
-**FRED:** if you set a FRED API key, you agree to be bound by the
-[FRED® API Terms of Use](https://fred.stlouisfed.org/docs/api/terms_of_use.html). This product
-uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.
-Turkish CPI is published by TÜİK. Details and the evidence for each line:
-[`docs/providers.md`](docs/providers.md).
+**FRED:** FRED API anahtarı ayarlarsanız
+[FRED® API Terms of Use](https://fred.stlouisfed.org/docs/api/terms_of_use.html) koşullarıyla
+bağlı olmayı kabul edersiniz. Bu ürün FRED® API'sini kullanır, ancak Federal Reserve Bank of
+St. Louis tarafından onaylanmış ya da sertifikalandırılmış değildir. Türkiye TÜFE'sini TÜİK
+yayımlar. Ayrıntılar ve her satırın dayanağı: [`docs/providers.md`](docs/providers.md).
 
-## Using it with kapmcp (KAP disclosures and financial statements)
+## kapmcp ile birlikte kullanmak (KAP bildirimleri ve finansal tablolar)
 
-realmarket-mcp does not read KAP, Turkey's Public Disclosure Platform: KAP's terms require MKK's
-written permission for automated use (see [`docs/providers.md`](docs/providers.md)). The
-independent open-source project [kapmcp](https://github.com/hasancagrigungor/kapmcp)
-(`pip install kap-mcp-server`) covers KAP through MKK's official API. MCP clients can run
-several servers at once, so the two can be used side by side and the model picks tools from
-both.
+realmarket-mcp, Türkiye'nin Kamuyu Aydınlatma Platformu KAP'ı okumaz: KAP'ın koşulları otomatik
+kullanım için MKK'nın yazılı iznini şart koşar (bkz. [`docs/providers.md`](docs/providers.md)).
+Bağımsız açık kaynak proje [kapmcp](https://github.com/hasancagrigungor/kapmcp)
+(`pip install kap-mcp-server`) KAP'ı MKK'nın resmî API'si üzerinden kapsar. MCP istemcileri
+aynı anda birden çok sunucu çalıştırabildiği için ikisi yan yana kullanılabilir; model araçları
+ikisinden de seçer.
 
-| Question | Served by |
+| Soru | Hangisi cevaplar |
 |---|---|
-| Company disclosures, attachments, official financial statements, corporate actions | kapmcp |
-| Nominal vs inflation-adjusted return; the same holding in US dollars and in gold | realmarket-mcp |
-| "Can I trust this price history?" (seams, gaps, placeholder bars) | realmarket-mcp |
-| Recent news coverage with publisher, date and link | either (kapmcp via Yahoo, realmarket-mcp via GDELT) |
+| Şirket bildirimleri, ekleri, resmî finansal tablolar, sermaye işlemleri | kapmcp |
+| Nominal ve enflasyondan arındırılmış getiri; aynı yatırımın ABD doları ve altın cinsinden karşılığı | realmarket-mcp |
+| "Bu fiyat geçmişine güvenebilir miyim?" (kopukluklar, boşluklar, yer tutucu barlar) | realmarket-mcp |
+| Yayıncı, tarih ve bağlantıyla son haberler | ikisi de (kapmcp Yahoo üzerinden, realmarket-mcp GDELT üzerinden) |
 
-Example configuration with both servers:
+İki sunucuyla örnek yapılandırma:
 
 ```json
 {
@@ -277,34 +286,36 @@ Example configuration with both servers:
 }
 ```
 
-Example request that uses both: *"Summarize THYAO's latest financial report from KAP, then tell
-me whether the stock beat Turkish inflation over the last three years, also in dollars and gold.
-Flag any data-quality issues first."*
+İkisini birden kullanan örnek istek: *"THYAO'nun KAP'taki son finansal raporunu özetle, sonra
+hissenin son üç yılda Türkiye enflasyonunu yenip yenmediğini dolar ve altın cinsinden de söyle.
+Önce veri kalitesi sorunlarını belirt."*
 
-Notes:
+Notlar:
 
-- kapmcp is a separate project with its own maintainer and license (MIT); realmarket-mcp is not
-  affiliated with it and has not audited it. Check its documentation for current setup.
-- Its KAP tools need an API key from the [MKK API Portal](https://apiportal.mkk.com.tr) and an
-  IP authorization on MKK's side; read MKK's conditions when you apply. Without a key, its
-  Yahoo-based tools still work.
-- When two servers offer similar tools (both can report prices), say which one you want if the
-  answer matters, e.g. "use realmarket for the real return".
+- kapmcp kendi geliştiricisi ve lisansı (MIT) olan ayrı bir projedir; realmarket-mcp'nin onunla
+  bir bağlantısı yoktur ve onu denetlememiştir. Güncel kurulum için kendi belgelerine bakın.
+- KAP araçları için [MKK API Portal](https://apiportal.mkk.com.tr)'dan bir API anahtarı ve MKK
+  tarafında IP yetkilendirmesi gerekir; başvururken MKK'nın koşullarını okuyun. Anahtar olmadan
+  da Yahoo tabanlı araçları çalışır.
+- İki sunucu benzer araçlar sunduğunda (ikisi de fiyat verebilir) ve cevap önemliyse hangisini
+  istediğinizi söyleyin, ör. "reel getiri için realmarket'i kullan".
 
-## Example questions
+## Örnek sorular
 
-- "Did THYAO beat Turkish inflation over the last 5 years? Also in dollars and gold."
-- "Compare BIST 100, gold and the S&P 500 over the last 3 years."
-- "Is the price history of ASELS reliable since 2015?"
+- "THYAO son 5 yılda Türkiye enflasyonunu yendi mi? Dolar ve altın cinsinden de."
+- "BIST 100, altın ve S&P 500'ü son 3 yıl için karşılaştır."
+- "ASELS'in 2015'ten bu yana fiyat geçmişi güvenilir mi?"
 
-## What it is not
+## Ne değildir
 
-- **Not investment advice.** It measures and compares; it never tells you what to buy or sell.
-- **Not a data service.** It ships no market data. It runs on your machine and fetches data
-  from providers under your own access; you are responsible for each provider's terms.
-- **Not a trading bot** and not a price-prediction tool.
+- **Yatırım tavsiyesi değildir.** Ölçer ve kıyaslar; ne alıp ne satacağınızı hiçbir zaman
+  söylemez.
+- **Bir veri hizmeti değildir.** Hiçbir piyasa verisiyle birlikte gelmez. Sizin makinenizde
+  çalışır ve veriyi sağlayıcılardan sizin erişiminizle çeker; her sağlayıcının koşullarından siz
+  sorumlusunuz.
+- **Bir alım satım botu değildir**, fiyat tahmin aracı da değildir.
 
-## Development
+## Geliştirme
 
 ```bash
 python -m pip install -e ".[dev]"
@@ -313,9 +324,9 @@ python -m ruff check . && python -m ruff format --check .
 python -m mypy
 ```
 
-The repository includes Claude Code development agents, skills and hooks under `.claude/`;
-see [`CLAUDE.md`](CLAUDE.md).
+Depo, `.claude/` altında Claude Code geliştirme ajanları, becerileri (skills) ve kancaları
+(hooks) içerir; bkz. [`CLAUDE.md`](CLAUDE.md).
 
-## License
+## Lisans
 
 [Apache-2.0](LICENSE).

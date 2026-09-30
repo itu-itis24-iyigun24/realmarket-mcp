@@ -36,7 +36,12 @@ runs `ruff format` and `ruff check --fix` on every Python file Claude writes.
 - **No advice language** anywhere a user or model can read it: tool descriptions, prompts,
   README, result text.
 - **Secrets only from environment variables** (`REALMARKET_<PROVIDER>_API_KEY`).
-- **English** for identifiers, comments and docs.
+- **English** for identifiers, comments and model-facing text (server instructions, tool
+  descriptions, `skills/`): the model tests measured that text. **Turkish** for documents users
+  and firms read (`README.md`, `docs/adapter-api.md`, `docs/entegrasyon-rehberi.md`,
+  `docs/uyum-dosyasi.md`, `docs/pilot-protokolu.md`, `evals/reports/`) and for new CHANGELOG
+  entries. Internal development docs (`docs/design.md`, `docs/tool-contract.md`,
+  `docs/providers.md`, this file) may stay English.
 - Keep dependencies minimal; each new runtime dependency needs an Apache-2.0-compatible license.
 
 ## Development agents and skills

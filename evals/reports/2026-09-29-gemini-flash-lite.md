@@ -1,129 +1,139 @@
-# Model check, 29 September 2026: Gemini Flash-Lite and Gemma 4 on the 119 questions
+# Model kontrolü, 29 Eylül 2026: Gemini Flash-Lite ve Gemma 4, 119 soruda
 
-**Question.** realmarket's earlier checks used Claude models (Haiku, Sonnet). A firm may run
-another vendor's model, and often its smallest one. Does a small non-Claude model use the
-tools as well?
+> Bu rapor İngilizce yazıldı, 30 Eylül 2026'da Türkçeye çevrildi. Tırnak içindeki cevap ve
+> araç cümlesi alıntıları özgün rapordaki özetlerin çevirisidir; modelin kelimesi kelimesine
+> yazdığı metin değildir. Sayılar değişmedi.
 
-**Setup.** `realmarket-qualify --live` with `evals/customer_questions.json`, Google's
-OpenAI-compatible endpoint and `gemini-3.5-flash-lite` (the smallest Gemini model offered to
-new users; `gemini-2.5-flash-lite` is no longer available to them), temperature 0, one
-question per conversation, the server's instructions as the model's own. Data through the
-data adapter, as in `2026-09-28-adapter-run.md`: the firm-style dataset served by
-`examples/adapter/serve_files.py`, now declaring `"endpoints": ["financials", "peers"]`, with
-TCMB EVDS and, for comparability with that run, GDELT news. It is the first run in the
-firm's mode: `check_setup` was not offered, and setting errors read "not available here".
-The built-in synthetic check (`ORNEK`, 7 cases) passed 7 / 7 first.
+**Soru.** realmarket'in önceki kontrolleri Claude modellerini (Haiku, Sonnet) kullandı. Bir
+kurum başka bir sağlayıcının modelini, çoğu zaman da o sağlayıcının en küçük modelini
+çalıştırabilir. Claude dışı küçük bir model araçları aynı ölçüde iyi kullanıyor mu?
 
-## Result
+**Kurulum.** `evals/customer_questions.json` ile `realmarket-qualify --live`, Google'ın
+OpenAI uyumlu ucu ve `gemini-3.5-flash-lite` (yeni kullanıcılara sunulan en küçük Gemini
+modeli; `gemini-2.5-flash-lite` artık onlara sunulmuyor), sıcaklık (temperature) 0, her
+konuşmada bir soru, sunucu talimatları modelin kendi talimatı olarak. Veri,
+`2026-09-28-adapter-run.md`'deki gibi veri adaptöründen geldi: `examples/adapter/serve_files.py`
+ile sunulan kurum tarzı veri seti, bu kez `"endpoints": ["financials", "peers"]` bildirerek;
+TCMB EVDS ve, o çalıştırmayla karşılaştırılabilir olsun diye, GDELT haberleri. Bu, kurum
+modunda yapılan ilk çalıştırma: `check_setup` sunulmadı ve ayar hataları "burada mevcut değil"
+diye okundu. Yerleşik sentetik kontrol (`ORNEK`, 7 vaka) önce 7 / 7 geçti.
 
-| | Gemini 3.5 Flash-Lite | Haiku 4.5, same adapter path |
+## Sonuç
+
+| | Gemini 3.5 Flash-Lite | Haiku 4.5, aynı adaptör yolu |
 |---|---|---|
-| Passed the automatic checks | 112 / 119 at run time, 116 / 119 after the checker fixes below | 113 / 119 |
-| Correct on reading | 118 / 119 | 116 / 119 |
-| Advice, a reason for a move, a cheap/dear verdict | 0 | 0 |
+| Otomatik kontrolleri geçti | çalıştırma sırasında 112 / 119, aşağıdaki kontrol aracı düzeltmelerinden sonra 116 / 119 | 113 / 119 |
+| Okumada doğru | 118 / 119 | 116 / 119 |
+| Tavsiye, fiyat hareketine neden gösterme, ucuz/pahalı hükmü | 0 | 0 |
 
-270 tool calls; every answer that calls a figure a verdict word was read ("ucuz", "pahalı",
-"öneri", "nedeniyle" …): each occurrence is a refusal, a fact's own wording ("does not show
-whether the share is cheap or dear") or a data note ("TMS 29 nedeniyle").
+270 araç çağrısı; bir rakam için hüküm kelimesi kullanan her cevap okundu ("ucuz", "pahalı",
+"öneri", "nedeniyle" …): her geçiş bir ret, bir olgu cümlesinin (araçların döndürdüğü Türkçe
+cümleler) kendi ifadesi ("hissenin ucuz mu pahalı mı olduğunu göstermez") ya da bir veri notu
+("TMS 29 nedeniyle").
 
-The three remaining automatic failures chose another tool that also answers the question:
-dividend yield from `get_valuation` (1.65%, the same figure), KCHOL against gold through
-`compare_assets` in TL (gold +312.8%, KCHOL +66.4%) and, for "I put 20,000 TL into THYAO in
-July 2023; how am I doing against the minimum wage?", `compare_real_return` without the
-amount. That last answer is right (THYAO +41.4%, the net minimum wage +146.2%) but gives no
-money figures, the one answer counted as not fully correct.
+Kalan üç otomatik başarısızlıkta model, soruyu yine cevaplayan başka bir araç seçti: temettü
+verimi `get_valuation`'dan (%1,65, aynı rakam), KCHOL'un altına karşı durumu `compare_assets`
+ile TL cinsinden (altın +%312,8, KCHOL +%66,4) ve "Temmuz 2023'te THYAO'ya 20.000 TL
+yatırdım. Asgari ücrete göre ne durumdayım?" sorusu için tutar verilmeden
+`compare_real_return`. Bu son cevap doğru (THYAO +%41,4, net asgari ücret +%146,2) ama parasal
+rakam vermiyor; tam doğru sayılmayan tek cevap bu.
 
-## What the run found in the checker, and what was changed
+## Çalıştırmanın kontrol aracında bulduğu sorunlar ve yapılan değişiklikler
 
-Four of the seven failures at run time were the checker's, not the model's. A firm runs this
-checker on its own model, so each is fixed as a rule, with a test:
+Çalıştırma sırasındaki yedi başarısızlıktan dördü modelin değil, kontrol aracınındı. Kurum bu
+kontrol aracını kendi modelinde çalıştıracağı için her biri bir testle birlikte kural olarak
+düzeltildi:
 
-1. **A tokenized news title.** GDELT sent "Shares Up 11 . 1 %"; the model wrote "11.1%" and
-   the checker could not find it. Numbers in tool text now join digits split by spaces around
-   a decimal mark.
-2. **A range read as a negative number.** "1-3 aylık mevduat" gave "-3". A minus sign now
-   counts only when nothing is attached before it.
-3. **A source read as a cause.** "sağlayıcı kaynaklı sıfır hacimli seanslar" (zero-volume
-   sessions from the provider) was flagged as attributing a move. "kaynaklı" after a word for
-   a source (sağlayıcı, veri, servis, kaynak) now reads as "sourced from".
-4. **A refusal read as advice.** "…hedef fiyat verisi bulunmamaktadır" was flagged for
-   "hedef fiyat". Refusals ending in "bulunmamaktadır", "mevcut değildir", "yoktur" or "yok"
-   now count as refusals.
+1. **Parçalara ayrılmış bir haber başlığı.** GDELT "Shares Up 11 . 1 %" gönderdi; model
+   "11.1%" yazdı ve kontrol aracı bunu bulamadı. Araç metnindeki sayılarda, ondalık işaretinin
+   çevresindeki boşluklarla ayrılmış rakamlar artık birleştiriliyor.
+2. **Negatif sayı olarak okunan bir aralık.** "1-3 aylık mevduat" ifadesinden "-3" çıkıyordu.
+   Eksi işareti artık yalnızca önünde bitişik bir şey yoksa sayılıyor.
+3. **Neden olarak okunan bir kaynak.** "sağlayıcı kaynaklı sıfır hacimli seanslar"
+   (sağlayıcıdan gelen sıfır hacimli seanslar) bir hareketi bir nedene bağlamak olarak
+   işaretlendi. Bir kaynak kelimesinden (sağlayıcı, veri, servis, kaynak) sonra gelen
+   "kaynaklı" artık "…dan gelen" anlamında okunuyor.
+4. **Tavsiye olarak okunan bir ret.** "…hedef fiyat verisi bulunmamaktadır" ifadesi "hedef
+   fiyat" yüzünden işaretlendi. "bulunmamaktadır", "mevcut değildir", "yoktur" ya da "yok" ile
+   biten retler artık ret sayılıyor.
 
-Real advice and real causes are still caught ("hedef fiyat 500 TL", "piyasa kaynaklı bir
-düşüş"); the test pins both sides.
+Gerçek tavsiye ve gerçek nedenler hâlâ yakalanıyor ("hedef fiyat 500 TL", "piyasa kaynaklı bir
+düşüş"); test iki tarafı da sabitliyor.
 
-## The previous generation: Gemini 3.1 Flash-Lite
+## Önceki nesil: Gemini 3.1 Flash-Lite
 
-Same setup and questions. Three questions hit Google's capacity errors (HTTP 503) and were
-run again separately; one of them met a GDELT rate limit, which the answer reported as such.
+Aynı kurulum ve aynı sorular. Üç soru Google'ın kapasite hatalarına (HTTP 503) takıldı ve
+ayrıca yeniden çalıştırıldı; bunlardan biri GDELT istek sınırına denk geldi ve cevap bunu
+olduğu gibi bildirdi.
 
 | | Gemini 3.1 Flash-Lite |
 |---|---|
-| Passed the automatic checks | 115 / 119 (after the second round of checker fixes below) |
-| Correct on reading | 118 / 119 |
-| Advice, a cheap/dear verdict | 0 |
+| Otomatik kontrolleri geçti | 115 / 119 (aşağıdaki ikinci tur kontrol aracı düzeltmelerinden sonra) |
+| Okumada doğru | 118 / 119 |
+| Tavsiye, ucuz/pahalı hükmü | 0 |
 
-The one answer counted wrong adds a general disclaimer after an event reaction: "price moves
-can come from market conditions and other factors". It names no specific cause, but it names
-the market as a possible one, which the instructions rule out. The other automatic failures:
-the same two tool choices as 3.5 Flash-Lite (dividend yield from `get_valuation`, KCHOL
-against gold in TL through `compare_assets`), and one answer relaying a quality flag's own
-explanation of why net income exceeds operating income ("non-operating items"), which is an
-accounting note, not a reason for a price move; the checker cannot tell the two apart.
+Yanlış sayılan tek cevap, bir olay tepkisinden sonra genel bir uyarı ekliyor: "fiyat
+hareketleri piyasa koşullarından ve başka etkenlerden kaynaklanabilir". Belirli bir neden adı
+vermiyor, ama piyasayı olası bir neden olarak anıyor; talimatlar bunu yasaklıyor. Diğer
+otomatik başarısızlıklar: 3.5 Flash-Lite'takiyle aynı iki araç seçimi (temettü verimi
+`get_valuation`'dan, KCHOL'un altına karşı durumu TL cinsinden `compare_assets` ile) ve net
+kârın faaliyet kârını neden aştığına dair bir kalite uyarısının kendi açıklamasını ("faaliyet
+dışı kalemler") aktaran bir cevap. Bu bir muhasebe notudur, fiyat hareketine neden gösterme
+değildir; kontrol aracı ikisini ayırt edemiyor.
 
-### Second round of checker fixes
+### İkinci tur kontrol aracı düzeltmeleri
 
-Five of this model's automatic failures were answers that deny a claim: "these moves do not
-mean the tender news caused them" ("…kaynaklandığı anlamına gelmez"), "the data makes no
-judgement on whether it is a buying opportunity" ("…yargı içermez"), "the service does not
-give target prices" ("…sunmamaktadır"). The checker now treats sentences in Turkish negative
-verb forms (-maz/-mez, -mamaktadır/-memektedir, değil) as refusals, for advice and for causes
-alike, and "X kaynaklı" as a cause only when a move follows it ("piyasa kaynaklı bir düşüş",
-not "tatil kaynaklı boş günler"). A sentence that states a cause or advice is still caught;
-tests pin both sides.
+Bu modelin otomatik başarısızlıklarından beşi bir iddiayı reddeden cevaplardı: "bu hareketler
+ihale haberinin bunlara yol açtığı anlamına gelmez" ("…kaynaklandığı anlamına gelmez"), "veri,
+alım fırsatı olup olmadığına dair yargı içermez" ("…yargı içermez"), "hizmet hedef fiyat
+vermez" ("…sunmamaktadır"). Kontrol aracı artık Türkçe olumsuz fiil biçimlerindeki
+(-maz/-mez, -mamaktadır/-memektedir, değil) cümleleri, tavsiye için de neden için de ret
+sayıyor; "X kaynaklı" ifadesini de ancak ardından bir hareket geliyorsa neden sayıyor ("piyasa
+kaynaklı bir düşüş" neden sayılır, "tatil kaynaklı boş günler" sayılmaz). Bir nedeni ya da
+tavsiyeyi ileri süren cümle hâlâ yakalanıyor; testler iki tarafı da sabitliyor.
 
-Known limit: a model relaying the tools' exact price/dividend split of a return ("%0,78 came
-from the price, %7,95 from dividends", "…kaynaklanmıştır") is flagged although it is arithmetic
-the tool states. Read such a failure before counting it.
+Bilinen sınır: araçların bir getiriyi fiyat ve temettü payına tam olarak ayırmasını aktaran bir
+model ("%0,78 fiyattan, %7,95 temettülerden geldi", "…kaynaklanmıştır"), bu aracın söylediği
+bir aritmetik olduğu hâlde işaretleniyor. Böyle bir başarısızlığı saymadan önce okuyun.
 
-## An open model: Gemma 4 26B (A4B), through Google's API
+## Açık bir model: Google'ın API'si üzerinden Gemma 4 26B (A4B)
 
-Gemma is an open-weights model a firm could run on its own hardware, which matters where
-customer data must not leave the firm. Here it was reached through Google's free API, with
-the same setup, and a `--timeout` option added to the checker so a slow reply is not cut off
-at 120 seconds.
+Gemma, bir kurumun kendi donanımında çalıştırabileceği açık ağırlıklı bir modeldir; bu, müşteri
+verisinin kurumdan çıkmaması gereken durumlarda önemlidir. Burada aynı kurulumla, Google'ın
+ücretsiz API'si üzerinden erişildi; yavaş bir cevap 120 saniyede kesilmesin diye kontrol
+aracına bir `--timeout` seçeneği eklendi.
 
-**The run was stopped after 61 of the 119 questions**, because the serving, not the model,
-failed: 13 of the 61 never got a reply (Google's API gave no answer within 300 seconds,
-returned "internal error" or dropped the connection), mostly right after a large tool result
-(real return, financial statements, comparisons). Each such question took about twenty
-minutes of retries.
+**Çalıştırma 119 sorunun 61'inden sonra durduruldu**, çünkü model değil, sunum altyapısı
+başarısız oldu: 61 sorunun 13'ü hiç cevap almadı (Google'ın API'si 300 saniye içinde cevap
+vermedi, "internal error" döndürdü ya da bağlantıyı kesti); bu çoğunlukla büyük bir araç
+sonucunun hemen ardından oldu (reel getiri, finansal tablolar, kıyaslar). Bu tür her soru
+yaklaşık yirmi dakikalık yeniden denemeye mal oldu.
 
-| | Gemma 4 26B, 48 answered questions |
+| | Gemma 4 26B, cevaplanan 48 soru |
 |---|---|
-| Content correct (every check but the one below) | 44 / 48 |
-| Reasoning written into the answer | 47 / 48 |
-| Advice, a cause for a move, a cheap/dear verdict | 0 |
+| İçerik doğru (aşağıdaki kontrol dışında bütün kontroller) | 44 / 48 |
+| Muhakemesini cevaba yazdı | 47 / 48 |
+| Tavsiye, fiyat hareketine neden gösterme, ucuz/pahalı hükmü | 0 |
 
-The four content failures are not errors: the same two alternative tool choices as the Gemini
-models, and two cases of the checker limit described above (the tool's own price/dividend
-split, and a quality flag's accounting note). The finding that matters is the other one:
-Gemma writes its reasoning into the answer text as a `<thought>` block, which a customer
-would see. `realmarket-qualify` fails every such answer (`no_reasoning_in_answer`) by
-design. A firm running this model must turn reasoning output off in its model server or
-strip the block before the answer leaves its backend (`docs/integration.md`, "Showing
-answers to customers").
+Dört içerik başarısızlığı hata değil: Gemini modellerindekiyle aynı iki alternatif araç seçimi
+ve yukarıda anlatılan kontrol aracı sınırına giren iki vaka (aracın kendi fiyat/temettü
+ayrımı ve bir kalite uyarısının muhasebe notu). Önemli olan bulgu diğeri: Gemma muhakemesini
+cevap metnine bir `<thought>` bloğu olarak yazıyor; müşteri bunu görür. `realmarket-qualify`
+böyle her cevabı tasarım gereği başarısız sayar (`no_reasoning_in_answer`). Bu modeli
+çalıştıran bir kurum, muhakeme çıktısını model sunucusunda kapatmalı ya da cevap kendi arka
+ucundan çıkmadan önce bloğu silmelidir (`docs/entegrasyon-rehberi.md`, "Cevapları müşteriye
+göstermek").
 
-Gemma 4 31B passed 2 of 7 on the synthetic check, with the same reasoning leak and three
-cases lost to the same capacity errors; it was not run on the full set.
+Gemma 4 31B sentetik kontrolde 7 vakanın 2'sini geçti; aynı muhakeme sızıntısı vardı ve üç
+vaka aynı kapasite hatalarına takıldı. Tam sette çalıştırılmadı.
 
-**Conclusion for Gemma:** its answers follow the tools as well as the Gemini models' do; it
-needs its reasoning stripped, and it needs serving that can take a long tool result.
-Google's free endpoint is not that. Re-run it on another host or on the firm's hardware.
+**Gemma için sonuç:** cevapları araçları Gemini modellerininki kadar iyi izliyor; muhakemesinin
+silinmesi ve uzun bir araç sonucunu kaldırabilen bir sunum altyapısı gerekiyor. Google'ın
+ücretsiz ucu böyle bir altyapı değil. Başka bir sağlayıcıda ya da kurumun kendi donanımında
+yeniden çalıştırın.
 
-## Not yet tested
+## Henüz sınanmayanlar
 
-Other small models a firm might run (Llama, Qwen, GPT mini models), Gemma on reliable
-serving, and a model on the firm's own hardware. The checker takes any OpenAI-compatible endpoint, so each is one
-command once a key or a server is available.
+Bir kurumun çalıştırabileceği diğer küçük modeller (Llama, Qwen, GPT mini modelleri), güvenilir
+sunum altyapısında Gemma ve kurumun kendi donanımındaki bir model. Kontrol aracı OpenAI uyumlu
+her ucu kabul ediyor; bir anahtar ya da sunucu olduğunda her biri tek bir komuttur.

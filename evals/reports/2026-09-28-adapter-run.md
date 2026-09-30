@@ -1,55 +1,63 @@
-# Model check, 28 September 2026: the 119 questions through the data adapter
+# Model kontrolü, 28 Eylül 2026: veri adaptörü üzerinden 119 soru
 
-**Question.** Does a firm that connects its own data through the adapter get the same answers as
-the Yahoo path? The adapter API gained dividends, splits and traded closes in `/bars` and an
-optional `/peers` endpoint for this run; everything else is unchanged.
+> Bu rapor İngilizce yazıldı, 30 Eylül 2026'da Türkçeye çevrildi. Tırnak içindeki cevap ve
+> araç cümlesi alıntıları özgün rapordaki özetlerin çevirisidir; modelin kelimesi kelimesine
+> yazdığı metin değildir. Sayılar değişmedi.
 
-**Setup.** A firm-style dataset (symbols as a Turkish broker's feed names them: `THYAO`,
-`XU100`, `USDTRY`, `XAUUSD`; 26 series, dividends, splits, statements and peer lists) was
-built from one Yahoo snapshot and served by `examples/adapter/serve_files.py`. The dataset
-stays out of the repository: realmarket ships no market data. `realmarket-adapter-check`
-passed every required check and every optional one the data covers. Claude Haiku 4.5 then
-answered the same 119 questions, in the same batches, with `REALMARKET_PRICE_PROVIDER=http`.
+**Soru.** Kendi verisini adaptör üzerinden bağlayan bir kurum, Yahoo yolundakiyle aynı
+cevapları alıyor mu? Bu çalıştırma için adaptör API'sine `/bars` içinde temettüler, bedelsizler
+ve işlem görmüş kapanışlar ile isteğe bağlı bir `/peers` ucu eklendi; geri kalan her şey aynı.
 
-## Result
+**Kurulum.** Kurum tarzı bir veri seti (semboller, bir Türk aracı kurumunun veri akışındaki
+adlarıyla: `THYAO`, `XU100`, `USDTRY`, `XAUUSD`; 26 seri, temettüler, bedelsizler, finansal
+tablolar ve benzer şirket listeleri) tek bir Yahoo anlık görüntüsünden oluşturuldu ve
+`examples/adapter/serve_files.py` ile sunuldu. Veri seti depoya konmadı: realmarket piyasa
+verisi dağıtmaz. `realmarket-adapter-check`, zorunlu kontrollerin hepsini ve verinin kapsadığı
+isteğe bağlı kontrollerin hepsini geçti. Ardından Claude Haiku 4.5 aynı 119 soruyu, aynı
+gruplarla, `REALMARKET_PRICE_PROVIDER=http` ile cevapladı.
 
-| | Yahoo path (full run 2) | Adapter path |
+## Sonuç
+
+| | Yahoo yolu (2. tam çalıştırma) | Adaptör yolu |
 |---|---|---|
-| Passed the automatic checks | 114 / 119 | 113 / 119 |
-| Correct on reading | 115 / 119 | 116 / 119 |
-| Advice, a reason for a move, a cheap/dear verdict | 0 | 0 |
+| Otomatik kontrolleri geçti | 114 / 119 | 113 / 119 |
+| Okumada doğru | 115 / 119 | 116 / 119 |
+| Tavsiye, fiyat hareketine neden gösterme, ucuz/pahalı hükmü | 0 | 0 |
 
-Direct comparisons of the same calls on both paths gave identical figures (THYAO's P/B and
-industry comparison, BIMAS's bonus issue applied to a portfolio, GARAN's dividend yield).
+Aynı çağrıların iki yolda doğrudan karşılaştırılması aynı rakamları verdi (THYAO'nun PD/DD'si
+ve alt sektör kıyası, BIMAS'ın bir portföye uygulanan bedelsizi, GARAN'ın temettü verimi).
 
-Haiku's three errors: a KCHOL-versus-gold answer comparing gold in dollars with the share in
-lira through `compare_assets` (it says the currencies differ, but still names a winner), and
-two answers computing a gap the facts gave in another form. The other three automatic
-failures are the test's: calls made without the log flag, a refusal ending in "yok", and a
-question answered with the previous question's portfolio.
+Haiku'nun üç hatası: `compare_assets` ile dolar cinsinden altını lira cinsinden hisseyle
+karşılaştıran bir KCHOL-altın cevabı (para birimlerinin farklı olduğunu söylüyor ama yine de
+bir kazanan adı veriyor) ve olgu cümlelerinin (araçların döndürdüğü Türkçe cümleler) başka bir
+biçimde verdiği bir farkı kendisi hesaplayan iki cevap. Diğer üç otomatik başarısızlık testin
+kendisinden: kayıt bayrağı olmadan yapılan çağrılar, "yok" ile biten bir ret ve önceki sorunun
+portföyüyle cevaplanan bir soru.
 
-## What the run found, and what was changed
+## Çalıştırmanın bulduğu sorunlar ve yapılan değişiklikler
 
-1. **`check_setup` said statements were unavailable with the adapter.** It only knew Yahoo as
-   a statement source, so with the adapter its facts said "Türkiye için yok", and Haiku
-   refused four financial and valuation questions the adapter could answer. Statements are
-   now reported as coming from the price source when it is on (Yahoo, the adapter, local
-   files). Re-run of the four: correct.
-2. **A trade dated on a closed day used the previous close.** "June 2024" written as
-   2024-06-01 (a Saturday) priced a purchase at 31 May's close, so the same portfolio gave
-   +20,340 TL or +21,177.50 TL depending on how the date was written. A buy or sell without a
-   price on a closed day now fills at the next session, and the facts say so. Re-run: the
-   adapter and Yahoo paths agree.
-3. **Dividends not entered, summed by the model.** The account-level fact now states their
-   total along with the result including them.
+1. **`check_setup`, adaptörle finansal tabloların mevcut olmadığını söylüyordu.** Finansal
+   tablo kaynağı olarak yalnızca Yahoo'yu biliyordu; bu yüzden adaptörle olgu cümleleri
+   "Türkiye için yok" diyordu ve Haiku, adaptörün cevaplayabileceği dört finansal tablo ve
+   değerleme sorusunu reddetti. Finansal tablolar artık, fiyat kaynağı açıkken (Yahoo, adaptör,
+   yerel dosyalar) o kaynaktan geliyor olarak bildiriliyor. Dördünün yeniden çalıştırılması:
+   doğru.
+2. **Kapalı bir güne tarihlenen işlem önceki kapanışı kullanıyordu.** 2024-06-01 (Cumartesi)
+   olarak yazılan "Haziran 2024", bir alımı 31 Mayıs kapanışından fiyatlıyordu; böylece aynı
+   portföy, tarihin nasıl yazıldığına göre +20.340 TL ya da +21.177,50 TL veriyordu. Kapalı bir
+   günde fiyatsız girilen alım ya da satım artık bir sonraki seansta gerçekleşiyor ve olgu
+   cümleleri bunu söylüyor. Yeniden çalıştırma: adaptör ve Yahoo yolları aynı sonucu veriyor.
+3. **Temettüler girilmemişti; model onları kendisi topluyordu.** Hesap düzeyindeki olgu
+   cümlesi artık temettülerin toplamını, temettüler dahil sonuçla birlikte söylüyor.
 
-## Afterwards: assets in different currencies
+## Sonrasında: farklı para birimlerindeki varlıklar
 
-`compare_assets` now measures assets priced in different currencies in one (TRY when one of
-them is in TRY) and ranks them there; without a rate it ranks nothing across currencies. The
-real-return fact giving an asset's return in dollars now names the asset: Haiku had read
-"XU100 in dollars, -0.87%" as the dollar's own return. Re-run of the two affected questions
-(KCHOL or gold; gold, the dollar and BIST 100): after the first fix Sonnet 2 / 2 and Haiku
-3 / 4, the miss being that dollar misreading; after the second, Haiku 4 / 4 (gold +32.0% in
-TL, the dollar +17.8%, BIST 100 +16.8%; gold +311.9% in TL against KCHOL's +71.9% over
-three years, the same figure `compare_real_return` gives).
+`compare_assets` artık farklı para birimlerinde fiyatlanan varlıkları tek bir para biriminde
+ölçüyor (biri TRY ise TRY) ve sıralamayı orada yapıyor; kur yoksa para birimleri arasında
+sıralama yapmıyor. Bir varlığın dolar cinsinden getirisini veren reel getiri olgu cümlesi artık
+varlığın adını söylüyor: Haiku "XU100 dolar cinsinden, -%0,87" ifadesini doların kendi
+getirisi olarak okumuştu. Etkilenen iki sorunun yeniden çalıştırılması (KCHOL mu altın mı;
+altın, dolar ve BIST 100): ilk düzeltmeden sonra Sonnet 2 / 2 ve Haiku 3 / 4, kaçırılan cevap o
+dolar yanlış okumasıydı; ikinci düzeltmeden sonra Haiku 4 / 4 (TL cinsinden altın +%32,0, dolar
++%17,8, BIST 100 +%16,8; üç yılda TL cinsinden altın +%311,9, KCHOL +%71,9;
+`compare_real_return`'ün verdiği rakamın aynısı).

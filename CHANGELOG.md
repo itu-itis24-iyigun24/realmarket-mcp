@@ -1,5 +1,13 @@
 # Changelog
 
+## Yayımlanmamış
+
+- Kurumların ve kullanıcıların okuduğu belgeler Türkçe: `README.md`, `docs/adapter-api.md` ve
+  `evals/reports/` altındaki dört model testi raporu. `docs/integration.md` kaldırıldı; içeriği
+  (sunucu ayarları, `realmarket-qualify` kullanımı, denetim kaydı, cevapları müşteriye
+  gösterme) `docs/entegrasyon-rehberi.md` içine taşındı. Modelin okuduğu metinler (sunucu
+  talimatları, araç açıklamaları, beceri) değişmedi.
+
 ## 0.1.9 — 2026-09-30
 
 - **A token in front of the HTTP endpoint.** With `REALMARKET_SERVER_TOKEN` set,
