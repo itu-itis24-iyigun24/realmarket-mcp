@@ -1,9 +1,5 @@
 # Model kontrolü, 28 Eylül 2026: veri adaptörü üzerinden 119 soru
 
-> Bu rapor İngilizce yazıldı, 30 Eylül 2026'da Türkçeye çevrildi. Tırnak içindeki cevap ve
-> araç cümlesi alıntıları özgün rapordaki özetlerin çevirisidir; modelin kelimesi kelimesine
-> yazdığı metin değildir. Sayılar değişmedi.
-
 **Soru.** Kendi verisini adaptör üzerinden bağlayan bir kurum, Yahoo yolundakiyle aynı
 cevapları alıyor mu? Bu çalıştırma için adaptör API'sine `/bars` içinde temettüler, bedelsizler
 ve işlem görmüş kapanışlar ile isteğe bağlı bir `/peers` ucu eklendi; geri kalan her şey aynı.
@@ -38,7 +34,7 @@ portföyüyle cevaplanan bir soru.
 
 1. **`check_setup`, adaptörle finansal tabloların mevcut olmadığını söylüyordu.** Finansal
    tablo kaynağı olarak yalnızca Yahoo'yu biliyordu; bu yüzden adaptörle olgu cümleleri
-   "Türkiye için yok" diyordu ve Haiku, adaptörün cevaplayabileceği dört finansal tablo ve
+   "Türkiye ve diğer piyasalar için yok" diyordu ve Haiku, adaptörün cevaplayabileceği dört finansal tablo ve
    değerleme sorusunu reddetti. Finansal tablolar artık, fiyat kaynağı açıkken (Yahoo, adaptör,
    yerel dosyalar) o kaynaktan geliyor olarak bildiriliyor. Dördünün yeniden çalıştırılması:
    doğru.
@@ -55,7 +51,7 @@ portföyüyle cevaplanan bir soru.
 `compare_assets` artık farklı para birimlerinde fiyatlanan varlıkları tek bir para biriminde
 ölçüyor (biri TRY ise TRY) ve sıralamayı orada yapıyor; kur yoksa para birimleri arasında
 sıralama yapmıyor. Bir varlığın dolar cinsinden getirisini veren reel getiri olgu cümlesi artık
-varlığın adını söylüyor: Haiku "XU100 dolar cinsinden, -%0,87" ifadesini doların kendi
+varlığın adını söylüyor: Haiku, XU100 için verilen "…dolar cinsinden getiri -%0,87" cümlesini doların kendi
 getirisi olarak okumuştu. Etkilenen iki sorunun yeniden çalıştırılması (KCHOL mu altın mı;
 altın, dolar ve BIST 100): ilk düzeltmeden sonra Sonnet 2 / 2 ve Haiku 3 / 4, kaçırılan cevap o
 dolar yanlış okumasıydı; ikinci düzeltmeden sonra Haiku 4 / 4 (TL cinsinden altın +%32,0, dolar
