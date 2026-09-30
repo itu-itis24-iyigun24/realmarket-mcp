@@ -43,10 +43,20 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--blue); outline-
 .num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 0.95em; }
 hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
 
+.head { max-width: 860px; }
+.head .lede { max-width: 680px; }
 .brand { font: 600 1.05rem/1 var(--sans); }
 .brand b { color: var(--blue); font-weight: 600; }
 .toc { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 0; margin: 4px 0 0; list-style: none; font-size: 0.95rem; }
 .toc a { color: var(--muted); }
+
+/* why: claim and its evidence, one row each */
+.why { display: grid; margin-top: -32px; }
+.why .row { display: grid; grid-template-columns: minmax(0, 17rem) minmax(0, 1fr); gap: 8px 32px; padding-block: 16px; border-top: 1px solid var(--rule); max-width: 900px; }
+.why .row:last-of-type { border-bottom: 1px solid var(--rule); }
+.why .claim { font: 600 1.2rem/1.3 var(--serif); }
+.why .toc { margin-top: 18px; }
+@media (max-width: 680px) { .why .row { grid-template-columns: 1fr; } }
 
 /* an app screen */
 .app { background: var(--app); border: 1px solid var(--rule); border-radius: 26px; overflow: hidden; width: 100%; max-width: 400px; min-width: 0; }
@@ -123,13 +133,37 @@ footer { border-top: 1px solid var(--rule); padding-top: 20px; font-size: 0.88re
 
 <main class="page">
 
-<header class="text">
+<header class="text head">
   <p class="brand">real<b>market</b></p>
   <h1>Uygulamanızdaki yapay zekâ asistanı, müşterinin hisse ve portföy sorularını sizin verinizle cevaplasın.</h1>
-  <p class="lede">realmarket, aracı kurumun asistanı ile kurumun piyasa verisi arasına kurulan bir yazılımdır.
-    Asistan bir rakama ihtiyaç duyduğunda (getiri, enflasyona göre getiri, portföy kârı, değerleme oranı)
-    rakamı kendisi tahmin etmez; realmarket sizin verinizden hesaplar ve asistana hazır cümleler olarak verir.
-    Yatırım tavsiyesi, hedef fiyat ya da fiyat hareketine neden üretmez.</p>
+  <p class="lede">realmarket, asistanınız ile piyasa veriniz arasına kurulan bir yazılımdır. Asistan rakamı
+    tahmin etmez; realmarket sizin verinizden hesaplar, asistan müşteriye aktarır.</p>
+</header>
+
+<section class="why" aria-label="Neden realmarket">
+  <div class="row">
+    <p class="claim">Tavsiye riski ölçülmüş</p>
+    <p>Beş farklı yapay zekâ modeli, 119 müşteri sorusu: <strong>sıfır</strong> yatırım tavsiyesi,
+      sıfır uydurma neden, sıfır “ucuz” ya da “pahalı” yorumu. Test sonuçları ve yöntem açık.
+      <a href="#olcum">Ölçüm</a></p>
+  </div>
+  <div class="row">
+    <p class="claim">Türk yatırımcısının sorduğu hesaplar hazır</p>
+    <p>TÜFE'ye göre reel getiri, stopaj sonrası mevduat getirisi, gram altın, asgari ücrete göre getiri,
+      TMS 29'a göre düzeltilmiş bilançolar, bedelsiz ve temettü dahil portföy kâr/zararı. Veriye bağlı
+      olmayan bir model bunları hesaplayamaz. <a href="#ornekler">Örnekler</a></p>
+  </div>
+  <div class="row">
+    <p class="claim">Veri, sunucu ve model sizde</p>
+    <p>Sizin sunucunuzda çalışır, veri saklamaz, bize hiçbir veri gelmez. Modeli siz seçersiniz: Claude,
+      Gemini ya da kendi sunucunuzda çalışan açık kaynak bir model. Kod açık kaynak olduğu için hiçbir
+      tedarikçiye bağlı kalmazsınız.</p>
+  </div>
+  <div class="row">
+    <p class="claim">Riski olmayan bir başlangıç</p>
+    <p>Fiyat kaynağınızın önüne birkaç günde yazılan küçük bir servis yeterli. 6 haftalık pilot ücretsiz,
+      müşterilere kapalı ve istediğiniz an sonlanır. <a href="#pilot">Pilot</a></p>
+  </div>
   <ul class="toc" aria-label="Bu sayfada">
     <li><a href="#sorun">Sorun</a></li>
     <li><a href="#nasil">Nasıl çalışıyor</a></li>
@@ -137,7 +171,7 @@ footer { border-top: 1px solid var(--rule); padding-top: 20px; font-size: 0.88re
     <li><a href="#olcum">Ölçüm</a></li>
     <li><a href="#pilot">Kurulum ve pilot</a></li>
   </ul>
-</header>
+</section>
 
 <hr>
 
