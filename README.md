@@ -4,6 +4,9 @@ Claude'un ve diğer büyük dil modellerinin (LLM) piyasaları **doğrulanmış 
 rakamlarla** araştırmasını sağlayan açık kaynak bir
 [Model Context Protocol](https://modelcontextprotocol.io) sunucusu.
 
+**Aracı kurumlar için:** [iki dakikalık demo](https://itu-itis24-iyigun24.github.io/realmarket-mcp/examples/demo/realmarket-demo.html) (giriş gerektirmez) ve
+[entegrasyon rehberi](docs/entegrasyon-rehberi.md).
+
 > **Durum: alfa (MVP).** Fiyat, reel getiri, veri kalitesi ve ABD finansal tablo araçları canlı
 > Yahoo, SEC EDGAR, OECD, FRED, TCMB EVDS ve GDELT servislerine karşı doğrulandı. KAP şirket
 > bildirimleri dahil değildir (KAP'ın kullanım koşulları MKK'nın yazılı iznini şart koşar);

@@ -4,6 +4,8 @@ A one-page demo for brokerages (`realmarket-demo.html`, in Turkish): a model wit
 next to the same model with realmarket, ten recorded answers with what each tool call gave
 the model, the model-check results and the pilot.
 
+Published at https://itu-itis24-iyigun24.github.io/realmarket-mcp/examples/demo/realmarket-demo.html (GitHub Pages, built from `main`).
+
 Every answer on the page is a recorded, unedited model output; the page only lays them out.
 The data is fictional: the company ORNEK, its index and the peer retailers are generated,
 not market data. Answers are made in the firm's mode (through the data adapter), so the page
