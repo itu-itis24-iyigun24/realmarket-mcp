@@ -1,363 +1,374 @@
 <title>realmarket Demo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: one reading column; the demo breaks out into a two-pane "phone + inspector" band. */
+/* Layout: a product brief read top to bottom; the phone and its margin notes sit side by side. */
 :root {
-  --paper: #f5f7f6; --panel: #ffffff; --ink: #14211d; --muted: #56675f; --line: #d9e1dd;
-  --accent: #0d7a54; --accent-soft: #e2f1ea; --risk: #a8471f; --risk-soft: #f8e9e1;
-  --bubble: #e9efec;
-  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
-  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --paper: #fbfbfa; --sheet: #ffffff; --ink: #1b1e24; --muted: #5d636d; --rule: #e2e3e7;
+  --blue: #2742b0; --blue-wash: #eef1fb; --red: #b1261d; --green: #1d7443;
+  --app: #f1f2f4; --bubble-me: #2742b0; --on-blue: #ffffff;
+  --serif: "Newsreader", Georgia, "Times New Roman", serif;
+  --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0f1513; --panel: #151e1b; --ink: #e5ede9; --muted: #95a79f; --line: #27332f;
-    --accent: #45c28f; --accent-soft: #173229; --risk: #e3906a; --risk-soft: #35211a;
-    --bubble: #1c2824; color-scheme: dark;
+    --paper: #121419; --sheet: #191c22; --ink: #e7e8ec; --muted: #9ba1ac; --rule: #2b2f37;
+    --blue: #8ea2ff; --blue-wash: #1e2440; --red: #f08a82; --green: #6fcf97;
+    --app: #20242b; --bubble-me: #3b56c6; --on-blue: #ffffff;
+    color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --paper: #0f1513; --panel: #151e1b; --ink: #e5ede9; --muted: #95a79f; --line: #27332f;
-  --accent: #45c28f; --accent-soft: #173229; --risk: #e3906a; --risk-soft: #35211a;
-  --bubble: #1c2824; color-scheme: dark;
+  --paper: #121419; --sheet: #191c22; --ink: #e7e8ec; --muted: #9ba1ac; --rule: #2b2f37;
+  --blue: #8ea2ff; --blue-wash: #1e2440; --red: #f08a82; --green: #6fcf97;
+  --app: #20242b; --bubble-me: #3b56c6; --on-blue: #ffffff;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { background: var(--paper); color: var(--ink); font: 17px/1.55 var(--body); margin: 0; }
-.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; }
-.col { max-width: 720px; }
-h1, h2, h3 { font-family: var(--display); line-height: 1.12; text-wrap: balance; margin: 0; }
-h1 { font-size: clamp(2.1rem, 5vw, 3.4rem); font-weight: 700; letter-spacing: -0.02em; }
-h2 { font-size: clamp(1.55rem, 3vw, 2.1rem); font-weight: 700; letter-spacing: -0.01em; }
-h3 { font-size: 1.1rem; font-weight: 700; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 16.5px/1.6 var(--sans); }
+.page { max-width: 1040px; margin: 0 auto; padding-inline: 20px; padding-block: 48px 72px; display: grid; gap: 64px; }
+.text { max-width: 680px; display: grid; gap: 14px; }
+h1, h2 { font-family: var(--serif); font-weight: 600; line-height: 1.15; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2rem, 4.6vw, 2.8rem); }
+h2 { font-size: clamp(1.5rem, 3vw, 1.95rem); }
+h3 { font: 600 1rem/1.35 var(--sans); margin: 0; }
 p { margin: 0; }
-a { color: var(--accent); }
-a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-.eyebrow { font: 600 0.78rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
-.lede { font-size: 1.2rem; color: var(--muted); }
-.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-section { padding-block: 56px; border-top: 1px solid var(--line); }
-section > .wrap { display: grid; gap: 28px; }
-
-/* top bar */
-.top { padding-block: 18px; }
-.top .wrap { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
-.mark { font: 700 1.2rem/1 var(--display); letter-spacing: -0.01em; }
-.mark span { color: var(--accent); }
-.top nav { display: flex; gap: 18px; flex-wrap: wrap; font-size: 0.95rem; }
-.top nav a { color: var(--muted); text-decoration: none; }
-.top nav a:hover { color: var(--ink); }
-
-/* hero */
-.hero { border-top: 0; padding-block: 40px 56px; }
-.hero .wrap { gap: 22px; }
-.proof { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-top: 8px; color: var(--muted); font-size: 0.98rem; }
-.proof b { color: var(--ink); font-family: var(--mono); font-weight: 600; }
-.cta { display: inline-flex; align-items: center; gap: 10px; background: var(--accent); color: var(--paper);
-  text-decoration: none; font-weight: 600; padding: 12px 18px; border-radius: 6px; width: fit-content; }
-
-/* contrast */
-.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px; display: grid; gap: 12px; align-content: start; min-width: 0; }
-.card.risk { border-color: color-mix(in srgb, var(--risk) 45%, var(--line)); }
-.card.safe { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
-.tag { font: 600 0.75rem/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
-.risk .tag { color: var(--risk); }
-.safe .tag { color: var(--accent); }
-.q { font-weight: 600; }
-.answer { font-size: 0.95rem; display: grid; gap: 8px; }
-.answer ul, .answer ol { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
-.answer .cut { color: var(--muted); font-family: var(--mono); font-size: 0.85rem; }
-.flags { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
-.flags li { font-size: 0.92rem; padding: 6px 10px; border-radius: 6px; }
-.risk .flags li { background: var(--risk-soft); }
-.safe .flags li { background: var(--accent-soft); }
+a { color: var(--blue); }
+a:focus-visible, button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.lede { font-size: 1.12rem; }
+.muted { color: var(--muted); }
 .small { font-size: 0.9rem; color: var(--muted); }
-details.more { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 20px; }
-details.more summary { cursor: pointer; font-weight: 600; }
-details.more[open] summary { margin-bottom: 14px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 0.95em; }
+hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
 
-/* demo */
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { font: 600 0.9rem/1 var(--body); padding: 9px 13px; border-radius: 999px; border: 1px solid var(--line);
-  background: var(--panel); color: var(--ink); cursor: pointer; }
-.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.stage { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 20px; align-items: start; }
-@media (max-width: 820px) { .stage { grid-template-columns: 1fr; } }
-.phone { background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
-.phone-head { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); font-family: var(--mono); }
-.msg-user { justify-self: end; max-width: 85%; background: var(--ink); color: var(--paper); padding: 10px 14px; border-radius: 16px 16px 4px 16px; font-weight: 600; }
-.msg-bot { background: var(--bubble); padding: 14px 16px; border-radius: 16px 16px 16px 4px; min-width: 0; overflow-wrap: anywhere; }
-.inspector { display: grid; gap: 14px; min-width: 0; }
-.inspector .card { gap: 10px; }
-.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 0.93rem; }
-.kv dt { color: var(--muted); }
-.kv dd { margin: 0; font-weight: 600; }
-.fact { font-family: var(--mono); font-size: 0.82rem; line-height: 1.5; background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; overflow-wrap: anywhere; }
-.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 0.93rem; }
-.checks li::before { content: "✓"; color: var(--accent); font-weight: 700; margin-right: 8px; }
+.brand { font: 600 1.05rem/1 var(--sans); }
+.brand b { color: var(--blue); font-weight: 600; }
+.toc { display: flex; flex-wrap: wrap; gap: 6px 22px; padding: 0; margin: 4px 0 0; list-style: none; font-size: 0.95rem; }
+.toc a { color: var(--muted); }
 
-/* pillars */
-.grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }
-.pillar { display: grid; gap: 8px; align-content: start; }
-.pillar p { color: var(--muted); font-size: 0.97rem; }
+/* an app screen */
+.app { background: var(--app); border: 1px solid var(--rule); border-radius: 26px; overflow: hidden; width: 100%; max-width: 400px; min-width: 0; }
+.app-bar { background: var(--sheet); border-bottom: 1px solid var(--rule); padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+.app-bar .dot { width: 30px; height: 30px; border-radius: 50%; background: var(--blue); color: var(--on-blue); display: grid; place-items: center; font: 600 0.8rem/1 var(--sans); flex: none; }
+.app-bar div { display: grid; line-height: 1.25; }
+.app-bar small { color: var(--muted); font-size: 0.78rem; }
+.thread { padding: 16px 14px; display: grid; gap: 12px; }
+.me { justify-self: end; max-width: 86%; background: var(--bubble-me); color: var(--on-blue); padding: 9px 13px; border-radius: 16px 16px 4px 16px; font-size: 0.95rem; }
+.bot { background: var(--sheet); border: 1px solid var(--rule); padding: 12px 14px; border-radius: 16px 16px 16px 4px; font-size: 0.93rem; line-height: 1.55; display: grid; gap: 8px; min-width: 0; overflow-wrap: anywhere; }
+.bot ul, .bot ol { margin: 0; padding-left: 1.15em; display: grid; gap: 3px; }
+.bot .cut { color: var(--muted); font-family: var(--mono); font-size: 0.8rem; }
+.app-input { margin: 0 12px 12px; background: var(--sheet); border: 1px solid var(--rule); border-radius: 999px; padding: 9px 14px; color: var(--muted); font-size: 0.88rem; }
+
+/* highlights and the notes that explain them */
+mark { background: none; color: inherit; border-bottom: 2px solid var(--hl); }
+mark::before { content: attr(data-n); display: inline-grid; place-items: center; width: 1.3em; height: 1.3em; margin-right: 3px; border-radius: 50%; background: var(--hl); color: var(--paper); font: 600 0.7rem/1 var(--sans); vertical-align: 0.1em; }
+.bad { --hl: var(--red); }
+.good { --hl: var(--green); }
+.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; counter-reset: n; }
+.notes li { counter-increment: n; display: grid; grid-template-columns: 1.6em 1fr; gap: 10px; }
+.notes li::before { content: counter(n); width: 1.6em; height: 1.6em; border-radius: 50%; display: grid; place-items: center; background: var(--hl); color: var(--paper); font: 600 0.8rem/1 var(--sans); }
+.annotated { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 32px; align-items: start; margin-top: 32px; }
+.side { display: grid; gap: 16px; align-content: start; padding-top: 8px; }
+.verdict { font-weight: 600; }
+.bad .verdict { color: var(--red); }
+.good .verdict { color: var(--green); }
+@media (max-width: 760px) { .annotated { grid-template-columns: 1fr; } }
+details { border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding-block: 14px; margin-top: 36px; }
+details summary { cursor: pointer; font-weight: 600; }
+details .annotated { margin-top: 20px; }
+
+/* one question, start to finish */
+.walk { list-style: none; margin: 32px 0 0; padding: 0; display: grid; }
+.walk > li { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr); gap: 16px; padding-bottom: 32px; position: relative; }
+.walk > li::after { content: ""; position: absolute; left: calc(1.1rem - 1px); top: 2.4rem; bottom: 0.2rem; border-left: 2px solid var(--rule); }
+.walk > li:last-child { padding-bottom: 0; }
+.walk > li:last-child::after { display: none; }
+.step-n { width: 2.2rem; height: 2.2rem; border-radius: 50%; border: 2px solid var(--blue); color: var(--blue); display: grid; place-items: center; font: 600 0.95rem/1 var(--sans); }
+.step { display: grid; gap: 10px; min-width: 0; padding-top: 4px; }
+.request { background: var(--sheet); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 16px; display: grid; gap: 4px; max-width: 520px; }
+.request ul { margin: 0; padding-left: 1.1em; }
+.sentences { background: var(--blue-wash); border-left: 3px solid var(--blue); padding: 14px 18px; margin: 0; display: grid; gap: 10px; list-style: none; max-width: 680px; }
+.sentences li { font-size: 0.95rem; }
+.walk .app { max-width: 460px; }
+
+/* ten examples */
+.examples { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 400px); gap: 32px; align-items: start; margin-top: 28px; }
+@media (max-width: 820px) { .examples { grid-template-columns: 1fr; } }
+.qlist { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.qlist button { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--rule); padding: 12px 4px; font: 400 0.98rem/1.4 var(--sans); color: var(--ink); cursor: pointer; display: grid; grid-template-columns: 1fr auto; gap: 12px; }
+.qlist button:hover { background: var(--sheet); }
+.qlist button[aria-pressed="true"] { color: var(--blue); font-weight: 600; }
+.qlist button[aria-pressed="true"]::after { content: "→"; }
+.detail { display: grid; gap: 14px; }
+.inside { font-size: 0.9rem; display: grid; gap: 8px; }
+.inside .sentences { padding: 10px 14px; }
+.inside .sentences li { font-size: 0.86rem; }
 
 /* table */
-.tablebox { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 0.97rem; }
-th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { font: 600 0.78rem/1.2 var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
-td.num { white-space: nowrap; }
-.zero { color: var(--accent); font-weight: 600; }
+.tablebox { overflow-x: auto; margin-top: 24px; }
+table { border-collapse: collapse; width: 100%; max-width: 760px; font-size: 0.97rem; }
+th, td { text-align: left; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 600; font-size: 0.85rem; color: var(--muted); }
+td.num, th.num { text-align: right; padding-right: 0; padding-left: 16px; white-space: nowrap; }
 
-/* steps */
-.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; counter-reset: s; }
-.step { border-top: 3px solid var(--ink); padding-top: 14px; display: grid; gap: 6px; align-content: start; }
-.step .when { font-family: var(--mono); font-size: 0.85rem; color: var(--accent); }
-.step p { color: var(--muted); font-size: 0.97rem; }
+dl.facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 10px 24px; margin: 0; }
+dl.facts dt { font-weight: 600; }
+dl.facts dd { margin: 0; color: var(--muted); }
+@media (max-width: 560px) { dl.facts { grid-template-columns: 1fr; gap: 2px; } dl.facts dd { margin-bottom: 10px; } }
 
-.pilot { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 28px; display: grid; gap: 20px; }
-.terms { display: flex; flex-wrap: wrap; gap: 10px; }
-.terms span { background: var(--accent-soft); color: var(--ink); padding: 7px 12px; border-radius: 999px; font-weight: 600; font-size: 0.93rem; }
-
-footer { border-top: 1px solid var(--line); padding-block: 36px 48px; }
-footer .wrap { display: grid; gap: 12px; font-size: 0.9rem; color: var(--muted); }
-@media (prefers-reduced-motion: no-preference) {
-  .msg-bot, .inspector { animation: rise .25s ease-out; }
-  @keyframes rise { from { transform: translateY(6px); opacity: .6 } to { transform: none; opacity: 1 } }
-}
+footer { border-top: 1px solid var(--rule); padding-top: 20px; font-size: 0.88rem; color: var(--muted); max-width: 760px; }
 </style>
 
-<header class="top">
-  <div class="wrap">
-    <div class="mark">real<span>market</span></div>
-    <nav aria-label="Bölümler">
-      <a href="#fark">Fark</a><a href="#demo">Demo</a><a href="#olcum">Ölçüm</a><a href="#kurulum">Kurulum</a><a href="#pilot">Pilot</a>
-    </nav>
-  </div>
+<main class="page">
+
+<header class="text">
+  <p class="brand">real<b>market</b></p>
+  <h1>Uygulamanızdaki yapay zekâ asistanı, müşterinin hisse ve portföy sorularını sizin verinizle cevaplasın.</h1>
+  <p class="lede">realmarket, aracı kurumun asistanı ile kurumun piyasa verisi arasına kurulan bir yazılımdır.
+    Asistan bir rakama ihtiyaç duyduğunda (getiri, enflasyona göre getiri, portföy kârı, değerleme oranı)
+    rakamı kendisi tahmin etmez; realmarket sizin verinizden hesaplar ve asistana hazır cümleler olarak verir.
+    Yatırım tavsiyesi, hedef fiyat ya da fiyat hareketine neden üretmez.</p>
+  <ul class="toc" aria-label="Bu sayfada">
+    <li><a href="#sorun">Sorun</a></li>
+    <li><a href="#nasil">Nasıl çalışıyor</a></li>
+    <li><a href="#ornekler">On örnek</a></li>
+    <li><a href="#olcum">Ölçüm</a></li>
+    <li><a href="#pilot">Kurulum ve pilot</a></li>
+  </ul>
 </header>
 
-<section class="hero">
-  <div class="wrap">
-    <p class="eyebrow">Aracı kurumların yapay zekâ asistanları için</p>
-    <h1 class="col">Müşteriniz soruyor. Asistanınız cevabı kendi verinizden kuruyor.</h1>
-    <p class="lede col">realmarket, uygulamanızdaki asistanı lisanslı piyasa verinize bağlayan araç katmanıdır.
-      Getiriyi, enflasyona göre reel getiriyi, portföy kâr/zararını ve değerleme oranlarını hesaplar;
-      her rakamı tarihi, kaynağı ve anlamıyla modele verir. Tavsiye, hedef fiyat ya da neden uydurma yoktur.</p>
-    <div class="proof">
-      <span><b>119</b> müşteri tipi soru</span>
-      <span><b>5</b> model üzerinde ölçüldü</span>
-      <span><b>0</b> tavsiye, <b>0</b> uydurma neden</span>
-    </div>
-    <a class="cta" href="#pilot">6 haftalık ücretsiz pilot →</a>
-  </div>
-</section>
+<hr>
 
-<section id="fark">
-  <div class="wrap">
-    <div class="col" style="display:grid;gap:12px">
-      <p class="eyebrow">Sorun</p>
-      <h2>Veriye bağlı olmayan bir asistan, kurumunuz adına konuşur.</h2>
-      <p class="lede">Aşağıdaki iki cevap aynı modelden geliyor (Gemini 3.5 Flash-Lite). Soldakine
-        bir aracı kurum asistanı olduğu söylendi ama veri verilmedi. Sağdakine realmarket bağlandı.
-        İkisi de düzenlenmemiş gerçek çıktıdır.</p>
-    </div>
-    <div class="pair">
-      <article class="card risk">
-        <p class="tag">Araçsız model</p>
-        <p class="q">“<!--CONTRAST_Q-->”</p>
-        <div class="answer"><!--CONTRAST_A--></div>
-        <ul class="flags">
-          <li>Elinde fiyat verisi yok; hissenin düştüğünü kabul ediyor.</li>
-          <li>Beş olası neden sıralıyor: fiyat hareketine yorum.</li>
-          <li>Uygulamanızda olmayabilecek ekranlara yönlendiriyor.</li>
-        </ul>
-      </article>
-      <article class="card safe">
-        <p class="tag">realmarket ile</p>
-        <p class="q">“ORNEK son işlem gününde neden düştü ya da yükseldi?”</p>
-        <div class="answer"><!--WITH_TOOLS--></div>
-        <ul class="flags">
-          <li>Seansın rakamları, endeksle farkı ve hacmi; hepsi veriden.</li>
-          <li>Hareket bir nedene bağlanmıyor.</li>
-          <li>Haber kaynağı yoksa bunu açıkça söylüyor.</li>
-        </ul>
-      </article>
-    </div>
-    <details class="more">
-      <summary>Araçsız model “hangi hisseleri almalıyım?” sorusuna ne dedi</summary>
-      <div class="card risk" style="border:0;padding:0">
-        <p class="q">“<!--ADVICE_Q-->”</p>
-        <div class="answer"><!--ADVICE_A--></div>
-        <ul class="flags">
-          <li>“Hisse önermem” diyor, ardından sektör sayıyor ve sepet kuruyor.</li>
-          <li>Kurumunuz adına “analistlerimizin hisse önerileri”nden söz ediyor.</li>
-        </ul>
+<section id="sorun">
+  <div class="text">
+    <h2>Veriye bağlı olmayan bir asistan, bilmediği şeyi anlatır</h2>
+    <p>Aşağıdaki iki cevap aynı yapay zekâ modelinden (Gemini 3.5 Flash-Lite) geliyor ve düzenlenmedi.
+      Birincisine yalnızca bir aracı kurumun asistanı olduğu söylendi. İkincisine realmarket bağlandı.</p>
+  </div>
+
+  <div class="annotated bad">
+    <div class="app">
+      <div class="app-bar"><span class="dot">A</span><div><strong>Asistan</strong><small>Veri bağlantısı yok</small></div></div>
+      <div class="thread">
+        <p class="me"><!--WITHOUT_Q--></p>
+        <div class="bot"><!--WITHOUT_A--></div>
       </div>
-    </details>
-    <p class="small col">Soldaki soru gerçek bir hisse için soruldu, sağdaki demo verisindeki kurgusal
-      ORNEK için. Soldaki modelin hiçbir veriye erişimi olmadığından fark hisseden değil, veri
-      bağlantısından kaynaklanıyor.</p>
-  </div>
-</section>
-
-<section id="demo">
-  <div class="wrap">
-    <div class="col" style="display:grid;gap:12px">
-      <p class="eyebrow">Canlı kayıt</p>
-      <h2>On soru, on gerçek cevap</h2>
-      <p class="lede">Müşterilerin sorduğu türden sorular. Bir soru seçin; sağda asistanın perde
-        arkasında hangi aracı çağırdığını ve modele ne verildiğini görün.</p>
     </div>
-    <div class="chips" role="group" aria-label="Demo soruları" id="chips"></div>
-    <div class="stage">
-      <div class="phone" aria-live="polite">
-        <div class="phone-head"><span>Asistan</span><span>kurum modu</span></div>
-        <div class="msg-user" id="q"></div>
-        <div class="msg-bot answer" id="a"></div>
+    <div class="side">
+      <p class="verdict">Veri olmadan</p>
+      <ol class="notes">
+        <li>Elinde fiyat verisi yok. Hissenin gerçekten düşüp düşmediğini bilmeden düşüşü açıklamaya başlıyor.</li>
+        <li>Beş olası neden sayıyor. Fiyat hareketini bir nedene bağlamak, yatırım yorumuna en yakın alan.</li>
+        <li>Uygulamanızda böyle bir bölüm olup olmadığını bilmiyor; kurumunuz adına yönlendirme yapıyor.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="annotated good">
+    <div class="app">
+      <div class="app-bar"><span class="dot">A</span><div><strong>Asistan</strong><small>realmarket bağlı</small></div></div>
+      <div class="thread">
+        <p class="me"><!--WITH_Q--></p>
+        <div class="bot"><!--WITH_A--></div>
       </div>
-      <aside class="inspector" id="insp" aria-label="Perde arkası"></aside>
     </div>
-    <p class="small col">Veriler, kurgusal ORNEK şirketi ve sentetik piyasa serilerinden oluşan demo
-      verisidir; sektördeki diğer şirketler de kurgusaldır. Cevaplar Gemini 3.5 Flash-Lite
-      modelinin 29 Eylül 2026 tarihli düzenlenmemiş çıktılarıdır. Pilotta aynı sorular sizin
-      verinizle ve sizin modelinizle çalışır.</p>
+    <div class="side">
+      <p class="verdict">realmarket ile</p>
+      <ol class="notes">
+        <li>Rakam kurumun fiyat verisinden hesaplandı ve tarihiyle geldi.</li>
+        <li>Endeksle karşılaştırma var, ama hareket endekse ya da piyasaya bağlanmıyor.</li>
+        <li>Haberi kontrol edemediğini söylüyor; boşluğu tahminle doldurmuyor.</li>
+      </ol>
+      <p class="small">Birinci soru gerçek bir hisse için soruldu, ikincisi bu demodaki kurgusal ORNEK
+        şirketi için. Birinci modelin hiçbir veriye erişimi olmadığından fark hisseden değil,
+        veri bağlantısından geliyor.</p>
+    </div>
   </div>
+
+  <details class="bad">
+    <summary>Veri bağlı olmayan asistana “hangi hisseleri almalıyım?” diye sorulduğunda</summary>
+    <div class="annotated">
+      <div class="app">
+        <div class="app-bar"><span class="dot">A</span><div><strong>Asistan</strong><small>Veri bağlantısı yok</small></div></div>
+        <div class="thread">
+          <p class="me"><!--ADVICE_Q--></p>
+          <div class="bot"><!--ADVICE_A--></div>
+        </div>
+      </div>
+      <div class="side">
+        <ol class="notes">
+          <li>Tavsiye veremeyeceğini söylüyor.</li>
+          <li>Hemen ardından sektör sayıyor ve paranın nasıl bölüneceğini anlatıyor.</li>
+          <li>Kurumunuz adına, var olup olmadığını bilmediği analist önerilerine yönlendiriyor.</li>
+        </ol>
+      </div>
+    </div>
+  </details>
 </section>
 
-<section>
-  <div class="wrap">
-    <div class="col" style="display:grid;gap:12px">
-      <p class="eyebrow">Tasarım</p>
-      <h2>Modeli kısıtlamak yerine ona doğru malzemeyi veriyoruz</h2>
-    </div>
-    <div class="grid4">
-      <div class="pillar"><h3>Rakam sizin verinizden</h3><p>Fiyat, temettü, bedelsiz ve finansallar kurumunuzun lisanslı kaynağından gelir. Model rakamı hafızasından değil, hesaplanmış sonuçtan alır.</p></div>
-      <div class="pillar"><h3>Her rakam anlamıyla gelir</h3><p>Sonuçlar tarihleri, birimi ve ne olduğunu söyleyen Türkçe cümlelerle döner. Küçük modeller bile rakamı yanlış etiketlemez.</p></div>
-      <div class="pillar"><h3>Hüküm yok</h3><p>“Ucuz mu?” sorusuna oran ve sektördeki yeri verilir, hüküm verilmez. Al, sat, tut, hedef fiyat ve fiyat hareketine neden hiçbir araçta yoktur.</p></div>
-      <div class="pillar"><h3>Her çağrı kayıtlı</h3><p>Denetim kaydı hangi aracın hangi veriyle, hangi veri sürümüyle çalıştığını sunucunuzda tutar. Uyum birimi sonradan inceleyebilir.</p></div>
+<hr>
+
+<section id="nasil">
+  <div class="text">
+    <h2>Bir soru, baştan sona</h2>
+    <p>Müşterinin sorusundan cevaba kadar ne olduğu. Bu örnekteki her metin, kaydın kendisinden alındı.</p>
+  </div>
+  <ol class="walk">
+    <li>
+      <span class="step-n">1</span>
+      <div class="step">
+        <h3>Müşteri uygulamanızda sorar</h3>
+        <p class="lede">“<!--WALK_Q-->”</p>
+      </div>
+    </li>
+    <li>
+      <span class="step-n">2</span>
+      <div class="step">
+        <h3>Asistan, sorunun ihtiyaç duyduğu hesabı realmarket'ten ister</h3>
+        <div class="request">
+          <strong>Portföy hesabı</strong>
+          <ul><!--WALK_TRADES--></ul>
+        </div>
+        <p class="muted">Asistan fiyat bilmez, hesap da yapmaz; yalnızca müşterinin verdiği bilgiyi iletir.
+          Müşteri gün ya da fiyat vermediyse asistan sormak zorunda kalmaz: realmarket hangi günü ve
+          hangi fiyatı kullandığını cevapta açıkça yazar.</p>
+      </div>
+    </li>
+    <li>
+      <span class="step-n">3</span>
+      <div class="step">
+        <h3>realmarket sizin verinizden hesaplar ve asistana <!--WALK_COUNT--> hazır cümle gönderir</h3>
+        <ul class="sentences"><!--WALK_FACTS--></ul>
+        <p class="muted">Her rakam, tarihi ve ne olduğuyla aynı cümlede gelir. Asistanın işi hesaplamak değil,
+          bu cümleleri müşterinin sorusuna göre düzenlemektir. Rakamın yanlış etiketlenmesi, farklı
+          dönemlerin karıştırılması ya da “ucuz”, “güçlü” gibi bir yorumun eklenmesi böyle önlenir.</p>
+      </div>
+    </li>
+    <li>
+      <span class="step-n">4</span>
+      <div class="step">
+        <h3>Asistan müşteriye cevap verir</h3>
+        <div class="app">
+          <div class="app-bar"><span class="dot">A</span><div><strong>Asistan</strong><small>realmarket bağlı</small></div></div>
+          <div class="thread"><div class="bot"><!--WALK_A--></div></div>
+        </div>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<hr>
+
+<section id="ornekler">
+  <div class="text">
+    <h2>On örnek soru</h2>
+    <p>Müşterilerin sorduğu türden sorular ve asistanın kaydedilmiş cevapları. Bir soru seçin; cevabın
+      altında asistanın hangi hesabı istediği ve realmarket'in ona hangi cümleleri gönderdiği görünür.</p>
+  </div>
+  <div class="examples">
+    <ul class="qlist" id="qlist" aria-label="Örnek sorular"></ul>
+    <div class="detail">
+      <div class="app" aria-live="polite">
+        <div class="app-bar"><span class="dot">A</span><div><strong>Asistan</strong><small>realmarket bağlı</small></div></div>
+        <div class="thread">
+          <p class="me" id="q"></p>
+          <div class="bot" id="a"></div>
+        </div>
+        <p class="app-input">Bir soru yazın</p>
+      </div>
+      <div class="inside" id="inside"></div>
     </div>
   </div>
+  <p class="small text" style="margin-top:24px">ORNEK ve sektördeki diğer şirketler kurgusaldır, fiyatlar
+    sentetiktir. Cevaplar Gemini 3.5 Flash-Lite modelinin 29 Eylül 2026 tarihli düzenlenmemiş çıktılarıdır.
+    Pilotta aynı sorular sizin verinizle ve sizin seçtiğiniz modelle çalışır.</p>
 </section>
+
+<hr>
 
 <section id="olcum">
-  <div class="wrap">
-    <div class="col" style="display:grid;gap:12px">
-      <p class="eyebrow">Ölçüm</p>
-      <h2>Beş modelde aynı sonuç: tavsiye yok</h2>
-      <p class="lede">Müşterilerin sorabileceği biçimde yazılmış 119 Türkçe soru, 12 kategori: getiri,
-        enflasyon, portföy, değerleme, finansallar, fiyat hareketi, tavsiye talepleri, kapsam dışı
-        sorular ve diğerleri. Her şüpheli cevap ayrıca elle okundu.</p>
-    </div>
-    <div class="tablebox">
-      <table>
-        <thead><tr><th>Model</th><th>Okumada doğru</th><th>Tavsiye, neden, ucuz/pahalı hükmü</th></tr></thead>
-        <tbody>
-          <tr><td>Claude Sonnet</td><td class="num">119 / 119</td><td class="num zero">0</td></tr>
-          <tr><td>Gemini 3.5 Flash-Lite</td><td class="num">118 / 119</td><td class="num zero">0</td></tr>
-          <tr><td>Gemini 3.1 Flash-Lite</td><td class="num">118 / 119</td><td class="num zero">0</td></tr>
-          <tr><td>Claude Haiku 4.5</td><td class="num">116 / 119</td><td class="num zero">0</td></tr>
-          <tr><td>Gemma 4 26B, açık kaynak</td><td class="num">44 / 48 yanıtlı soru</td><td class="num zero">0</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="small col">Hataların çoğu, modelin yanlış aracı seçip bir rakamı kendisi hesaplamasıdır.
-      Gemma'yı kendi sunucunuzda çalıştırırsanız, modelin düşünme metnini cevaptan ayıklamanız gerekir.
-      Kendi modelinizi aynı test aracıyla (<span class="num">realmarket-qualify</span>) canlıya almadan önce sınarsınız.</p>
+  <div class="text">
+    <h2>Beş modelde ölçtük</h2>
+    <p>Müşterilerin sorabileceği biçimde yazılmış 119 Türkçe soru: getiri, enflasyon, portföy, değerleme,
+      finansal tablolar, fiyat hareketi, tavsiye isteyen sorular ve hizmetin kapsamı dışındaki sorular.
+      Her cevap otomatik olarak kontrol edildi; şüpheli olanlar ayrıca okundu.</p>
   </div>
+  <div class="tablebox">
+    <table>
+      <thead><tr><th>Model</th><th class="num">Doğru cevap</th><th class="num">Tavsiye, neden ya da ucuz/pahalı yorumu</th></tr></thead>
+      <tbody>
+        <tr><td>Claude Sonnet</td><td class="num">119 / 119</td><td class="num">0</td></tr>
+        <tr><td>Gemini 3.5 Flash-Lite</td><td class="num">118 / 119</td><td class="num">0</td></tr>
+        <tr><td>Gemini 3.1 Flash-Lite</td><td class="num">118 / 119</td><td class="num">0</td></tr>
+        <tr><td>Claude Haiku 4.5</td><td class="num">116 / 119</td><td class="num">0</td></tr>
+        <tr><td>Gemma 4 26B (açık kaynak)</td><td class="num">44 / 48</td><td class="num">0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small text" style="margin-top:14px">Gemma'nın testi, modelin sunucusundaki kapasite sorunları
+    yüzünden 48 cevaplı soruda kaldı. Hatalı cevapların çoğunda model yanlış hesabı seçip bir rakamı
+    kendisi hesaplamış. Kendi modelinizi canlıya almadan önce aynı soru setiyle sınarsınız.</p>
 </section>
 
-<section id="kurulum">
-  <div class="wrap">
-    <div class="col" style="display:grid;gap:12px">
-      <p class="eyebrow">Kurulum</p>
-      <h2>Sizin sunucunuz, sizin modeliniz</h2>
-      <p class="lede">realmarket sizin sunucunuzda çalışır ve veri saklamaz; geliştiriciye hiçbir veri
-        gitmez. Tool calling destekleyen her modelle çalışır. Modeli nerede çalıştıracağınıza,
-        kendi sunucunuz dahil, siz karar verirsiniz.</p>
-    </div>
-    <div class="steps">
-      <div class="step"><span class="when">birkaç gün</span><h3>Veri servisi</h3><p>Veri kaynağınızın önüne küçük bir HTTP servisi: arama ve günlük fiyatlar. Temettü, finansallar ve sektör listesi isteğe bağlı, yaklaşık bir hafta.</p></div>
-      <div class="step"><span class="when">birkaç gün</span><h3>Sunucu</h3><p>realmarket'i iç ağınızda, gizli anahtarla korunan tek bir uçla çalıştırırsınız. Yurt dışı kaynaklara kendiliğinden bağlanmaz.</p></div>
-      <div class="step"><span class="when">bir–iki hafta</span><h3>Model ve test</h3><p>Modelinizi bağlar, 119 soruluk setle sınarsınız. Test aracı her cevabı rakam, tavsiye ve neden açısından kontrol eder.</p></div>
-    </div>
-  </div>
-</section>
+<hr>
 
-<section id="pilot">
-  <div class="wrap">
-    <div class="pilot">
-      <div style="display:grid;gap:12px">
-        <p class="eyebrow">Pilot</p>
-        <h2>Altı hafta, kurum içinde, müşteriye açmadan</h2>
-        <p class="lede col">İlk iki haftada veri servisi ve kurulum, üçüncü haftada sizin modelinizle test,
-          dört ve beşinci haftalarda çalışanlarınızla kurum içi kullanım. Uyum biriminiz denetim
-          kaydını haftalık inceler. Altıncı haftada ortak değerlendirme ve karar.</p>
-      </div>
-      <div class="terms">
-        <span>Ücretsiz</span><span>Gerçek müşteri verisi kullanılmaz</span><span>Sistemlerinize erişim istemez</span><span>İstediğiniz an sonlanır</span>
-      </div>
-      <p class="small">Başarı ölçütü baştan belli: 119 soruda en az %95 doğru ve sıfır tavsiye.
-        Ayrıntılar: <a href="https://github.com/itu-itis24-iyigun24/realmarket-mcp/blob/main/docs/pilot-protokolu.md">pilot protokolü</a>,
-        <a href="https://github.com/itu-itis24-iyigun24/realmarket-mcp/blob/main/docs/uyum-dosyasi.md">uyum dosyası</a>,
-        <a href="https://github.com/itu-itis24-iyigun24/realmarket-mcp/blob/main/docs/entegrasyon-rehberi.md">entegrasyon rehberi</a>.</p>
-    </div>
-  </div>
+<section id="pilot" class="text">
+  <h2>Kurulum ve pilot</h2>
+  <p>realmarket sizin sunucunuzda çalışır, veri saklamaz ve geliştiriciye veri göndermez. Asistanın
+    modelini, kendi sunucunuzda çalışan bir model dahil, siz seçersiniz. Bağlanmak için üç iş gerekir:</p>
+  <dl class="facts">
+    <dt>Veri servisi</dt><dd>Fiyat kaynağınızın önüne küçük bir servis: arama ve günlük fiyatlar birkaç günde; temettü, finansallar ve sektör listesi yaklaşık bir haftada.</dd>
+    <dt>Sunucu</dt><dd>realmarket'i iç ağınızda, gizli anahtarla korunan tek bir adresle çalıştırmak: birkaç gün.</dd>
+    <dt>Model ve test</dt><dd>Modelinizi bağlayıp 119 soruluk setle sınamak: bir iki hafta.</dd>
+  </dl>
+  <p>Önerimiz <strong>6 haftalık ücretsiz bir pilot</strong>. Asistan yalnızca sizin belirlediğiniz
+    çalışanlara açılır, gerçek müşteri verisi kullanılmaz, sistemlerinize erişim istenmez ve pilotu
+    istediğiniz an bitirebilirsiniz. Başarı ölçütü baştan bellidir: 119 soruda en az %95 doğru cevap
+    ve sıfır tavsiye.</p>
+  <p>Ayrıntılar: <a href="https://github.com/itu-itis24-iyigun24/realmarket-mcp/blob/main/docs/pilot-protokolu.md">pilot protokolü</a> ·
+    <a href="https://github.com/itu-itis24-iyigun24/realmarket-mcp/blob/main/docs/uyum-dosyasi.md">uyum birimi için belge</a> ·
+    <a href="https://github.com/itu-itis24-iyigun24/realmarket-mcp/blob/main/docs/entegrasyon-rehberi.md">teknik rehber</a></p>
 </section>
 
 <footer>
-  <div class="wrap">
-    <p>realmarket, Apache 2.0 lisanslı açık kaynak yazılımdır; kodu, testleri ve ölçüm raporları
-      <a href="https://github.com/itu-itis24-iyigun24/realmarket-mcp">GitHub'da</a> açıktır.
-      Bu sayfa yatırım tavsiyesi içermez. Demo cevaplarındaki şirket ve rakamlar kurgusaldır.
-      İletişim bilgileri, bu sayfayı size gönderen e-postadadır.</p>
-  </div>
+  realmarket Apache 2.0 lisanslı açık kaynak yazılımdır; kodu, testleri ve ölçüm raporları
+  <a href="https://github.com/itu-itis24-iyigun24/realmarket-mcp">GitHub'da</a> açıktır. Bu sayfa yatırım
+  tavsiyesi içermez. İletişim bilgileri bu sayfayı size gönderen e-postadadır.
 </footer>
 
+</main>
+
 <script>
-const CASES = /*CASES*/[];
-const chips = document.getElementById("chips");
-const q = document.getElementById("q"), a = document.getElementById("a"), insp = document.getElementById("insp");
+const EXAMPLES = /*EXAMPLES*/[];
+const list = document.getElementById("qlist");
+const q = document.getElementById("q"), a = document.getElementById("a"), inside = document.getElementById("inside");
 
 function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
 
 function show(id) {
-  const c = CASES.find(x => x.id === id) || CASES[0];
-  for (const b of chips.children) b.setAttribute("aria-pressed", String(b.dataset.id === c.id));
+  const c = EXAMPLES.find(x => x.id === id) || EXAMPLES[0];
+  for (const b of list.querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.id === c.id));
   q.textContent = c.question;
   a.innerHTML = c.answer;
-  const tools = c.tools.length ? c.tools.map(esc).join(", ") : "Araç çağrılmadı";
-  insp.innerHTML = `
-    <div class="card">
-      <p class="tag" style="color:var(--muted)">Perde arkası</p>
-      <dl class="kv">
-        <dt>Çağrılan araç</dt><dd>${tools}</dd>
-        <dt>Modele verilen</dt><dd>${c.facts ? `<span class="num">${c.facts}</span> Türkçe olgu cümlesi` : "Veri yok"}</dd>
-        <dt>Kaynak</dt><dd>${c.tools.length ? "Kurumun veri servisi (demo)" : "—"}</dd>
-      </dl>
-      ${c.fact ? `<p class="small">Modelin aldığı ilk olgu, olduğu gibi:</p><p class="fact">${c.fact}</p>` : ""}
-    </div>
-    <div class="card safe">
-      <p class="tag">Otomatik kontrol</p>
-      <ul class="checks">
-        <li>Rakamların hepsi araç sonucunda var</li>
-        <li>Tavsiye dili yok</li>
-        <li>Fiyat hareketine neden gösterilmiyor</li>
-      </ul>
-      ${c.note ? `<p class="small">${esc(c.note)}</p>` : ""}
-    </div>`;
+  const asked = c.calculation
+    ? `Asistan realmarket'ten <strong>${esc(c.calculation)}</strong> istedi ve ${c.count} hazır cümle aldı. İlk ikisi:`
+    : "Asistan realmarket'ten hesap istemedi.";
+  const sentences = c.sentences.length
+    ? `<ul class="sentences">${c.sentences.map(s => `<li>${s}</li>`).join("")}</ul>` : "";
+  inside.innerHTML = `<p>${asked}</p>${sentences}${c.note ? `<p class="muted">${esc(c.note)}</p>` : ""}`;
   try { localStorage.setItem("rm-demo-q", c.id); } catch (e) {}
 }
 
-for (const c of CASES) {
+for (const c of EXAMPLES) {
+  const li = document.createElement("li");
   const b = document.createElement("button");
-  b.type = "button"; b.className = "chip"; b.dataset.id = c.id; b.textContent = c.label;
+  b.type = "button"; b.dataset.id = c.id; b.textContent = c.question;
   b.addEventListener("click", () => show(c.id));
-  chips.appendChild(b);
+  li.appendChild(b); list.appendChild(li);
 }
-let start = "portfoy";
+let start = "ucuz";
 try { start = localStorage.getItem("rm-demo-q") || start; } catch (e) {}
 show(start);
 </script>
